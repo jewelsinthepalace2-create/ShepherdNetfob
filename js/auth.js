@@ -5,7 +5,7 @@ document.getElementById('login-form').addEventListener('submit', async e => {
   const errorMsg = document.getElementById('error-msg');
 
   try {
-    const res = await fetch('https://shepherdnet-api.<yourname>.workers.dev/login', {
+    const res = await fetch('https://shepherdnet-api.jewelsinthepalace2.workers.dev/', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({ email, password })
