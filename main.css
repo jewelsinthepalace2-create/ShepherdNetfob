@@ -1,0 +1,217 @@
+/* ---------------------- BASE STYLING ---------------------- */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+body {
+  background-color: #f4f6f8;
+  color: #2c3e50;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+/* ---------------------- BUTTONS ---------------------- */
+button {
+  background-color: #3498db;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 10px 20px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+button:hover {
+  background-color: #2980b9;
+}
+
+/* ---------------------- LOGIN PAGE ---------------------- */
+.login-container {
+  max-width: 400px;
+  margin: 100px auto;
+  background-color: #fff;
+  padding: 40px 30px;
+  border-radius: 12px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+  text-align: center;
+}
+
+.login-container h1 {
+  margin-bottom: 30px;
+  color: #2c3e50;
+}
+
+.login-container input {
+  width: 100%;
+  padding: 12px 15px;
+  margin-bottom: 20px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  font-size: 1rem;
+  transition: border 0.3s ease;
+}
+
+.login-container input:focus {
+  border-color: #3498db;
+  outline: none;
+}
+
+#login-form p#error-msg {
+  color: #e74c3c;
+  font-size: 0.9rem;
+}
+
+/* ---------------------- DASHBOARD LAYOUT ---------------------- */
+.sidebar {
+  width: 220px;
+  height: 100vh;
+  background-color: #2c3e50;
+  color: #ecf0f1;
+  position: fixed;
+  top: 0;
+  left: 0;
+  padding: 30px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.sidebar a {
+  display: block;
+  padding: 12px 15px;
+  border-radius: 8px;
+  transition: background 0.3s ease;
+}
+
+.sidebar a:hover {
+  background-color: #34495e;
+}
+
+.topbar {
+  height: 60px;
+  background-color: #3498db;
+  color: #fff;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 30px;
+  margin-left: 220px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.main-content {
+  margin-left: 220px;
+  padding: 30px;
+  min-height: calc(100vh - 60px);
+}
+
+/* ---------------------- TABLE STYLING ---------------------- */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: #fff;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+th, td {
+  padding: 15px;
+  text-align: left;
+}
+
+th {
+  background-color: #3498db;
+  color: #fff;
+  font-weight: 600;
+}
+
+tr {
+  border-bottom: 1px solid #ecf0f1;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+tr:hover {
+  background-color: #f1f5f9;
+}
+
+/* ---------------------- PROFILE PAGE ---------------------- */
+#profile-container {
+  max-width: 700px;
+  margin: 40px auto;
+  background-color: #fff;
+  padding: 40px 30px;
+  border-radius: 12px;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+}
+
+#profile-container h2 {
+  margin-bottom: 30px;
+  color: #2c3e50;
+}
+
+#profile-container img {
+  display: block;
+  margin: 0 auto 20px;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid #3498db;
+}
+
+#profile-container p {
+  font-size: 1rem;
+  margin-bottom: 10px;
+}
+
+#profile-container p strong {
+  color: #34495e;
+}
+
+/* ---------------------- RESPONSIVE ---------------------- */
+@media (max-width: 900px) {
+  .sidebar {
+    width: 180px;
+    padding: 20px;
+  }
+
+  .topbar {
+    margin-left: 180px;
+  }
+
+  .main-content {
+    margin-left: 180px;
+  }
+}
+
+@media (max-width: 600px) {
+  .sidebar {
+    display: none;
+  }
+
+  .topbar {
+    margin-left: 0;
+  }
+
+  .main-content {
+    margin-left: 0;
+    padding: 20px;
+  }
+
+  #profile-container {
+    padding: 30px 20px;
+  }
+
+  table th, table td {
+    padding: 10px;
+  }
+}
