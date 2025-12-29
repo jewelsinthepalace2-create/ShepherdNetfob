@@ -5,8 +5,32 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ShepherdNet Login</title>
 <link rel="stylesheet" href="css/main.css">
+  <script
+  async
+  crossorigin="anonymous"
+  data-clerk-publishable-key="pk_test_c29jaWFsLXJlZGJpcmQtMjYuY2xlcmsuYWNjb3VudHMuZGV2JA"
+  src="https://js.clerk.com/v4/clerk.browser.js">
+</script>
+<script>
+  window.addEventListener("load", async () => {
+    await Clerk.load();
+
+    if (!Clerk.user) {
+      Clerk.openSignIn();
+    } else {
+      console.log("Logged in:", Clerk.user);
+    }
+  });
+</script>
+
 </head>
 <body>
+  <div id="auth"></div>
+
+<script>
+  Clerk.mountSignIn("#auth");
+</script>
+
 <div class="login-container">
   <h1>ShepherdNet</h1>
   <form id="login-form">
