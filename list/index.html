@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>My Flock</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+  <style>
+    body { background: #0f172a; color: white; font-family: 'Poppins', sans-serif; padding: 20px; }
+    h2 { text-align: center; margin-bottom: 20px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 15px; }
+    .card { background: rgba(255,255,255,0.05); padding: 15px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: 0.2s; }
+    .card:hover { background: rgba(255,255,255,0.1); }
+    .status { font-size: 0.7rem; padding: 2px 8px; border-radius: 10px; background: #333; margin-top: 5px; display: inline-block; }
+    .add-btn { position: fixed; bottom: 20px; right: 20px; background: #4facfe; color: white; width: 60px; height: 60px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 30px; text-decoration: none; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+  </style>
+</head>
+<body>
+
+<h2 id="headerTitle">Loading Flock...</h2>
+<div id="grid" class="grid"></div>
+<a href="../dashboard/add-member.html" class="add-btn">+</a>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
+  import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
+  import { initializeFirestore, doc, getDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyCBv60eRCO0e4dFBMKGKnIATouxTuk1Bcc",
+    authDomain: "fob-database-139d1.firebaseapp.com",
+    projectId: "fob-database-139d1",
+    storageBucket: "fob-database-139d1.firebasestorage.app",
+    messagingSenderId: "375165731354",
+    appId: "1:375165731354:web:b5fa57dcb2d71ee0d8c7a3"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = initializeFirestore(app, { experimentalForceLongPolling: true }, "fobrealdbase");
+
+  async function loadFlock(user) {
+    const grid = document.getElementById('grid');
+    grid.innerHTML = "Checking permissions...";
+
+    // 1. Determine Role
+    let role = "unknown";
+    let q;
+    
+    // Check Pastor Collection
+    let userDoc = await getDoc(doc(db, "pastors", user.uid));
+    if (userDoc.exists()) {
+      role = "pastor";
+      document.getElementById('headerTitle').textContent = "My Branch (Full Access)";
+      // PASTOR LOGIC: Show everyone with my pastorId (Direct + Shepherd adds)
+      q = query(collection(db, "members"), where("pastorId", "==", user.uid));
+    } else {
+      // Check Shepherd Collection
+      userDoc = await getDoc(doc(db, "shepherds", user.uid));
+      if (userDoc.exists()) {
+        role = "shepherd";
+        document.getElementById('headerTitle').textContent = "My Sheep";
+        // SHEPHERD LOGIC: Show only what I added
+        q = query(collection(db, "members"), where("shepherdId", "==", user.uid));
+      } else {
+        // Check Master Admin (Optional)
+        userDoc = await getDoc(doc(db, "master_admin", user.uid));
+        if(userDoc.exists()) {
+             q = collection(db, "members"); // Admin sees all
+        }
+      }
+    }
+
+    // 2. Fetch Data
+    if (!q) { grid.innerHTML = "Access Denied."; return; }
+    
+    const snapshot = await getDocs(q);
+    grid.innerHTML = "";
+
+    if (snapshot.empty) {
+      grid.innerHTML = "<p>No members found.</p>";
+      return;
+    }
+
+    snapshot.forEach((docSnap) => {
+      const data = docSnap.data();
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.onclick = () => window.location.href = `profile.html?id=${docSnap.id}`;
+      card.innerHTML = `
+        <div>
+          <h3>${data.full_name}</h3>
+          <p style="color:#aaa; font-size:0.8rem;">${data.phone || ""}</p>
+          <span class="status">${data.status}</span>
+        </div>
+        <div style="font-size:1.5rem">›</div>
+      `;
+      grid.appendChild(card);
+    });
+  }
+
+  onAuthStateChanged(auth, (user) => {
+    if (user) loadFlock(user);
+    else window.location.href = "../index.html";
+  });
+</script>
+</body>
+</html>
