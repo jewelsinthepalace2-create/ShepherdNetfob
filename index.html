@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ShepherdNet | Secure Login</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
   <style>
     :root {
       --primary: #4facfe;
@@ -23,7 +24,6 @@
       overflow: hidden;
     }
 
-    /* Floating Background Blobs */
     .blob {
       position: absolute;
       width: 400px;
@@ -42,11 +42,10 @@
       to { transform: translate(100px, 150px); }
     }
 
-    /* Glassmorphism Card */
     #login-container {
       position: relative;
-      width: 100%;
-      max-width: 420px;
+      width: 90%;
+      max-width: 400px;
       padding: 40px;
       background: var(--glass);
       backdrop-filter: blur(20px);
@@ -79,7 +78,7 @@
     button {
       width: 100%;
       padding: 15px;
-      margin-top: 25px;
+      margin-top: 20px;
       background: white;
       color: #0f172a;
       border: none;
@@ -89,9 +88,10 @@
       transition: 0.3s;
     }
 
-    button:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(79, 172, 254, 0.3); }
+    button:hover { transform: translateY(-2px); background: #f0f0f0; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
 
-    .status-msg { margin-top: 15px; font-size: 0.85rem; min-height: 1.2rem; }
+    .status-msg { margin-top: 20px; font-size: 0.85rem; color: #ff6b6b; min-height: 1.2rem; }
   </style>
 </head>
 <body>
@@ -107,7 +107,7 @@
     <p id="status" class="status-msg"></p>
   </div>
 
- <script type="module">
+<script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
   import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
   import { initializeFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
@@ -121,36 +121,25 @@
     appId: "1:375165731354:web:b5fa57dcb2d71ee0d8c7a3"
   };
 
-  // Initialize Firebase
+  // 1. Initialize Firebase
   const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
 
-  // FIX: Using initializeFirestore with Long Polling to bypass "Offline" errors
+  // 2. Initialize Firestore with your CUSTOM database name
   const db = initializeFirestore(app, {
     experimentalForceLongPolling: true, 
-  });
+  }, "fobrealdbase"); 
 
   const statusEl = document.getElementById('status');
+  const loginBtn = document.getElementById('loginBtn');
 
+  // Helper function to scan collections for the User's Role
   async function findUserRole(uid) {
     const collections = ['pastors', 'shepherds', 'members'];
-    
     for (const col of collections) {
-      console.log(`🔎 Searching in collection: "${col}"...`);
       try {
-        const docRef = doc(db, col, uid);
-        const snap = await getDoc(docRef);
-        
-        if (snap.exists()) {
-          console.log(`✅ MATCH FOUND!`);
-          console.log(`📂 Collection: ${col}`);
-          console.log(`🆔 Document Name (ID): ${snap.id}`); 
-          console.log(`📄 Content inside document:`, snap.data());
-          
-          return snap.data().role;
-        } else {
-          console.log(`❌ No document named "${uid}" found in "${col}".`);
-        }
+        const snap = await getDoc(doc(db, col, uid));
+        if (snap.exists()) return snap.data().role;
       } catch (e) {
         console.error(`Error checking ${col}:`, e);
       }
@@ -158,49 +147,58 @@
     return null;
   }
 
-  document.getElementById('loginBtn').addEventListener('click', async () => {
-    const email = document.getElementById('email').value;
+  // Login Handler
+  loginBtn.addEventListener('click', async () => {
+    const email = document.getElementById('email').value.trim();
     const password = document.getElementById('password').value;
-    
-    if(!email || !password) {
-        alert("Please enter email and password");
-        return;
+
+    if (!email || !password) {
+      statusEl.textContent = "Please fill in all fields.";
+      return;
     }
 
+    // UI State: Loading
+    loginBtn.disabled = true;
+    loginBtn.textContent = "Authenticating...";
+    statusEl.textContent = "";
+
     try {
-        // TEST 1: Authentication
-        const cred = await signInWithEmailAndPassword(auth, email, password);
-        const myUID = cred.user.uid;
-        alert("Step 1 Success! Your UID is: " + myUID);
+      // Step 1: Sign In
+      const cred = await signInWithEmailAndPassword(auth, email, password);
+      
+      // Step 2: Fetch Role from fobrealdbase
+      statusEl.style.color = "#4facfe";
+      statusEl.textContent = "Verifying permissions...";
+      const role = await findUserRole(cred.user.uid);
 
-        // TEST 2: Searching Firestore
-        const role = await findUserRole(myUID);
-        
-        if (!role) {
-            alert("Step 2 Failed: I found no document named " + myUID + " in pastors, shepherds, or members.");
-            return;
-        }
+      if (!role) {
+        throw new Error("User document not found. Please contact admin.");
+      }
 
-        alert("Step 2 Success! Your role is: " + role);
+      // Step 3: Redirect
+      const routes = {
+        "master_admin": "admin/index.html",
+        "pastor": "pastor/index.html",
+        "shepherd": "shepherd/index.html",
+        "member": "list/index.html"
+      };
 
-        // TEST 3: Redirecting
-        const routes = {
-            "master_admin": "admin/index.html",
-            "pastor": "pastor/index.html",
-            "shepherd": "shepherd/index.html",
-            "member": "list/index.html"
-        };
-
-        if (routes[role]) {
-            alert("Step 3: Redirecting to " + routes[role]);
-            window.location.href = routes[role];
-        } else {
-            alert("Step 3 Failed: The role '" + role + "' does not match any route.");
-        }
+      if (routes[role]) {
+        statusEl.textContent = "Access Granted. Redirecting...";
+        window.location.href = routes[role];
+      } else {
+        throw new Error("Unauthorized role assigned.");
+      }
 
     } catch (err) {
-        alert("Auth Error: " + err.message);
-        console.error(err);
+      console.error(err);
+      statusEl.style.color = "#ff6b6b";
+      statusEl.textContent = err.message.includes("auth/") 
+        ? "Invalid email or password." 
+        : err.message;
+      
+      loginBtn.disabled = false;
+      loginBtn.textContent = "Login";
     }
   });
 </script>
