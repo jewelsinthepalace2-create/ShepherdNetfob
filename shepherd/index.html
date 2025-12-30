@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shepherd Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <style> :root { --primary: #4facfe; --glass: rgba(255, 255, 255, 0.05); --border: rgba(255, 255, 255, 0.1); }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; }
+        body { background: #0f172a; color: white; display: flex; min-height: 100vh; }
+        nav { width: 280px; background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(20px); border-right: 1px solid var(--border); padding: 40px 20px; display: flex; flex-direction: column; }
+        nav h2 { color: var(--primary); font-size: 1.2rem; margin-bottom: 50px; letter-spacing: 2px; text-align: center; }
+        nav a { color: white; text-decoration: none; padding: 15px 20px; border-radius: 12px; margin-bottom: 10px; transition: 0.3s; opacity: 0.7; }
+        nav a:hover, nav a.active { background: var(--glass); opacity: 1; color: var(--primary); border: 1px solid var(--border); }
+        main { flex: 1; padding: 60px; overflow-y: auto; }
+        .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 25px; }
+        .card { background: var(--glass); padding: 30px; border-radius: 24px; border: 1px solid var(--border); backdrop-filter: blur(10px); }
+        .card h3 { font-size: 0.8rem; text-transform: uppercase; opacity: 0.5; }
+        .card p { font-size: 2.5rem; font-weight: 600; margin-top: 10px; color: var(--primary); }
+        .btn { background: var(--primary); color: white; border: none; padding: 15px 30px; border-radius: 12px; cursor: pointer; font-weight: 600; margin-top: 20px; } </style>
+</head>
+<body>
+    <nav>
+        <h2>SHEPHERD</h2>
+        <a href="#" class="active">My Flock</a>
+        <a href="../list/index.html">Member List</a>
+        <a href="#" id="logoutBtn">Sign Out</a>
+    </nav>
+    <main>
+        <h1>Welcome, Shepherd</h1>
+        <div class="card">
+            <h3>Members in Your Flock</h3>
+            <p id="flock-count">0</p>
+        </div>
+    </main>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
+        import { getFirestore, collection, query, where, getCountFromServer } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+
+        const firebaseConfig = { apiKey: "AIzaSyCBv60eRCO0e4dFBMKGKnIATouxTuk1Bcc", authDomain: "fob-database-139d1.firebaseapp.com", projectId: "fob-database-139d1", storageBucket: "fob-database-139d1.firebasestorage.app", messagingSenderId: "375165731354", appId: "1:375165731354:web:b5fa57dcb2d71ee0d8c7a3" };
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                const q = query(collection(db, "members"), where("shepherd_id", "==", user.uid));
+                const count = await getCountFromServer(q);
+                document.getElementById('flock-count').innerText = count.data().count;
+            }
+        });
+        document.getElementById('logoutBtn').onclick = () => signOut(auth).then(() => window.location.href="../index.html");
+    </script>
+</body>
+</html>
