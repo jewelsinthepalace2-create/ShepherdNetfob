@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Member Profile</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+  <style>
+    body { background: #0f172a; color: white; font-family: 'Poppins', sans-serif; display: flex; justify-content: center; padding: 20px; }
+    .profile-card { width: 100%; max-width: 600px; background: rgba(255,255,255,0.05); padding: 30px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1); }
+    h1 { color: #4facfe; margin-bottom: 5px; }
+    .label { color: #888; font-size: 0.8rem; text-transform: uppercase; margin-top: 20px; display: block; }
+    .value { font-size: 1.1rem; border-bottom: 1px solid #333; padding-bottom: 5px; display: block; }
+    .btn { background: none; border: 1px solid #666; color: #ccc; padding: 8px 15px; border-radius: 20px; cursor: pointer; text-decoration: none; font-size: 0.9rem; }
+  </style>
+</head>
+<body>
+
+<div class="profile-card">
+  <a href="index.html" class="btn">← Back</a>
+  
+  <h1 id="pName" style="margin-top:20px;">Loading...</h1>
+  <p id="pStatus" style="color: #00f2fe;">...</p>
+
+  <span class="label">Phone</span>
+  <span class="value" id="pPhone">-</span>
+
+  <span class="label">Location</span>
+  <span class="value" id="pLocation">-</span>
+
+  <span class="label">Notes</span>
+  <div class="value" id="pNotes" style="min-height: 50px; border:none; background:rgba(0,0,0,0.2); padding:10px; border-radius:8px;">-</div>
+  
+  <br>
+  <p style="font-size:0.7rem; color:#555;">ID: <span id="pId"></span></p>
+</div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
+  import { initializeFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyCBv60eRCO0e4dFBMKGKnIATouxTuk1Bcc",
+    authDomain: "fob-database-139d1.firebaseapp.com",
+    projectId: "fob-database-139d1",
+    storageBucket: "fob-database-139d1.firebasestorage.app",
+    messagingSenderId: "375165731354",
+    appId: "1:375165731354:web:b5fa57dcb2d71ee0d8c7a3"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = initializeFirestore(app, { experimentalForceLongPolling: true }, "fobrealdbase");
+
+  async function loadProfile() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const docId = urlParams.get('id');
+
+    if (!docId) return;
+
+    const docSnap = await getDoc(doc(db, "members", docId));
+    if (docSnap.exists()) {
+      const data = docSnap.data();
+      document.getElementById('pName').textContent = data.full_name;
+      document.getElementById('pStatus').textContent = data.status;
+      document.getElementById('pPhone').textContent = data.phone;
+      document.getElementById('pLocation').textContent = data.location;
+      document.getElementById('pNotes').textContent = data.notes;
+      document.getElementById('pId').textContent = docId;
+    }
+  }
+  loadProfile();
+</script>
+</body>
+</html>
