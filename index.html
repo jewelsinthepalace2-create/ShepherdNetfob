@@ -1,45 +1,91 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ShepherdNet Login</title>
-<link rel="stylesheet" href="css/main.css">
+  <meta charset="UTF-8" />
+  <title>ShepherdNet Login</title>
+
+  <!-- Clerk SDK -->
   <script
-  async
-  crossorigin="anonymous"
-  data-clerk-publishable-key="pk_test_c29jaWFsLXJlZGJpcmQtMjYuY2xlcmsuYWNjb3VudHMuZGV2JA"
-  src="https://js.clerk.com/v4/clerk.browser.js">
-</script>
-<script>
-  window.addEventListener("load", async () => {
-    await Clerk.load();
+    async
+    crossorigin="anonymous"
+    data-clerk-publishable-key="pk_test_YnJpZWYtc2hhcmstODYuY2xlcmsuYWNjb3VudHMuZGV2JA"
+    src="https://js.clerk.dev/v4/clerk.browser.js">
+  </script>
 
-    if (!Clerk.user) {
-      Clerk.openSignIn();
-    } else {
-      console.log("Logged in:", Clerk.user);
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      background: #f4f6fb;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
     }
-  });
-</script>
-
+    #app {
+      width: 100%;
+      max-width: 420px;
+    }
+  </style>
 </head>
+
 <body>
-  <div id="auth"></div>
+  <div id="app"></div>
 
-<script>
-  Clerk.mountSignIn("#auth");
-</script>
+  <script>
+    async function redirectByRole() {
+      const token = await Clerk.session.getToken()
 
-<div class="login-container">
-  <h1>ShepherdNet</h1>
-  <form id="login-form">
-    <input type="email" id="email" placeholder="Email" required>
-    <input type="password" id="password" placeholder="Password" required>
-    <button type="submit">Login</button>
-    <p id="error-msg"></p>
-  </form>
-</div>
-<script src="js/auth.js"></script>
+      const res = await fetch(
+        "https://shepherdnet-api.jewelsinthepalace2.workers.dev/api/me",
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      )
+
+      if (!res.ok) {
+        alert("Authorization failed")
+        return
+      }
+
+      const user = await res.json()
+
+      switch (user.role) {
+        case "master_admin":
+          window.location.href = "/admin/index.html"
+          break
+        case "chapel_leader":
+          window.location.href = "/chapel/index.html"
+          break
+        case "pastor":
+          window.location.href = "/pastor/index.html"
+          break
+        case "shepherd":
+          window.location.href = "/shepherd/index.html"
+          break
+        case "member":
+          window.location.href = "/list/index.html"
+          break
+        default:
+          alert("Role not assigned. Contact admin.")
+      }
+    }
+
+    window.addEventListener("load", async () => {
+      await Clerk.load()
+      const app = document.getElementById("app")
+
+      if (!Clerk.user) {
+        // Not logged in → show Clerk sign in
+        Clerk.mountSignIn(app)
+        return
+      }
+
+      // Logged in → redirect automatically
+      redirectByRole()
+    })
+  </script>
 </body>
 </html>
