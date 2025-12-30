@@ -39,64 +39,95 @@
   const auth = getAuth(app);
   const db = initializeFirestore(app, { experimentalForceLongPolling: true }, "fobrealdbase");
 
-  async function loadFlock(user) {
+ async function loadGroupedFlock(user) {
     const grid = document.getElementById('grid');
-    grid.innerHTML = "Checking permissions...";
+    grid.innerHTML = "Organizing your branch...";
 
-    // 1. Determine Role
-    let role = "unknown";
-    let q;
-    
-    // Check Pastor Collection
-    let userDoc = await getDoc(doc(db, "pastors", user.uid));
-    if (userDoc.exists()) {
-      role = "pastor";
-      document.getElementById('headerTitle').textContent = "My Branch (Full Access)";
-      // PASTOR LOGIC: Show everyone with my pastorId (Direct + Shepherd adds)
-      q = query(collection(db, "members"), where("pastorId", "==", user.uid));
-    } else {
-      // Check Shepherd Collection
-      userDoc = await getDoc(doc(db, "shepherds", user.uid));
-      if (userDoc.exists()) {
-        role = "shepherd";
-        document.getElementById('headerTitle').textContent = "My Sheep";
-        // SHEPHERD LOGIC: Show only what I added
-        q = query(collection(db, "members"), where("shepherdId", "==", user.uid));
-      } else {
-        // Check Master Admin (Optional)
-        userDoc = await getDoc(doc(db, "master_admin", user.uid));
-        if(userDoc.exists()) {
-             q = collection(db, "members"); // Admin sees all
+    try {
+        // 1. Get the Pastor's data
+        const pastorSnap = await getDoc(doc(db, "pastors", user.uid));
+        if (!pastorSnap.exists()) {
+            grid.innerHTML = "Access Denied or Not a Pastor.";
+            return;
         }
-      }
+
+        // 2. Fetch all Shepherds assigned to this Pastor
+        const shepherdsQ = query(collection(db, "shepherds"), where("assigned_pastor_id", "==", user.uid));
+        const shepherdSnaps = await getDocs(shepherdsQ);
+        
+        // Store shepherds in a map for easy access
+        let shepherdMap = {}; 
+        shepherdSnaps.forEach(s => {
+            shepherdMap[s.id] = { name: s.data().full_name, members: [] };
+        });
+
+        // 3. Fetch all Members assigned to this Pastor
+        const membersQ = query(collection(db, "members"), where("pastorId", "==", user.uid));
+        const memberSnaps = await getDocs(membersQ);
+
+        let directMembers = [];
+
+        // 4. Sort Members into their Shepherd's "buckets"
+        memberSnaps.forEach(m => {
+            const data = m.data();
+            const mId = m.id;
+            const shepherdId = data.shepherdId;
+
+            if (shepherdId && shepherdMap[shepherdId]) {
+                shepherdMap[shepherdId].members.push({ id: mId, ...data });
+            } else {
+                directMembers.push({ id: mId, ...data });
+            }
+        });
+
+        // 5. RENDER THE HTML
+        grid.innerHTML = ""; // Clear loader
+
+        // --- SECTION: Direct Members ---
+        if (directMembers.length > 0) {
+            renderHeader(grid, "Directly Under You");
+            directMembers.forEach(m => renderMemberCard(grid, m));
+        }
+
+        // --- SECTION: Shepherd Groups ---
+        for (const sId in shepherdMap) {
+            const shepherd = shepherdMap[sId];
+            renderHeader(grid, `Shepherd: ${shepherd.name}`); // THE SHEPHERD'S NAME APPEARS FIRST
+            
+            if (shepherd.members.length === 0) {
+                grid.innerHTML += `<p style="padding-left:20px; color:#666; font-size:0.8rem;">No members yet.</p>`;
+            } else {
+                shepherd.members.forEach(m => renderMemberCard(grid, m));
+            }
+        }
+
+    } catch (e) {
+        console.error(e);
+        grid.innerHTML = "Error loading list.";
     }
+}
 
-    // 2. Fetch Data
-    if (!q) { grid.innerHTML = "Access Denied."; return; }
-    
-    const snapshot = await getDocs(q);
-    grid.innerHTML = "";
+// Helper: Create a Section Header
+function renderHeader(container, text) {
+    const h = document.createElement('h3');
+    h.style = "grid-column: 1/-1; margin-top: 30px; border-left: 4px solid #4facfe; padding-left: 15px; color: #4facfe; font-size: 1rem; background: rgba(79, 172, 254, 0.05); padding-top: 10px; padding-bottom: 10px;";
+    h.textContent = text;
+    container.appendChild(h);
+}
 
-    if (snapshot.empty) {
-      grid.innerHTML = "<p>No members found.</p>";
-      return;
-    }
-
-    snapshot.forEach((docSnap) => {
-      const data = docSnap.data();
-      const card = document.createElement('div');
-      card.className = 'card';
-      card.onclick = () => window.location.href = `profile.html?id=${docSnap.id}`;
-      card.innerHTML = `
+// Helper: Create a Member Card
+function renderMemberCard(container, member) {
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.onclick = () => window.location.href = `profile.html?id=${member.id}`;
+    card.innerHTML = `
         <div>
-          <h3>${data.full_name}</h3>
-          <p style="color:#aaa; font-size:0.8rem;">${data.phone || ""}</p>
-          <span class="status">${data.status}</span>
+          <h3>${member.full_name}</h3>
+          <span class="status">${member.status}</span>
         </div>
-        <div style="font-size:1.5rem">›</div>
-      `;
-      grid.appendChild(card);
-    });
+        <div style="font-size:1.5rem">›</div>`;
+    container.appendChild(card);
+}
   }
 
   onAuthStateChanged(auth, (user) => {
