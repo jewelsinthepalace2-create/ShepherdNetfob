@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Add New Member</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+  <style>
+    body { background: #0f172a; color: white; font-family: 'Poppins', sans-serif; display: flex; justify-content: center; padding: 40px; }
+    .card { background: rgba(255,255,255,0.1); padding: 30px; border-radius: 15px; width: 100%; max-width: 500px; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.2); }
+    input, select, textarea { width: 100%; padding: 12px; margin: 10px 0; background: rgba(255,255,255,0.05); border: 1px solid #444; color: white; border-radius: 8px; }
+    button { width: 100%; padding: 15px; background: #4facfe; border: none; border-radius: 8px; color: white; font-weight: bold; margin-top: 10px; cursor: pointer; }
+    button:disabled { background: #555; cursor: not-allowed; }
+  </style>
+</head>
+<body>
+
+<div class="card">
+  <h2>Add New Member</h2>
+  <p id="roleDisplay" style="color: #4facfe; font-size: 0.9rem; margin-bottom: 20px;">Detecting permissions...</p>
+  
+  <input type="text" id="mName" placeholder="Full Name" required>
+  <input type="tel" id="mPhone" placeholder="Phone Number">
+  <input type="text" id="mLocation" placeholder="Location">
+  <select id="mStatus">
+    <option value="New Convert">New Convert</option>
+    <option value="Member">Regular Member</option>
+    <option value="Worker">Worker</option>
+  </select>
+  <textarea id="mNotes" placeholder="Initial Notes..." rows="3"></textarea>
+
+  <button id="saveBtn" disabled>Wait...</button>
+  <p id="msg" style="text-align:center; margin-top:15px;"></p>
+</div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
+  import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
+  import { initializeFirestore, doc, getDoc, collection, addDoc } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyCBv60eRCO0e4dFBMKGKnIATouxTuk1Bcc",
+    authDomain: "fob-database-139d1.firebaseapp.com",
+    projectId: "fob-database-139d1",
+    storageBucket: "fob-database-139d1.firebasestorage.app",
+    messagingSenderId: "375165731354",
+    appId: "1:375165731354:web:b5fa57dcb2d71ee0d8c7a3"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = initializeFirestore(app, { experimentalForceLongPolling: true }, "fobrealdbase");
+
+  let myUid = null;
+  let myRole = null;
+  let myPastorId = null; // The ID of the "Boss" to tag
+
+  // 1. CHECK WHO IS LOGGED IN
+  onAuthStateChanged(auth, async (user) => {
+    if (user) {
+      myUid = user.uid;
+      const btn = document.getElementById('saveBtn');
+      const roleDisplay = document.getElementById('roleDisplay');
+      
+      // Check if I am a Pastor
+      let docSnap = await getDoc(doc(db, "pastors", myUid));
+      if (docSnap.exists()) {
+        myRole = "pastor";
+        myPastorId = myUid; // I am the boss
+      } else {
+        // Check if I am a Shepherd
+        docSnap = await getDoc(doc(db, "shepherds", myUid));
+        if (docSnap.exists()) {
+          myRole = "shepherd";
+          // CRITICAL: Get my boss's ID from my profile
+          myPastorId = docSnap.data().assigned_pastor_id; 
+        }
+      }
+
+      if (myRole) {
+        roleDisplay.textContent = `Logged in as: ${myRole.toUpperCase()} (Linked to Pastor ID: ${myPastorId ? "✅" : "❌"})`;
+        btn.textContent = "Save Member Record";
+        btn.disabled = false;
+      } else {
+        roleDisplay.textContent = "Error: Account role not found.";
+      }
+    } else {
+      window.location.href = "../index.html";
+    }
+  });
+
+  // 2. SAVE TO DATABASE
+  document.getElementById('saveBtn').addEventListener('click', async () => {
+    const btn = document.getElementById('saveBtn');
+    btn.disabled = true;
+    btn.textContent = "Saving...";
+    
+    try {
+      if (!myPastorId) throw new Error("Hierarchy Error: No Pastor ID linked to your account.");
+
+      await addDoc(collection(db, "members"), {
+        full_name: document.getElementById('mName').value,
+        phone: document.getElementById('mPhone').value,
+        location: document.getElementById('mLocation').value,
+        status: document.getElementById('mStatus').value,
+        notes: document.getElementById('mNotes').value,
+        joinedAt: new Date(),
+        
+        // AUTOMATIC TAGGING
+        pastorId: myPastorId, 
+        shepherdId: (myRole === 'shepherd') ? myUid : "direct_pastor_entry"
+      });
+
+      document.getElementById('msg').style.color = "#4facfe";
+      document.getElementById('msg').textContent = "Success! Member Added.";
+      document.getElementById('mName').value = ""; // Clear form
+      btn.textContent = "Save Another";
+      btn.disabled = false;
+
+    } catch (e) {
+      console.error(e);
+      document.getElementById('msg').textContent = "Error: " + e.message;
+      btn.disabled = false;
+    }
+  });
+</script>
+</body>
+</html>
