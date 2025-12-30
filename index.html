@@ -132,19 +132,22 @@
 
   const statusEl = document.getElementById('status');
 
-  async function findUserRole(uid) {
-    const collections = ['pastors', 'shepherds', 'members'];
-    // Try to find the UID in any of the three collections
-    for (const col of collections) {
-      try {
-        const snap = await getDoc(doc(db, col, uid));
-        if (snap.exists()) return snap.data().role;
-      } catch (e) {
-        console.error("Error fetching from " + col, e);
-      }
+ async function findUserRole(uid) {
+  const collections = ['pastors', 'shepherds', 'members'];
+  
+  for (const col of collections) {
+    console.log("Checking collection:", col, "for UID:", uid); // LOG 1
+    const snap = await getDoc(doc(db, col, uid));
+    
+    if (snap.exists()) {
+      console.log("Found document! Data is:", snap.data()); // LOG 2
+      return snap.data().role;
+    } else {
+      console.log("Not found in:", col); // LOG 3
     }
-    return null;
   }
+  return null;
+}
 
  document.getElementById('loginBtn').addEventListener('click', async () => {
     const email = document.getElementById('email').value;
