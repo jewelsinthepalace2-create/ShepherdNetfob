@@ -156,15 +156,75 @@
 </div>
 
 <script type="module">
-  // ... [Import statements and Firebase Config as before] ...
-  import { query, where, getDocs } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
+  import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
+  import { getFirestore, doc, getDoc, collection, addDoc, query, where, getDocs } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+
+  // YOUR CONFIG
+  const firebaseConfig = { 
+    apiKey: "AIzaSyCBv60eRCO0e4dFBMKGKnIATouxTuk1Bcc", 
+    authDomain: "fob-database-139d1.firebaseapp.com", 
+    projectId: "fob-database-139d1", 
+    storageBucket: "fob-database-139d1.firebasestorage.app", 
+    messagingSenderId: "375165731354", 
+    appId: "1:375165731354:web:b5fa57dcb2d71ee0d8c7a3" 
+  };
+  
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app); // Note: Removed long polling for standard speed
+
+  let pId = null;
+  let sId = null;
+
+  // 1. LISTEN FOR USER
+  onAuthStateChanged(auth, async (user) => {
+    if (user) {
+      const roleDisplay = document.getElementById('roleDisplay');
+      const saveBtn = document.getElementById('saveBtn');
+
+      try {
+        // Check Shepherds Collection first
+        const shepherdRef = doc(db, "shepherds", user.uid);
+        const shepherdSnap = await getDoc(shepherdRef);
+
+        if (shepherdSnap.exists()) {
+          sId = user.uid;
+          pId = shepherdSnap.data().assigned_pastor_id || "not_assigned";
+          roleDisplay.innerText = `Logged in as Shepherd: ${shepherdSnap.data().full_name}`;
+        } else {
+          // Check Pastors Collection
+          const pastorRef = doc(db, "pastors", user.uid);
+          const pastorSnap = await getDoc(pastorRef);
+          
+          if (pastorSnap.exists()) {
+            pId = user.uid;
+            sId = "direct_pastor_entry";
+            roleDisplay.innerText = `Logged in as Pastor: ${pastorSnap.data().full_name}`;
+          } else {
+            roleDisplay.innerText = "Error: Role not found in database.";
+          }
+        }
+        
+        // ENABLE BUTTON ONCE ROLE IS LOADED
+        saveBtn.disabled = false;
+        saveBtn.innerText = "Save Member Data";
+
+      } catch (err) {
+        console.error(err);
+        roleDisplay.innerText = "Connection Error. Please refresh.";
+      }
+    } else {
+      window.location.href = "login.html"; // Redirect if not logged in
+    }
+  });
 
   // AGE CALCULATION LOGIC
   window.calculateAge = () => {
     const dob = document.getElementById('mBirthday').value;
     if(!dob) return;
     const birthDate = new Date(dob);
-    const today = new Date(); // Browser uses local time, Ghana is GMT+0
+    const today = new Date();
     let age = today.getFullYear() - birthDate.getFullYear();
     const m = today.getMonth() - birthDate.getMonth();
     if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) { age--; }
@@ -172,25 +232,26 @@
     return age;
   };
 
-  // SAVE BUTTON LOGIC WITH DUPLICATE CHECK
+  // SAVE DATA
   document.getElementById('saveBtn').addEventListener('click', async () => {
     const phone = document.getElementById('mPhone').value;
     const btn = document.getElementById('saveBtn');
     
-    // 1. Unique Phone Index Check
+    // Duplicate Check
     const q = query(collection(db, "members"), where("phone", "==", phone));
     const querySnapshot = await getDocs(q);
     
     if (!querySnapshot.empty) {
-        alert("This phone number is already registered to another member!");
+        alert("Duplicate Phone Number found!");
         return;
     }
 
-    btn.disabled = true; btn.textContent = "Saving...";
+    btn.disabled = true; 
+    btn.textContent = "Saving to Cloud...";
     
     try {
       const birthDate = document.getElementById('mBirthday').value;
-      const birthMonthDay = birthDate ? birthDate.substring(5) : null; // MM-DD format for easy GMT matching
+      const birthMonthDay = birthDate ? birthDate.substring(5) : null;
 
       await addDoc(collection(db, "members"), {
         last_name: document.getElementById('mSurname').value,
@@ -198,15 +259,15 @@
         other_names: document.getElementById('mOthername').value,
         gender: document.getElementById('mGender').value,
         dob: birthDate,
-        dob_day_month: birthMonthDay, // Crucial for GMT birthday alerts
+        dob_day_month: birthMonthDay,
         phone: phone,
         level: document.getElementById('mLevel').value,
         course: document.getElementById('mCourse').value,
         status: document.getElementById('mStatus').value,
         recorded_by_id: auth.currentUser.uid,
-        pastorId: pId, // From your auth logic
+        pastorId: pId,
         shepherdId: sId,
-        timestamp: new Date().toISOString() // Stored in ISO string (UTC/GMT)
+        timestamp: new Date().toISOString()
       });
 
       alert("Member added successfully!");
@@ -214,6 +275,7 @@
     } catch (e) {
       alert("Error: " + e.message);
       btn.disabled = false;
+      btn.innerText = "Try Again";
     }
   });
 </script>
