@@ -8,17 +8,17 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
     <style> 
         :root { 
-            /* Dark Mode (Default) */
             --primary: #4facfe; 
             --bg: #0f172a;
             --glass: rgba(255, 255, 255, 0.05); 
             --border: rgba(255, 255, 255, 0.1); 
             --text: #ffffff;
             --text-dim: rgba(255, 255, 255, 0.5);
+            --sidebar-width: 280px;
+            --sidebar-collapsed: 80px;
         }
 
         [data-theme="light"] {
-            /* Light Mode */
             --bg: #f1f5f9;
             --glass: #ffffff;
             --border: #e2e8f0;
@@ -27,45 +27,90 @@
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; }
-        body { background: var(--bg); color: var(--text); display: flex; min-height: 100vh; transition: 0.3s; }
+        body { background: var(--bg); color: var(--text); display: flex; min-height: 100vh; transition: background 0.3s; overflow-x: hidden; }
 
-        /* Sidebar */
+        /* --- SIDEBAR SYSTEM --- */
         nav { 
-            width: 280px; 
+            width: var(--sidebar-width); 
             background: var(--glass); 
             backdrop-filter: blur(20px); 
             border-right: 1px solid var(--border); 
             padding: 40px 20px; 
             display: flex; 
             flex-direction: column; 
+            transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1), padding 0.4s, transform 0.4s;
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            z-index: 1000;
         }
-        
-        /* Profile Header in Sidebar */
-        .profile-link { 
-            text-decoration: none; 
-            padding: 15px; 
-            background: rgba(79, 172, 254, 0.1); 
-            border-radius: 15px; 
-            margin-bottom: 40px; 
-            border: 1px solid var(--border);
-            transition: 0.3s;
-            display: block;
-        }
-        .profile-link:hover { background: rgba(79, 172, 254, 0.2); transform: translateY(-2px); }
-        .profile-link h2 { font-size: 0.65rem; color: var(--primary); margin: 0; letter-spacing: 2px; text-transform: uppercase; }
-        .profile-link p { font-size: 0.95rem; color: var(--text); margin: 5px 0 0 0; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-        nav a { color: var(--text); text-decoration: none; padding: 15px 20px; border-radius: 12px; margin-bottom: 10px; transition: 0.3s; opacity: 0.7; font-size: 0.9rem; }
+        /* Desktop Collapse Logic */
+        body.sidebar-hidden nav { width: var(--sidebar-collapsed); padding: 40px 15px; }
+        body.sidebar-hidden .profile-link h2, 
+        body.sidebar-hidden .profile-link p,
+        body.sidebar-hidden nav a span:last-child, 
+        body.sidebar-hidden .theme-switch span:first-child { 
+            display: none; 
+        }
+        body.sidebar-hidden .profile-link { padding: 10px; display: flex; justify-content: center; }
+
+        /* Toggle Button */
+        .menu-toggle {
+            position: absolute;
+            right: -15px;
+            top: 30px;
+            width: 30px;
+            height: 30px;
+            background: var(--primary);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: #0f172a;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            z-index: 1100;
+            transition: 0.3s;
+        }
+        body.sidebar-hidden .menu-toggle { transform: rotate(180deg); }
+
+        /* Sidebar Links */
+        .profile-link { 
+            text-decoration: none; padding: 15px; background: rgba(79, 172, 254, 0.1); 
+            border-radius: 15px; margin-bottom: 40px; border: 1px solid var(--border);
+            transition: 0.3s; display: block;
+        }
+        .profile-link h2 { font-size: 0.65rem; color: var(--primary); margin: 0; letter-spacing: 2px; text-transform: uppercase; }
+        .profile-link p { font-size: 0.95rem; color: var(--text); margin: 5px 0 0 0; font-weight: 600; white-space: nowrap; }
+
+        nav a { 
+            display: flex; align-items: center; gap: 15px; color: var(--text); 
+            text-decoration: none; padding: 15px 20px; border-radius: 12px; 
+            margin-bottom: 10px; transition: 0.3s; opacity: 0.7; font-size: 0.9rem;
+            white-space: nowrap;
+        }
         nav a:hover, nav a.active { background: var(--glass); opacity: 1; color: var(--primary); border: 1px solid var(--border); }
         
-        /* Theme Toggle Switch */
         .theme-switch {
             margin-top: 20px; padding: 12px 20px; border-radius: 12px;
             background: var(--glass); border: 1px solid var(--border);
             display: flex; align-items: center; justify-content: space-between;
             font-size: 0.8rem; cursor: pointer; color: var(--text);
-            margin-bottom: 10px;
         }
+
+        /* Mobile Responsiveness */
+        @media (max-width: 768px) {
+            nav { position: fixed; left: 0; transform: translateX(-100%); }
+            body.mobile-nav-open nav { transform: translateX(0); width: 260px; }
+            .mobile-trigger {
+                display: block !important;
+                position: fixed; bottom: 20px; right: 20px;
+                background: var(--primary); padding: 15px; border-radius: 50%;
+                z-index: 2000; box-shadow: 0 10px 20px rgba(0,0,0,0.4);
+            }
+        }
+        .mobile-trigger { display: none; cursor: pointer; }
 
         /* Main Content */
         main { flex: 1; padding: 60px; overflow-y: auto; }
@@ -75,24 +120,30 @@
 
         .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 25px; }
         .card { background: var(--glass); padding: 35px; border-radius: 24px; border: 1px solid var(--border); backdrop-filter: blur(10px); transition: 0.3s; }
-        .card:hover { border-color: var(--primary); }
-        .card h3 { font-size: 0.8rem; text-transform: uppercase; opacity: 0.5; letter-spacing: 1px; color: var(--text-dim); }
         .card p { font-size: 3rem; font-weight: 600; margin-top: 10px; color: var(--text); }
         
         .logout-area { margin-top: auto; padding-top: 20px; }
-        #logoutBtn { color: #ff6b6b; opacity: 1; text-decoration: none; font-size: 0.9rem; display: block; padding: 15px 20px; }
+        #logoutBtn { color: #ff6b6b; text-decoration: none; font-size: 0.9rem; display: flex; align-items: center; gap: 15px; padding: 15px 20px; }
     </style>
 </head>
 <body>
-    <nav>
+    <div class="mobile-trigger" id="mobileBtn">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#0f172a" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+    </div>
+
+    <nav id="sidebar">
+        <div class="menu-toggle" id="toggleBtn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="15 18 9 12 15 6"></polyline></svg>
+        </div>
+
         <a href="../list/settings.html" class="profile-link">
             <h2>Shepherd Profile</h2>
             <p id="nav-name">Loading...</p>
         </a>
 
-        <a href="#" class="active">📊 My Flock Dashboard</a>
-        <a href="../list/index.html">📋 Member List</a>
-        <a href="../dashboard/add-member.html">👤 Add New Soul</a>
+        <a href="#" class="active"><span>📊</span> <span>My Flock Dashboard</span></a>
+        <a href="../list/index.html"><span>📋</span> <span>Member List</span></a>
+        <a href="../dashboard/add-member.html"><span>👤</span> <span>Add New Soul</span></a>
 
         <div class="theme-switch" id="themeToggle">
             <span>Theme Mode</span>
@@ -100,7 +151,7 @@
         </div>
         
         <div class="logout-area">
-            <a href="#" id="logoutBtn">🚪 Sign Out</a>
+            <a href="#" id="logoutBtn"><span>🚪</span> <span>Sign Out</span></a>
         </div>
     </nav>
 
@@ -110,11 +161,11 @@
         
         <div class="stat-grid">
             <div class="card">
-                <h3>Souls Under Your Care</h3>
+                <h3 style="font-size: 0.8rem; text-transform: uppercase; opacity: 0.5;">Souls Under Your Care</h3>
                 <p id="flock-count">0</p>
             </div>
             <div class="card" style="opacity: 0.5;">
-                <h3>Recent Visitations</h3>
+                <h3 style="font-size: 0.8rem; text-transform: uppercase; opacity: 0.5;">Recent Visitations</h3>
                 <p>0</p>
             </div>
         </div>
@@ -137,10 +188,29 @@
         const auth = getAuth(app);
         const db = initializeFirestore(app, { experimentalForceLongPolling: true }, "fobrealdbase");
 
+        // --- SIDEBAR & MOBILE LOGIC ---
+        const toggleBtn = document.getElementById('toggleBtn');
+        const mobileBtn = document.getElementById('mobileBtn');
+        const sidebar = document.getElementById('sidebar');
+
+        toggleBtn.addEventListener('click', () => {
+            document.body.classList.toggle('sidebar-hidden');
+        });
+
+        mobileBtn.addEventListener('click', () => {
+            document.body.classList.toggle('mobile-nav-open');
+        });
+
+        // Close mobile menu on outside click
+        document.addEventListener('click', (e) => {
+            if (window.innerWidth <= 768 && !sidebar.contains(e.target) && !mobileBtn.contains(e.target)) {
+                document.body.classList.remove('mobile-nav-open');
+            }
+        });
+
         // --- THEME LOGIC ---
         const themeToggle = document.getElementById('themeToggle');
         const themeIcon = document.getElementById('themeIcon');
-        
         const savedTheme = localStorage.getItem('theme') || 'dark';
         document.documentElement.setAttribute('data-theme', savedTheme);
         themeIcon.innerText = savedTheme === 'dark' ? '🌙' : '☀️';
@@ -156,19 +226,15 @@
         onAuthStateChanged(auth, async (user) => {
             if (user) {
                 try {
-                    // 1. Fetch Shepherd's Personal Info
                     const shepSnap = await getDoc(doc(db, "shepherds", user.uid));
                     if (shepSnap.exists()) {
                         const fullName = shepSnap.data().full_name;
                         document.getElementById('welcome-name').innerText = fullName.split(' ')[0];
                         document.getElementById('nav-name').innerText = fullName;
                     }
-
-                    // 2. Count Members Assigned to this Shepherd
                     const q = query(collection(db, "members"), where("shepherdId", "==", user.uid));
                     const countSnap = await getCountFromServer(q);
                     document.getElementById('flock-count').innerText = countSnap.data().count;
-
                 } catch (err) {
                     console.error("Error loading dashboard:", err);
                 }
