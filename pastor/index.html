@@ -1,18 +1,45 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pastor Dashboard</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pastor Dashboard | ShepherdNet</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
-        :root { --primary: #4facfe; --glass: rgba(255, 255, 255, 0.05); --border: rgba(255, 255, 255, 0.1); }
-        * { box-sizing: border-box; }
-        body { background: #0f172a; color: white; font-family: 'Poppins', sans-serif; display: flex; min-height: 100vh; margin: 0; }
+        :root { 
+            /* Dark Mode (Default) */
+            --primary: #4facfe; 
+            --bg: #0f172a;
+            --glass: rgba(255, 255, 255, 0.05); 
+            --border: rgba(255, 255, 255, 0.1); 
+            --text: #ffffff;
+            --text-dim: rgba(255, 255, 255, 0.5);
+        }
 
-        /* Sidebar */
-        nav { width: 260px; background: var(--glass); backdrop-filter: blur(10px); border-right: 1px solid var(--border); padding: 30px; display: flex; flex-direction: column; }
-        
-        /* Profile Header in Sidebar */
+        [data-theme="light"] {
+            /* Light Mode */
+            --bg: #f1f5f9;
+            --glass: #ffffff;
+            --border: #e2e8f0;
+            --text: #0f172a;
+            --text-dim: #64748b;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background: var(--bg); color: var(--text); font-family: 'Poppins', sans-serif; display: flex; min-height: 100vh; transition: 0.3s; }
+
+        /* Sidebar Styles */
+        nav { 
+            width: 280px; 
+            background: var(--glass); 
+            backdrop-filter: blur(15px); 
+            border-right: 1px solid var(--border); 
+            padding: 40px 20px; 
+            display: flex; 
+            flex-direction: column; 
+            transition: 0.3s;
+        }
+
         .profile-link { 
             text-decoration: none; 
             padding: 15px; 
@@ -21,40 +48,60 @@
             margin-bottom: 40px; 
             border: 1px solid var(--border);
             transition: 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 12px;
         }
         .profile-link:hover { background: rgba(79, 172, 254, 0.2); transform: translateY(-2px); }
-        .profile-link h2 { font-size: 0.7rem; color: var(--primary); margin: 0; letter-spacing: 2px; text-transform: uppercase; }
-        .profile-link p { font-size: 1rem; color: white; margin: 5px 0 0 0; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .profile-link h2 { font-size: 0.6rem; color: var(--primary); margin: 0; letter-spacing: 1px; text-transform: uppercase; }
+        .profile-link p { font-size: 0.85rem; color: var(--text); margin: 2px 0 0 0; font-weight: 600; }
 
-        nav a { display: block; color: white; text-decoration: none; padding: 15px 0; opacity: 0.7; transition: 0.3s; font-size: 0.9rem; }
-        nav a:hover { opacity: 1; color: var(--primary); }
-        .active { opacity: 1; color: var(--primary); font-weight: bold; }
+        nav a { display: block; color: var(--text); text-decoration: none; padding: 12px 15px; border-radius: 12px; opacity: 0.7; transition: 0.3s; margin-bottom: 5px; font-size: 0.9rem; }
+        nav a:hover, nav a.active { opacity: 1; color: var(--primary); background: var(--glass); }
+
+        /* Theme Toggle Switch */
+        .theme-switch {
+            margin-top: 20px; padding: 12px 15px; border-radius: 12px;
+            background: var(--glass); border: 1px solid var(--border);
+            display: flex; align-items: center; justify-content: space-between;
+            font-size: 0.8rem; cursor: pointer;
+        }
 
         /* Main Content */
-        main { flex: 1; padding: 50px; }
-        #welcome-text { font-size: 2.5rem; font-weight: 300; margin-bottom: 10px; }
+        main { flex: 1; padding: 60px; overflow-y: auto; }
+        #welcome-text { font-size: 2.5rem; font-weight: 300; margin-bottom: 5px; }
         #welcome-name { color: var(--primary); font-weight: 600; }
-        .subtitle { opacity: 0.5; margin-bottom: 40px; }
+        .subtitle { opacity: 0.5; margin-bottom: 40px; color: var(--text-dim); }
 
-        .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; }
-        .card { background: var(--glass); padding: 30px; border-radius: 24px; border: 1px solid var(--border); backdrop-filter: blur(5px); transition: 0.3s; }
-        .card:hover { border-color: var(--primary); background: rgba(255,255,255,0.08); }
-        .card h3 { font-size: 0.8rem; opacity: 0.6; text-transform: uppercase; letter-spacing: 1px; margin: 0; }
-        .card p { font-size: 2.5rem; font-weight: bold; margin: 10px 0 0 0; color: white; }
+        .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; }
+        .card { background: var(--glass); padding: 30px; border-radius: 24px; border: 1px solid var(--border); backdrop-filter: blur(10px); transition: 0.3s; }
+        .card:hover { border-color: var(--primary); }
+        .card h3 { font-size: 0.8rem; opacity: 0.5; text-transform: uppercase; letter-spacing: 1px; color: var(--text-dim); }
+        .card p { font-size: 2.5rem; font-weight: bold; margin-top: 10px; color: var(--text); }
+        
+        #logoutBtn { color: #ff6b6b; margin-top: auto; padding: 12px 15px; text-decoration: none; font-size: 0.9rem; }
     </style>
 </head>
 <body>
     <nav>
         <a href="../list/settings.html" class="profile-link">
-            <h2>Pastor Profile</h2>
-            <p id="nav-name">Loading...</p>
+            <div class="profile-info">
+                <h2>Pastor Profile</h2>
+                <p id="nav-name">Loading...</p>
+            </div>
         </a>
 
         <a href="#" class="active">🏠 Chapel Dashboard</a>
         <a href="../list/index.html">👥 My Members</a>
         <a href="../dashboard/add-member.html">➕ Add New Member</a>
+
+        <div class="theme-switch" id="themeToggle">
+            <span>Theme Mode</span>
+            <span id="themeIcon">🌙</span>
+        </div>
+
         <div style="flex-grow: 1;"></div>
-        <a href="#" id="logoutBtn" style="color: #ff6b6b; opacity: 1;">🚪 Sign Out</a>
+        <a href="#" id="logoutBtn">🚪 Sign Out</a>
     </nav>
 
     <main>
@@ -78,30 +125,48 @@
         import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
         import { initializeFirestore, doc, getDoc, collection, query, where, getCountFromServer } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
 
-        const firebaseConfig = { apiKey: "AIzaSyCBv60eRCO0e4dFBMKGKnIATouxTuk1Bcc", authDomain: "fob-database-139d1.firebaseapp.com", projectId: "fob-database-139d1", storageBucket: "fob-database-139d1.firebasestorage.app", messagingSenderId: "375165731354", appId: "1:375165731354:web:b5fa57dcb2d71ee0d8c7a3" };
+        const firebaseConfig = { 
+            apiKey: "AIzaSyCBv60eRCO0e4dFBMKGKnIATouxTuk1Bcc", 
+            authDomain: "fob-database-139d1.firebaseapp.com", 
+            projectId: "fob-database-139d1", 
+            storageBucket: "fob-database-139d1.firebasestorage.app", 
+            messagingSenderId: "375165731354", 
+            appId: "1:375165731354:web:b5fa57dcb2d71ee0d8c7a3" 
+        };
+
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
-        
-        // Ensure we are using your specific database name
         const db = initializeFirestore(app, { experimentalForceLongPolling: true }, "fobrealdbase");
+
+        // --- THEME LOGIC ---
+        const themeToggle = document.getElementById('themeToggle');
+        const themeIcon = document.getElementById('themeIcon');
+        
+        const savedTheme = localStorage.getItem('theme') || 'dark';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        themeIcon.innerText = savedTheme === 'dark' ? '🌙' : '☀️';
+
+        themeToggle.addEventListener('click', () => {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            themeIcon.innerText = newTheme === 'dark' ? '🌙' : '☀️';
+        });
 
         onAuthStateChanged(auth, async (user) => {
             if (user) {
                 try {
-                    // 1. Fetch Pastor's Name for Welcome Logic
+                    // 1. Fetch Pastor's Name
                     const pastorSnap = await getDoc(doc(db, "pastors", user.uid));
                     if (pastorSnap.exists()) {
                         const fullName = pastorSnap.data().full_name;
-                        const firstName = fullName.split(' ')[0]; // Gets just "Emma" from "Emma Smith"
-                        
-                        document.getElementById('welcome-name').innerText = firstName;
+                        document.getElementById('welcome-name').innerText = fullName.split(' ')[0];
                         document.getElementById('nav-name').innerText = fullName;
                     }
 
-                    // 2. Counts - Matching our hierarchy fields
-                    // Shepherds who report to this pastor
+                    // 2. Counts
                     const sQuery = query(collection(db, "shepherds"), where("assigned_pastor_id", "==", user.uid));
-                    // Members who belong to this pastor's branch
                     const mQuery = query(collection(db, "members"), where("pastorId", "==", user.uid));
                     
                     const [sCount, mCount] = await Promise.all([
