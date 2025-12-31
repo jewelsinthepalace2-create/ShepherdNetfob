@@ -2,35 +2,70 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Add New Member</title>
+  <title>Add New Member | ShepherdNet</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
   <style>
-    body { background: #0f172a; color: white; font-family: 'Poppins', sans-serif; display: flex; justify-content: center; padding: 40px; }
-    .card { background: rgba(255,255,255,0.1); padding: 30px; border-radius: 15px; width: 100%; max-width: 500px; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.2); }
-    input, select, textarea { width: 100%; padding: 12px; margin: 10px 0; background: rgba(255,255,255,0.05); border: 1px solid #444; color: white; border-radius: 8px; }
-    button { width: 100%; padding: 15px; background: #4facfe; border: none; border-radius: 8px; color: white; font-weight: bold; margin-top: 10px; cursor: pointer; }
-    button:disabled { background: #555; cursor: not-allowed; }
+    :root { --primary: #4facfe; --glass: rgba(255, 255, 255, 0.05); }
+    body { background: #0f172a; color: white; font-family: 'Poppins', sans-serif; display: flex; justify-content: center; padding: 20px; min-height: 100vh; }
+    .card { background: var(--glass); padding: 30px; border-radius: 20px; width: 100%; max-width: 500px; backdrop-filter: blur(15px); border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+    h2 { color: var(--primary); font-weight: 300; margin-bottom: 20px; text-align: center; }
+    .section-label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; color: #64748b; margin: 20px 0 10px 0; border-bottom: 1px solid #1e293b; padding-bottom: 5px; }
+    
+    input, select, textarea { width: 100%; padding: 12px; margin: 8px 0; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white; border-radius: 10px; outline: none; transition: 0.3s; }
+    input:focus { border-color: var(--primary); background: rgba(255,255,255,0.1); }
+    
+    .row { display: flex; gap: 10px; }
+    button { width: 100%; padding: 16px; background: var(--primary); border: none; border-radius: 12px; color: #0f172a; font-weight: 600; cursor: pointer; margin-top: 25px; transition: 0.3s; }
+    button:disabled { background: #334155; color: #64748b; cursor: not-allowed; }
+    #msg { text-align: center; margin-top: 15px; font-size: 0.9rem; }
   </style>
 </head>
 <body>
 
 <div class="card">
   <h2>Add New Member</h2>
-  <p id="roleDisplay" style="color: #4facfe; font-size: 0.9rem; margin-bottom: 20px;">Detecting permissions...</p>
-  
-  <input type="text" id="mName" placeholder="Full Name" required>
-  <input type="tel" id="mPhone" placeholder="Phone Number">
-  <input type="text" id="mLocation" placeholder="Location">
-  <select id="mStatus">
-    <option value="New Convert">New Convert</option>
-    <option value="Member">Regular Member</option>
-    <option value="Worker">Worker</option>
-  </select>
-  <textarea id="mNotes" placeholder="Initial Notes..." rows="3"></textarea>
+  <p id="roleDisplay" style="text-align:center; font-size:0.8rem; color:#4facfe;"></p>
 
-  <button id="saveBtn" disabled>Wait...</button>
-  <p id="msg" style="text-align:center; margin-top:15px;"></p>
+  <div class="section-label">Personal Information</div>
+  <input type="text" id="mName" placeholder="Full Name" required>
+  <div class="row">
+    <select id="mGender">
+      <option value="">Select Gender</option>
+      <option value="Male">Male</option>
+      <option value="Female">Female</option>
+    </select>
+    <input type="text" id="mBirthday" placeholder="Birthday (e.g. 12th June)">
+  </div>
+  <input type="tel" id="mPhone" placeholder="Phone Number">
+
+  <div class="section-label">Church & Residence</div>
+  <input type="text" id="mHostel" placeholder="Hostel / Residential Level">
+  <div class="row">
+    <select id="mDept">
+      <option value="None">Select Department</option>
+      <option value="Choir">Choir</option>
+      <option value="Media">Media</option>
+      <option value="Ushering">Ushering</option>
+      <option value="Protocol">Protocol</option>
+      <option value="Children">Children Ministry</option>
+    </select>
+    <select id="mStatus">
+      <option value="New Convert">New Convert</option>
+      <option value="Regular Member">Regular Member</option>
+      <option value="Worker">Worker</option>
+    </select>
+  </div>
+  <input type="date" id="mDateJoined" title="Date Joined">
+
+  <div class="section-label">Emergency Contact</div>
+  <input type="text" id="mEmergencyName" placeholder="Next of Kin / Friend Name">
+  <input type="tel" id="mEmergencyPhone" placeholder="Emergency Phone">
+
+  <textarea id="mNotes" placeholder="Spiritual Notes or Remarks..." rows="3"></textarea>
+
+  <button id="saveBtn" disabled>Identifying User...</button>
+  <p id="msg"></p>
 </div>
 
 <script type="module">
@@ -51,77 +86,66 @@
   const auth = getAuth(app);
   const db = initializeFirestore(app, { experimentalForceLongPolling: true }, "fobrealdbase");
 
-  let myUid = null;
-  let myRole = null;
-  let myPastorId = null; // The ID of the "Boss" to tag
+  let pId = null, sId = null, role = null;
 
-  // 1. CHECK WHO IS LOGGED IN
-  onAuthStateChanged(auth, async (user) => {
-    if (user) {
-      myUid = user.uid;
-      const btn = document.getElementById('saveBtn');
+  onAuthStateChanged(auth, async (u) => {
+    if (u) {
       const roleDisplay = document.getElementById('roleDisplay');
+      const btn = document.getElementById('saveBtn');
       
-      // Check if I am a Pastor
-      let docSnap = await getDoc(doc(db, "pastors", myUid));
-      if (docSnap.exists()) {
-        myRole = "pastor";
-        myPastorId = myUid; // I am the boss
+      // Check if Pastor
+      let s = await getDoc(doc(db, "pastors", u.uid));
+      if (s.exists()) {
+        role = "pastor"; pId = u.uid; sId = "direct_entry";
       } else {
-        // Check if I am a Shepherd
-        docSnap = await getDoc(doc(db, "shepherds", myUid));
-        if (docSnap.exists()) {
-          myRole = "shepherd";
-          // CRITICAL: Get my boss's ID from my profile
-          myPastorId = docSnap.data().assigned_pastor_id; 
+        // Check if Shepherd
+        s = await getDoc(doc(db, "shepherds", u.uid));
+        if (s.exists()) {
+          role = "shepherd"; pId = s.data().assigned_pastor_id; sId = u.uid;
         }
       }
 
-      if (myRole) {
-        roleDisplay.textContent = `Logged in as: ${myRole.toUpperCase()} (Linked to Pastor ID: ${myPastorId ? "✅" : "❌"})`;
-        btn.textContent = "Save Member Record";
-        btn.disabled = false;
+      if (role) {
+        roleDisplay.textContent = `Logged in as ${role.toUpperCase()}`;
+        btn.disabled = false; btn.textContent = "Save Member Record";
       } else {
-        roleDisplay.textContent = "Error: Account role not found.";
+        roleDisplay.textContent = "Error: Access Denied";
       }
-    } else {
-      window.location.href = "../index.html";
-    }
+    } else { window.location.href = "../index.html"; }
   });
 
-  // 2. SAVE TO DATABASE
   document.getElementById('saveBtn').addEventListener('click', async () => {
     const btn = document.getElementById('saveBtn');
-    btn.disabled = true;
-    btn.textContent = "Saving...";
+    btn.disabled = true; btn.textContent = "Saving to Cloud...";
     
     try {
-      if (!myPastorId) throw new Error("Hierarchy Error: No Pastor ID linked to your account.");
-
       await addDoc(collection(db, "members"), {
         full_name: document.getElementById('mName').value,
+        gender: document.getElementById('mGender').value,
+        birthday: document.getElementById('mBirthday').value,
         phone: document.getElementById('mPhone').value,
-        location: document.getElementById('mLocation').value,
+        hostel_level: document.getElementById('mHostel').value,
+        department: document.getElementById('mDept').value,
         status: document.getElementById('mStatus').value,
+        date_joined: document.getElementById('mDateJoined').value,
+        emergency_contact_name: document.getElementById('mEmergencyName').value,
+        emergency_contact_phone: document.getElementById('mEmergencyPhone').value,
         notes: document.getElementById('mNotes').value,
-        joinedAt: new Date(),
         
-        // AUTOMATIC TAGGING
-        pastorId: myPastorId, 
-        shepherdId: (myRole === 'shepherd') ? myUid : "direct_pastor_entry"
+        // AUTO ASSIGNMENT
+        pastorId: pId,
+        shepherdId: sId,
+        addedBy: auth.currentUser.uid,
+        serverTimestamp: new Date()
       });
 
       document.getElementById('msg').style.color = "#4facfe";
-      document.getElementById('msg').textContent = "Success! Member Added.";
-      document.getElementById('mName').value = ""; // Clear form
-      btn.textContent = "Save Another";
-      btn.disabled = false;
-
+      document.getElementById('msg').textContent = "Success! Member file created.";
+      document.querySelectorAll('input, select, textarea').forEach(el => el.value = "");
     } catch (e) {
-      console.error(e);
       document.getElementById('msg').textContent = "Error: " + e.message;
-      btn.disabled = false;
     }
+    btn.disabled = false; btn.textContent = "Save Member Record";
   });
 </script>
 </body>
