@@ -6,71 +6,110 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
   <style>
-    :root { --primary: #4facfe; --glass: rgba(255, 255, 255, 0.05); --border: rgba(255, 255, 255, 0.1); }
-    body { background: #0f172a; color: white; font-family: 'Poppins', sans-serif; display: flex; justify-content: center; padding: 40px 20px; }
+    :root { 
+        --primary: #4facfe; 
+        --bg: #0f172a;
+        --glass: rgba(255, 255, 255, 0.05); 
+        --border: rgba(255, 255, 255, 0.1); 
+        --text-dim: #888;
+    }
     
-    .signup-container { width: 100%; max-width: 600px; background: var(--glass); padding: 40px; border-radius: 24px; border: 1px solid var(--border); backdrop-filter: blur(10px); }
-    h2 { color: var(--primary); margin-bottom: 30px; text-align: center; font-weight: 600; }
+    body { background: var(--bg); color: white; font-family: 'Poppins', sans-serif; display: flex; justify-content: center; padding: 40px 20px; margin: 0; }
+    
+    .signup-container { width: 100%; max-width: 650px; background: var(--glass); padding: 40px; border-radius: 24px; border: 1px solid var(--border); backdrop-filter: blur(10px); }
+    h2 { color: var(--primary); margin-bottom: 30px; text-align: center; font-weight: 600; letter-spacing: 1px; }
 
     .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
     .full-width { grid-column: span 2; }
 
-    .form-group { margin-bottom: 15px; }
-    label { display: block; font-size: 0.75rem; color: #888; margin-bottom: 5px; text-transform: uppercase; }
-    input, select { width: 100%; padding: 12px; background: rgba(0,0,0,0.2); border: 1px solid var(--border); border-radius: 10px; color: white; font-family: inherit; box-sizing: border-box; }
-    input:focus { border-color: var(--primary); outline: none; }
+    .form-group { margin-bottom: 5px; }
+    label { display: block; font-size: 0.7rem; color: var(--text-dim); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600; }
     
-    .btn-register { width: 100%; padding: 15px; background: var(--primary); border: none; border-radius: 12px; color: #0f172a; font-weight: 600; cursor: pointer; margin-top: 20px; transition: 0.3s; }
+    input, select { 
+        width: 100%; padding: 12px; background: rgba(0,0,0,0.3); 
+        border: 1px solid var(--border); border-radius: 10px; 
+        color: white; font-family: inherit; box-sizing: border-box; 
+        transition: 0.3s;
+    }
+    input:focus, select:focus { border-color: var(--primary); outline: none; background: rgba(0,0,0,0.4); }
+    
+    input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(1); opacity: 0.6; }
+
+    .btn-register { 
+        width: 100%; padding: 16px; background: var(--primary); 
+        border: none; border-radius: 12px; color: #0f172a; 
+        font-weight: 600; cursor: pointer; margin-top: 30px; 
+        transition: 0.3s; font-size: 1rem;
+    }
     .btn-register:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(79, 172, 254, 0.3); }
-    .error-msg { color: #ff6b6b; font-size: 0.8rem; margin-top: 5px; display: none; }
+    .btn-register:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .error-msg { color: #ff6b6b; font-size: 0.75rem; margin-top: 5px; display: none; }
+    
+    .back-link { color: var(--text-dim); text-decoration: none; font-size: 0.85rem; display: flex; align-items: center; gap: 5px; margin-bottom: 20px; transition: 0.3s; }
+    .back-link:hover { color: var(--primary); }
   </style>
 </head>
 <body>
 
 <div class="signup-container">
-  <a href="admin/index.html" style="color:#666; text-decoration:none; font-size:0.9rem;">← Return to Admin Panel</a>
+  <a href="admin/index.html" class="back-link">← Return to Admin Panel</a>
   <h2>Register New Staff</h2>
 
   <form id="signupForm">
     <div class="form-grid">
-      <div class="form-group full-width">
+      <div class="form-group">
         <label>System Role</label>
         <select id="role" required>
           <option value="shepherds">Shepherd</option>
           <option value="pastors">Pastor</option>
         </select>
       </div>
-
       <div class="form-group">
         <label>Full Name</label>
         <input type="text" id="fullName" placeholder="e.g. Kofi Mensah" required>
       </div>
+
       <div class="form-group">
-        <label>Contact Number (Ghana)</label>
-        <input type="tel" id="contact" placeholder="024XXXXXXX" required>
-        <div id="contactError" class="error-msg">Invalid Ghana number (0XX or +233)</div>
+        <label>Gender</label>
+        <select id="gender" required>
+            <option value="" disabled selected>Select Gender</option>
+            <option value="Male">Male</option>
+            <option value="Female">Female</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Birthday</label>
+        <input type="date" id="dob" required>
       </div>
 
+      <div class="form-group">
+        <label>Contact Number</label>
+        <input type="tel" id="contact" placeholder="024XXXXXXX" required>
+        <div id="contactError" class="error-msg">Use 0XX or +233 format</div>
+      </div>
       <div class="form-group">
         <label>Email Address</label>
         <input type="email" id="email" required>
       </div>
-      <div class="form-group">
-        <label>Initial Password</label>
-        <input type="password" id="password" required minlength="6">
+
+      <div class="form-group full-width">
+        <label>Current Job / Occupation</label>
+        <input type="text" id="job" placeholder="e.g. Teacher, Software Developer">
       </div>
 
       <div class="form-group">
-        <label>Level (e.g. 100, 400, Alumnus)</label>
-        <input type="text" id="level" placeholder="Level">
+        <label>Course of Study</label>
+        <input type="text" id="course" placeholder="e.g. BSc Admin">
       </div>
       <div class="form-group">
-        <label>Course of Study</label>
-        <input type="text" id="course" placeholder="e.g. BSc Computer Science">
+        <label>Level (e.g. 400, Alumnus)</label>
+        <input type="text" id="level" placeholder="Level">
       </div>
+
       <div class="form-group full-width">
-        <label>Current Job / Occupation</label>
-        <input type="text" id="job" placeholder="e.g. Software Developer">
+        <label>Initial Password</label>
+        <input type="password" id="password" required minlength="6">
       </div>
     </div>
 
@@ -108,46 +147,40 @@
     if (!ghanaPhoneRegex.test(contact)) {
       contactError.style.display = 'block';
       return;
-    } else {
-      contactError.style.display = 'none';
     }
 
     btn.disabled = true;
-    btn.innerText = "Processing in Ghana Time...";
+    btn.innerText = "Creating Account...";
 
     const email = document.getElementById('email').value;
     const password = document.getElementById('password').value;
-    const collectionName = document.getElementById('role').value; // 'pastors' or 'shepherds'
-    
-    // Convert plural collection name to singular role value
+    const collectionName = document.getElementById('role').value; 
     const roleValue = collectionName.slice(0, -1); 
 
-    // Ghana Local Time String for display purposes
     const ghanaTimeStr = new Date().toLocaleString("en-GB", { timeZone: "Africa/Accra" });
 
     try {
-      // 1. Create the new user
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const newUser = userCredential.user;
 
-      // 2. Save profile data to Firestore
       await setDoc(doc(db, collectionName, newUser.uid), {
         full_name: document.getElementById('fullName').value,
+        gender: document.getElementById('gender').value,
+        dob: document.getElementById('dob').value,
         contact: contact,
         email: email,
-        level: document.getElementById('level').value,
-        course: document.getElementById('course').value,
         job: document.getElementById('job').value,
-        role: roleValue, // 'pastor' or 'shepherd'
-        created_at: serverTimestamp(), // Best practice: Use Firestore's server clock
-        registration_date_local: ghanaTimeStr // Human readable Ghana time
+        course: document.getElementById('course').value,
+        level: document.getElementById('level').value,
+        role: roleValue,
+        created_at: serverTimestamp(),
+        registration_date_local: ghanaTimeStr
       });
 
-      alert(`Success! ${roleValue.toUpperCase()} created.\nLocal Registration: ${ghanaTimeStr}\n\nYou will be logged out to protect Admin session.`);
+      alert(`Account successfully created for ${document.getElementById('fullName').value}.\nAdmin session will now close.`);
 
-      // 3. Clear session and redirect
       await signOut(auth);
-      window.location.href = "admin/index.html"; 
+      window.location.href = "../index.html"; 
 
     } catch (error) {
       alert("Error: " + error.message);
