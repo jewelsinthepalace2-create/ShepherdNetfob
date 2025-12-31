@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Insights | ShepherdNet</title>
+  <link rel="icon" type="image/png" href="https://i.ibb.co/60bRQP5Z/Jewels-background-removed.png">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root { 
+        --primary: #4facfe; --bg: #0f172a; --glass: rgba(255, 255, 255, 0.05); 
+        --border: rgba(255, 255, 255, 0.1); --text: #ffffff; --text-dim: rgba(255, 255, 255, 0.5);
+        --sidebar-width: 280px; --sidebar-collapsed: 80px;
+    }
+    [data-theme="light"] {
+        --bg: #f1f5f9; --glass: #ffffff; --border: #e2e8f0; --text: #0f172a; --text-dim: #64748b;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Poppins', sans-serif; display: flex; min-height: 100vh; transition: 0.3s; overflow-x: hidden; }
+
+    /* --- SIDEBAR --- */
+    nav { 
+        width: var(--sidebar-width); background: var(--glass); backdrop-filter: blur(15px); 
+        border-right: 1px solid var(--border); padding: 40px 20px; display: flex; 
+        flex-direction: column; transition: width 0.4s; position: sticky; top: 0; height: 100vh;
+    }
+    body.sidebar-hidden nav { width: var(--sidebar-collapsed); padding: 40px 15px; }
+    body.sidebar-hidden nav a span:last-child { display: none; }
+
+    nav a { 
+        display: flex; align-items: center; gap: 15px; color: var(--text); 
+        text-decoration: none; padding: 12px 15px; border-radius: 12px; 
+        opacity: 0.7; transition: 0.3s; margin-bottom: 8px; font-size: 0.9rem;
+    }
+    nav a.active { opacity: 1; color: var(--primary); background: var(--glass); }
+
+    /* --- DASHBOARD CONTENT --- */
+    main { flex: 1; padding: 40px; overflow-y: auto; }
+    .header-area { margin-bottom: 30px; }
+    
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 40px; }
+    .stat-card { background: var(--glass); padding: 25px; border-radius: 20px; border: 1px solid var(--border); text-align: center; }
+    .stat-card h3 { font-size: 0.75rem; text-transform: uppercase; color: var(--text-dim); letter-spacing: 1px; }
+    .stat-card p { font-size: 2rem; font-weight: 600; color: var(--primary); margin-top: 5px; }
+
+    .charts-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 30px; }
+    .chart-box { background: var(--glass); padding: 25px; border-radius: 24px; border: 1px solid var(--border); min-height: 350px; }
+    .chart-box h4 { margin-bottom: 20px; font-size: 0.9rem; font-weight: 400; color: var(--text-dim); }
+
+    canvas { width: 100% !important; max-height: 300px; }
+
+    @media (max-width: 768px) {
+        main { padding: 20px; }
+        .charts-container { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body class="sidebar-hidden">
+
+  <nav id="sidebar">
+    <div style="font-weight: 800; color: var(--primary); margin-bottom: 40px;">S-NET</div>
+    <a href="javascript:history.back()"><span>🏠</span> <span>Dashboard</span></a>
+    <a href="../dashboard/my-flock.html"><span>📋</span> <span>Registry</span></a>
+    <a href="#" class="active"><span>📊</span> <span>Insights</span></a>
+    <a href="../list/settings.html"><span>⚙️</span> <span>Settings</span></a>
+  </nav>
+
+  <main>
+    <div class="header-area">
+        <h1 style="font-size: 1.8rem;">Flock Insights</h1>
+        <p style="color: var(--text-dim);">Real-time growth and engagement analytics.</p>
+    </div>
+
+    <div class="stats-grid">
+        <div class="stat-card"><h3>Total Members</h3><p id="totalCount">0</p></div>
+        <div class="stat-card"><h3>New Converts</h3><p id="convertCount">0</p></div>
+        <div class="stat-card"><h3>Retention Rate</h3><p id="retentionRate">0%</p></div>
+    </div>
+
+    <div class="charts-container">
+        <div class="chart-box">
+            <h4>Membership Composition</h4>
+            <canvas id="statusChart"></canvas>
+        </div>
+        <div class="chart-box">
+            <h4>Growth Trend (Last 6 Months)</h4>
+            <canvas id="growthChart"></canvas>
+        </div>
+    </div>
+  </main>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
+  import { getFirestore, collection, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+  import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
+
+  const firebaseConfig = { 
+    apiKey: "AIzaSyCBv60eRCO0e4dFBMKGKnIATouxTuk1Bcc",
+    authDomain: "fob-database-139d1.firebaseapp.com",
+    projectId: "fob-database-139d1",
+    storageBucket: "fob-database-139d1.firebasestorage.app",
+    appId: "1:375165731354:web:b5fa57dcb2d71ee0d8c7a3"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app, "fobrealdbase");
+  const auth = getAuth(app);
+
+  onAuthStateChanged(auth, user => { if (user) loadAnalytics(); });
+
+  async function loadAnalytics() {
+    const snaps = await getDocs(collection(db, "members"));
+    const data = snaps.docs.map(doc => doc.data());
+
+    // 1. Calculations
+    const total = data.length;
+    const newConverts = data.filter(m => m.status === "New Convert").length;
+    const established = data.filter(m => m.status === "Established Member").length;
+    
+    document.getElementById('totalCount').innerText = total;
+    document.getElementById('convertCount').innerText = newConverts;
+    document.getElementById('retentionRate').innerText = total > 0 ? Math.round((established/total)*100) + "%" : "0%";
+
+    renderStatusChart(newConverts, established, total - (newConverts + established));
+    renderGrowthChart(data);
+  }
+
+  function renderStatusChart(converts, established, others) {
+    new Chart(document.getElementById('statusChart'), {
+      type: 'doughnut',
+      data: {
+        labels: ['New Converts', 'Established', 'Other'],
+        datasets: [{
+          data: [converts, established, others],
+          backgroundColor: ['#4facfe', '#00f2fe', '#1e293b'],
+          borderColor: 'transparent'
+        }]
+      },
+      options: { 
+          plugins: { legend: { position: 'bottom', labels: { color: '#94a3b8', font: { family: 'Poppins' } } } },
+          cutout: '70%'
+      }
+    });
+  }
+
+  function renderGrowthChart(members) {
+    // Process dates for the last 6 months
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const counts = {};
+    
+    // Initialize last 6 months with 0
+    for(let i=5; i>=0; i--) {
+        const d = new Date();
+        d.setMonth(d.getMonth() - i);
+        counts[monthNames[d.getMonth()]] = 0;
+    }
+
+    members.forEach(m => {
+        if(m.timestamp) {
+            const date = new Date(m.timestamp);
+            const month = monthNames[date.getMonth()];
+            if(counts.hasOwnProperty(month)) counts[month]++;
+        }
+    });
+
+    
+
+    new Chart(document.getElementById('growthChart'), {
+      type: 'line',
+      data: {
+        labels: Object.keys(counts),
+        datasets: [{
+          label: 'New Members',
+          data: Object.values(counts),
+          borderColor: '#4facfe',
+          backgroundColor: 'rgba(79, 172, 254, 0.1)',
+          fill: true,
+          tension: 0.4
+        }]
+      },
+      options: {
+        scales: {
+            y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8' } },
+            x: { grid: { display: false }, ticks: { color: '#94a3b8' } }
+        },
+        plugins: { legend: { display: false } }
+      }
+    });
+  }
+</script>
+</body>
+</html>
