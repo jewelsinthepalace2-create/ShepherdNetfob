@@ -7,38 +7,29 @@
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
   <style>
     :root { --primary: #4facfe; --bg: #0f172a; --glass: rgba(255, 255, 255, 0.07); --border: rgba(255, 255, 255, 0.15); }
-    
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { background: var(--bg); color: white; font-family: 'Poppins', sans-serif; min-height: 100vh; padding: 20px; }
-
     .container { max-width: 500px; margin: 0 auto; padding-bottom: 100px; }
     
-    /* Profile Header */
     .profile-header { text-align: center; padding: 30px 20px; background: var(--glass); border-radius: 24px; border: 1px solid var(--border); margin-bottom: 20px; }
     .avatar-circle { width: 80px; height: 80px; background: linear-gradient(45deg, #4facfe, #00f2fe); border-radius: 50%; margin: 0 auto 15px; display: flex; align-items: center; justify-content: center; font-size: 2rem; font-weight: 600; color: #0f172a; }
     h1 { font-size: 1.5rem; margin-bottom: 5px; }
     .badge { background: rgba(79, 172, 254, 0.2); color: var(--primary); padding: 5px 15px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; }
 
-    /* Info Sections */
     .info-card { background: var(--glass); border-radius: 20px; border: 1px solid var(--border); padding: 20px; margin-bottom: 15px; }
     .section-title { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 2px; color: var(--primary); margin-bottom: 15px; display: block; opacity: 0.8; }
-    
-    .data-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+    .data-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.05); align-items: center; }
     .data-row:last-child { border: none; }
     .label { color: #888; font-size: 0.85rem; }
     .value { font-weight: 400; font-size: 0.95rem; text-align: right; }
 
-    /* Inputs (Hidden by default) */
     .edit-mode { display: none; width: 100%; background: #1e293b; border: 1px solid var(--primary); color: white; padding: 10px; border-radius: 8px; font-family: inherit; margin-top: 5px; }
-
-    /* Action Buttons */
     .btn-group { display: flex; gap: 10px; margin-top: 20px; }
     .btn { flex: 1; padding: 15px; border-radius: 12px; border: none; font-weight: 600; cursor: pointer; transition: 0.3s; text-align: center; text-decoration: none; }
     .btn-edit { background: var(--glass); color: white; border: 1px solid var(--border); }
     .btn-call { background: var(--primary); color: #0f172a; }
     .btn-save { display: none; background: #10b981; color: white; width: 100%; margin-top: 10px; }
-    .btn-delete { color: #ff6b6b; font-size: 0.8rem; background: none; border: none; width: 100%; margin-top: 30px; opacity: 0.6; }
-
+    .btn-delete { color: #ff6b6b; font-size: 0.8rem; background: none; border: none; width: 100%; margin-top: 30px; opacity: 0.6; cursor: pointer; }
     .back-nav { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; color: #888; text-decoration: none; font-size: 0.9rem; }
   </style>
 </head>
@@ -88,7 +79,7 @@
   </div>
 
   <div class="info-card">
-    <span class="section-title">Academic & Emergency</span>
+    <span class="section-title">Academic Details</span>
     <div class="data-row">
       <span class="label">Course</span>
       <span class="value" id="pCourse_view">-</span>
@@ -107,67 +98,79 @@
   </div>
 
   <button id="saveBtn" class="btn btn-save">Save Changes</button>
-  <button id="deleteBtn" class="btn btn-delete">Delete Permanentely</button>
+  <button id="deleteBtn" class="btn btn-delete">Delete Permanently</button>
 </div>
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
-// Add getFirestore here
-import { getFirestore, doc, getDoc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+  import { getFirestore, doc, getDoc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
 
-const firebaseConfig = { 
-  apiKey: "AIzaSyCBv60eRCO0e4dFBMKGKnIATouxTuk1Bcc", 
-  authDomain: "fob-database-139d1.firebaseapp.com", 
-  projectId: "fob-database-139d1", 
-  storageBucket: "fob-database-139d1.firebasestorage.app", 
-  messagingSenderId: "375165731354", 
-  appId: "1:375165731354:web:b5fa57dcb2d71ee0d8c7a3" 
-};
+  const firebaseConfig = { 
+    apiKey: "AIzaSyCBv60eRCO0e4dFBMKGKnIATouxTuk1Bcc", 
+    authDomain: "fob-database-139d1.firebaseapp.com", 
+    projectId: "fob-database-139d1", 
+    storageBucket: "fob-database-139d1.firebasestorage.app", 
+    messagingSenderId: "375165731354", 
+    appId: "1:375165731354:web:b5fa57dcb2d71ee0d8c7a3" 
+  };
 
-const app = initializeApp(firebaseConfig);
+  const app = initializeApp(firebaseConfig);
+  // This is the correct way to connect to your named database
+  const db = getFirestore(app, "fobrealdbase");
 
-// Use getFirestore and pass the database name as the second argument
-const db = getFirestore(app, "fobrealdbase");
-
+  // Clean the ID from URL (removes any '#' attached)
   const urlParams = new URLSearchParams(window.location.search);
   const rawId = urlParams.get('id');
-  const docId = rawId ? rawId.split('#')[0] : null; // This removes everything after the #
-  async function loadProfile() {
-    if (!docId) return;
-    try {
-        const docSnap = await getDoc(doc(db, "members", docId));
-        if (docSnap.exists()) {
-          const d = docSnap.data();
-          
-          // Mapping fields to database names (first_name, last_name, dob, etc)
-          const fullName = `${d.first_name || ''} ${d.last_name || ''}`.trim();
-          document.getElementById('pName_view').textContent = fullName || "No Name";
-          document.getElementById('avatar-initial').textContent = d.first_name ? d.first_name[0] : "?";
-          
-          document.getElementById('pStatus_view').textContent = d.status || "-";
-          document.getElementById('pGender_view').textContent = d.gender || "-";
-          document.getElementById('pBirthday_view').textContent = d.dob || "-"; // database is dob
-          document.getElementById('pPhone_view').textContent = d.phone || "-";
-          document.getElementById('pHostel_view').textContent = d.hostel || "-"; // database is hostel
-          document.getElementById('pCourse_view').textContent = d.course || "-";
-          document.getElementById('pLevel_view').textContent = d.level || "-";
-          
-          // Set Edit Inputs
-          document.getElementById('pFirstName_edit').value = d.first_name || "";
-          document.getElementById('pLastName_edit').value = d.last_name || "";
-          document.getElementById('pStatus_edit').value = d.status || "New Convert";
-          document.getElementById('pGender_edit').value = d.gender || "Male";
-          document.getElementById('pBirthday_edit').value = d.dob || "";
-          document.getElementById('pPhone_edit').value = d.phone || "";
-          document.getElementById('pHostel_edit').value = d.hostel || "";
-          document.getElementById('pCourse_edit').value = d.course || "";
-          document.getElementById('pLevel_edit').value = d.level || "";
+  const docId = rawId ? rawId.split('#')[0] : null;
 
-          if(d.phone) document.getElementById('callLink').href = `tel:${d.phone}`;
+  async function loadProfile() {
+    if (!docId) {
+        console.error("No ID found in URL");
+        return;
+    }
+    try {
+        const docRef = doc(db, "members", docId);
+        const docSnap = await getDoc(docRef);
+
+        if (docSnap.exists()) {
+            const d = docSnap.data();
+            console.log("Data Loaded:", d);
+
+            // Set UI elements
+            const fullName = `${(d.first_name || '').trim()} ${(d.last_name || '').trim()}`;
+            document.getElementById('pName_view').textContent = fullName || "Unnamed Member";
+            document.getElementById('avatar-initial').textContent = d.first_name ? d.first_name.trim()[0].toUpperCase() : "?";
+            
+            document.getElementById('pStatus_view').textContent = d.status || "-";
+            document.getElementById('pGender_view').textContent = d.gender || "-";
+            document.getElementById('pBirthday_view').textContent = d.dob || "-";
+            document.getElementById('pPhone_view').textContent = d.phone || "-";
+            document.getElementById('pHostel_view').textContent = d.hostel || "-";
+            document.getElementById('pCourse_view').textContent = d.course || "-";
+            document.getElementById('pLevel_view').textContent = d.level || "-";
+            
+            // Pre-fill edit inputs
+            document.getElementById('pFirstName_edit').value = d.first_name || "";
+            document.getElementById('pLastName_edit').value = d.last_name || "";
+            document.getElementById('pStatus_edit').value = d.status || "New Convert";
+            document.getElementById('pGender_edit').value = d.gender || "Male";
+            document.getElementById('pBirthday_edit').value = d.dob || "";
+            document.getElementById('pPhone_edit').value = d.phone || "";
+            document.getElementById('pHostel_edit').value = d.hostel || "";
+            document.getElementById('pCourse_edit').value = d.course || "";
+            document.getElementById('pLevel_edit').value = d.level || "";
+
+            if(d.phone) document.getElementById('callLink').href = `tel:${d.phone}`;
+        } else {
+            document.getElementById('pName_view').textContent = "Member Not Found";
         }
-    } catch (err) { console.error(err); }
+    } catch (err) { 
+        console.error("Firebase Error:", err);
+        document.getElementById('pName_view').textContent = "Error Loading Data";
+    }
   }
 
+  // Toggle Edit Logic
   document.getElementById('toggleEdit').addEventListener('click', () => {
     const isEditing = document.getElementById('saveBtn').style.display === "block";
     document.querySelectorAll('.value').forEach(el => el.style.display = isEditing ? "block" : "none");
@@ -177,6 +180,7 @@ const db = getFirestore(app, "fobrealdbase");
     document.getElementById('toggleEdit').textContent = isEditing ? "Edit Profile" : "Cancel";
   });
 
+  // Save Logic
   document.getElementById('saveBtn').addEventListener('click', async () => {
     const btn = document.getElementById('saveBtn');
     btn.disabled = true; btn.textContent = "Updating...";
@@ -198,12 +202,11 @@ const db = getFirestore(app, "fobrealdbase");
     } catch (e) { alert("Error: " + e.message); btn.disabled = false; }
   });
 
+  // Delete Logic
   document.getElementById('deleteBtn').addEventListener('click', async () => {
-    if (confirm("⚠️ Permanent Delete?\n\nThis member will be removed forever.")) {
-        if (confirm("FINAL WARNING: Are you sure?")) {
-            await deleteDoc(doc(db, "members", docId));
-            window.location.href = "index.html";
-        }
+    if (confirm("Permanently delete this member?")) {
+        await deleteDoc(doc(db, "members", docId));
+        window.location.href = "index.html";
     }
   });
 
