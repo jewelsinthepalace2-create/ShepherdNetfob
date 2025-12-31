@@ -6,12 +6,33 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
   <style>
-    :root { --primary: #4facfe; --bg: #0f172a; --glass: rgba(255, 255, 255, 0.07); --border: rgba(255, 255, 255, 0.15); }
+    :root { 
+        /* Dark Mode (Default) */
+        --primary: #4facfe; 
+        --bg: #0f172a;
+        --glass: rgba(255, 255, 255, 0.05); 
+        --border: rgba(255, 255, 255, 0.1); 
+        --text: #ffffff;
+        --text-dim: rgba(255, 255, 255, 0.5);
+        --input-bg: rgba(0,0,0,0.2);
+    }
+
+    [data-theme="light"] {
+        /* Light Mode */
+        --bg: #f1f5f9;
+        --glass: #ffffff;
+        --border: #e2e8f0;
+        --text: #0f172a;
+        --text-dim: #64748b;
+        --input-bg: #f8fafc;
+    }
+
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { background: var(--bg); color: white; font-family: 'Poppins', sans-serif; min-height: 100vh; padding: 20px; }
-    .container { max-width: 500px; margin: 0 auto; padding-bottom: 100px; }
+    body { background: var(--bg); color: var(--text); font-family: 'Poppins', sans-serif; min-height: 100vh; padding: 20px; transition: 0.3s; }
     
-    .profile-header { text-align: center; padding: 30px 20px; background: var(--glass); border-radius: 24px; border: 1px solid var(--border); margin-bottom: 20px; position: relative; }
+    .container { max-width: 500px; margin: 0 auto; padding-bottom: 50px; }
+    
+    .profile-header { text-align: center; padding: 30px 20px; background: var(--glass); border-radius: 24px; border: 1px solid var(--border); margin-bottom: 20px; position: relative; backdrop-filter: blur(10px); }
     
     /* Photo styling & Edit Overlay */
     .avatar-container { width: 120px; height: 120px; margin: 0 auto 15px; position: relative; cursor: pointer; }
@@ -24,26 +45,32 @@
         justify-content: center; border: 3px solid var(--bg); color: #0f172a; font-size: 1rem;
     }
 
-    h1 { font-size: 1.5rem; margin-bottom: 5px; }
+    h1 { font-size: 1.5rem; margin-bottom: 5px; color: var(--text); }
     .badge { background: rgba(79, 172, 254, 0.2); color: var(--primary); padding: 5px 15px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; }
 
-    .info-card { background: var(--glass); border-radius: 20px; border: 1px solid var(--border); padding: 20px; margin-bottom: 15px; }
-    .section-title { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 2px; color: var(--primary); margin-bottom: 15px; display: block; opacity: 0.8; }
-    .data-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.05); align-items: center; }
+    .info-card { background: var(--glass); border-radius: 20px; border: 1px solid var(--border); padding: 20px; margin-bottom: 15px; backdrop-filter: blur(5px); }
+    .section-title { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 2px; color: var(--primary); margin-bottom: 15px; display: block; opacity: 0.8; font-weight: 600; }
+    .data-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--border); align-items: center; }
     .data-row:last-child { border: none; }
-    .label { color: #888; font-size: 0.85rem; }
-    .value { font-weight: 400; font-size: 0.95rem; text-align: right; }
+    .label { color: var(--text-dim); font-size: 0.85rem; }
+    .value { font-weight: 400; font-size: 0.95rem; text-align: right; color: var(--text); }
 
-    .edit-mode { display: none; width: 100%; background: #1e293b; border: 1px solid var(--primary); color: white; padding: 10px; border-radius: 8px; font-family: inherit; margin-top: 5px; }
+    .edit-mode { display: none; width: 100%; background: var(--input-bg); border: 1px solid var(--border); color: var(--text); padding: 10px; border-radius: 8px; font-family: inherit; margin-top: 5px; outline: none; }
+    .edit-mode:focus { border-color: var(--primary); }
+    
     .btn-group { display: flex; gap: 10px; margin-top: 20px; }
-    .btn { flex: 1; padding: 15px; border-radius: 12px; border: none; font-weight: 600; cursor: pointer; transition: 0.3s; text-align: center; text-decoration: none; }
-    .btn-edit { background: var(--glass); color: white; border: 1px solid var(--border); }
+    .btn { flex: 1; padding: 15px; border-radius: 12px; border: none; font-weight: 600; cursor: pointer; transition: 0.3s; text-align: center; text-decoration: none; font-size: 0.9rem; }
+    
+    .btn-edit { background: var(--glass); color: var(--text); border: 1px solid var(--border); }
     .btn-call { background: var(--primary); color: #0f172a; }
     .btn-save { display: none; background: #10b981; color: white; width: 100%; margin-top: 10px; }
     .btn-delete { color: #ff6b6b; font-size: 0.8rem; background: none; border: none; width: 100%; margin-top: 30px; opacity: 0.6; cursor: pointer; }
-    .back-nav { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; color: #888; text-decoration: none; font-size: 0.9rem; }
+    .btn-delete:hover { opacity: 1; }
     
-    #uploadProgress { font-size: 0.7rem; color: var(--primary); margin-top: 5px; display: none; }
+    .back-nav { display: flex; align-items: center; gap: 8px; margin-bottom: 20px; color: var(--text-dim); text-decoration: none; font-size: 0.9rem; transition: 0.3s; }
+    .back-nav:hover { color: var(--primary); }
+    
+    #uploadProgress { font-size: 0.7rem; color: var(--primary); margin-top: 10px; display: none; text-align: center; font-weight: 600; }
   </style>
 </head>
 <body>
@@ -137,6 +164,10 @@
   const urlParams = new URLSearchParams(window.location.search);
   const docId = urlParams.get('id')?.split('#')[0];
 
+  // --- THEME ENGINE SYNC ---
+  const savedTheme = localStorage.getItem('theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', savedTheme);
+
   onAuthStateChanged(auth, (user) => {
     if (user) { loadProfile(); } 
     else { document.getElementById('pName_view').textContent = "Unauthorized Access"; }
@@ -173,7 +204,7 @@
                 document.getElementById('pDateJoined_view').textContent = new Date(d.timestamp).toLocaleDateString('en-GB', {year:'numeric', month:'short', day:'numeric'});
             }
 
-            // Inputs
+            // Populate Inputs for Edit Mode
             document.getElementById('pFirstName_edit').value = d.first_name || "";
             document.getElementById('pLastName_edit').value = d.last_name || "";
             document.getElementById('pStatus_edit').value = d.status || "New Convert";
@@ -181,13 +212,15 @@
             document.getElementById('pHostel_edit').value = d.hostel || "";
             document.getElementById('pCourse_edit').value = d.course || "";
             document.getElementById('pLevel_edit').value = d.level || "";
+            document.getElementById('pGender_edit').value = d.gender || "Male";
+            document.getElementById('pBirthday_edit').value = d.dob || "";
 
             if(d.phone) document.getElementById('callLink').href = `tel:${d.phone}`;
         }
     } catch (err) { console.error(err); }
   }
 
-  // PHOTO UPLOAD LOGIC
+  // PHOTO UPLOAD
   document.getElementById('avatarTrigger').addEventListener('click', () => document.getElementById('photoInput').click());
   
   document.getElementById('photoInput').addEventListener('change', async (e) => {
@@ -210,17 +243,23 @@
     }
   });
 
-  // Toggle Edit
+  // Toggle Edit Visibility
   document.getElementById('toggleEdit').addEventListener('click', () => {
     const isEditing = document.getElementById('saveBtn').style.display === "block";
+    
     document.querySelectorAll('.value').forEach(el => el.style.display = isEditing ? "block" : "none");
     document.querySelectorAll('.edit-mode').forEach(el => el.style.display = isEditing ? "none" : "block");
+    
     document.getElementById('saveBtn').style.display = isEditing ? "none" : "block";
-    document.getElementById('callLink').style.display = isEditing ? "flex" : "none";
+    document.getElementById('callLink').style.display = isEditing ? "none" : "flex";
+    document.getElementById('pStatus_view').style.display = isEditing ? "inline-block" : "none";
+    document.getElementById('pName_view').style.display = isEditing ? "block" : "none";
+    
     document.getElementById('toggleEdit').textContent = isEditing ? "Edit Profile" : "Cancel";
+    document.getElementById('toggleEdit').classList.toggle('btn-edit');
   });
 
-  // Save Text Changes
+  // Save Changes
   document.getElementById('saveBtn').addEventListener('click', async () => {
     const btn = document.getElementById('saveBtn');
     btn.disabled = true; btn.textContent = "Updating...";
@@ -237,11 +276,11 @@
         level: document.getElementById('pLevel_edit').value
       });
       location.reload();
-    } catch (e) { alert(e.message); btn.disabled = false; }
+    } catch (e) { alert(e.message); btn.disabled = false; btn.textContent = "Save Changes"; }
   });
 
   document.getElementById('deleteBtn').addEventListener('click', async () => {
-    if (confirm("Delete member permanently?")) {
+    if (confirm("Delete member permanently from the database? This cannot be undone.")) {
         await deleteDoc(doc(db, "members", docId));
         window.location.href = "index.html";
     }
