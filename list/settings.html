@@ -118,11 +118,27 @@
     }
   }
 
-  // Handle File Selection Preview
+ // Handle File Selection Preview with 2MB Limit
   document.getElementById('fileInput').onchange = (e) => {
-    selectedFile = e.target.files[0];
-    if (selectedFile) {
-        document.getElementById('profileDisplay').src = URL.createObjectURL(selectedFile);
+    const file = e.target.files[0];
+    const MAX_SIZE = 2 * 1024 * 1024; // 2MB in bytes
+
+    if (file) {
+        if (file.size > MAX_SIZE) {
+            alert("File is too large! Please select an image smaller than 2MB.");
+            e.target.value = ""; // Clear the selection
+            selectedFile = null;
+            // Optional: Reset preview to default if they had one
+            return;
+        }
+
+        selectedFile = file;
+        // Show preview
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            document.getElementById('profileDisplay').src = event.target.result;
+        };
+        reader.readAsDataURL(file);
     }
   };
 
