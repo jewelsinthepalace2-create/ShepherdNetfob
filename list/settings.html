@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>My Profile Settings | ShepherdNet</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+  <style>
+    :root { --primary: #4facfe; --glass: rgba(255, 255, 255, 0.05); --border: rgba(255, 255, 255, 0.1); }
+    body { background: #0f172a; color: white; font-family: 'Poppins', sans-serif; margin: 0; padding: 20px; display: flex; justify-content: center; min-height: 100vh; }
+    
+    .settings-container { width: 100%; max-width: 500px; background: var(--glass); padding: 30px; border-radius: 24px; border: 1px solid var(--border); backdrop-filter: blur(10px); }
+    
+    .header { text-align: center; margin-bottom: 30px; }
+    .role-badge { display: inline-block; padding: 5px 15px; background: var(--primary); color: #0f172a; border-radius: 20px; font-size: 0.7rem; font-weight: bold; text-transform: uppercase; margin-bottom: 10px; }
+    
+    /* Profile Image Styles */
+    .profile-pic-container { position: relative; width: 100px; height: 100px; margin: 0 auto 20px auto; }
+    #profileDisplay { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; border: 2px solid var(--primary); background: #1e293b; }
+    .upload-label { position: absolute; bottom: 0; right: 0; background: var(--primary); color: #0f172a; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 1.2rem; border: 2px solid #0f172a; }
+    #fileInput { display: none; }
+
+    .form-group { margin-bottom: 20px; }
+    label { display: block; font-size: 0.8rem; color: #888; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px; }
+    input { width: 100%; padding: 12px; background: rgba(0,0,0,0.2); border: 1px solid var(--border); border-radius: 12px; color: white; font-family: inherit; box-sizing: border-box; }
+    input:disabled { opacity: 0.5; cursor: not-allowed; }
+    
+    .btn-save { width: 100%; padding: 15px; background: var(--primary); border: none; border-radius: 12px; color: #0f172a; font-weight: 600; cursor: pointer; transition: 0.3s; margin-top: 10px; }
+    .btn-save:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(79, 172, 254, 0.3); }
+
+    .security-section { margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--border); }
+    .secondary-btn { background: none; border: 1px solid var(--border); color: #888; width: 100%; padding: 12px; border-radius: 12px; cursor: pointer; font-size: 0.85rem; }
+    
+    .back-btn { background: none; border: none; color: #666; cursor: pointer; font-family: inherit; font-size: 0.9rem; margin-bottom: 20px; display: block; width: 100%; text-align: center; }
+    .back-btn:hover { color: var(--primary); }
+  </style>
+</head>
+<body>
+
+<div class="settings-container">
+  <button id="backBtn" class="back-btn">← Return to Dashboard</button>
+  
+  <div class="header">
+    <div class="profile-pic-container">
+        <img id="profileDisplay" src="https://via.placeholder.com/100?text=User" alt="Profile">
+        <label for="fileInput" class="upload-label">+</label>
+        <input type="file" id="fileInput" accept="image/*">
+    </div>
+    <div id="userRole" class="role-badge">Loading...</div>
+    <h2 id="displayTitle">Profile Settings</h2>
+  </div>
+
+  <div class="form-group">
+    <label>Full Name</label>
+    <input type="text" id="fullName" placeholder="Enter your full name">
+  </div>
+
+  <div class="form-group">
+    <label>Email Address</label>
+    <input type="email" id="userEmail" disabled>
+  </div>
+
+  <button id="saveProfile" class="btn-save">Update Profile</button>
+
+  <div class="security-section">
+    <label>Account Security</label>
+    <button id="resetPass" class="secondary-btn">Send Password Reset Email</button>
+  </div>
+</div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
+  import { getAuth, onAuthStateChanged, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
+  import { initializeFirestore, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+  import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-storage.js";
+
+  const firebaseConfig = { 
+    apiKey: "AIzaSyCBv60eRCO0e4dFBMKGKnIATouxTuk1Bcc", 
+    authDomain: "fob-database-139d1.firebaseapp.com", 
+    projectId: "fob-database-139d1", 
+    storageBucket: "fob-database-139d1.firebasestorage.app", 
+    messagingSenderId: "375165731354", 
+    appId: "1:375165731354:web:b5fa57dcb2d71ee0d8c7a3" 
+  };
+  
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = initializeFirestore(app, { experimentalForceLongPolling: true }, "fobrealdbase");
+  const storage = getStorage(app);
+
+  let currentRoleColl = "";
+  let selectedFile = null;
+
+  onAuthStateChanged(auth, async (user) => {
+    if (user) {
+      document.getElementById('userEmail').value = user.email;
+      await loadUserData(user.uid);
+    } else { window.location.href = "../index.html"; }
+  });
+
+  async function loadUserData(uid) {
+    const roles = [
+      { coll: "master_admin", label: "Master Admin" },
+      { coll: "pastors", label: "Pastor" },
+      { coll: "shepherds", label: "Shepherd" }
+    ];
+
+    for (let r of roles) {
+      const snap = await getDoc(doc(db, r.coll, uid));
+      if (snap.exists()) {
+        currentRoleColl = r.coll;
+        const d = snap.data();
+        document.getElementById('userRole').innerText = r.label;
+        document.getElementById('fullName').value = d.full_name || "";
+        if (d.profile_pic) document.getElementById('profileDisplay').src = d.profile_pic;
+        return;
+      }
+    }
+  }
+
+  // Handle File Selection Preview
+  document.getElementById('fileInput').onchange = (e) => {
+    selectedFile = e.target.files[0];
+    if (selectedFile) {
+        document.getElementById('profileDisplay').src = URL.createObjectURL(selectedFile);
+    }
+  };
+
+  // Smart Back Button
+  document.getElementById('backBtn').onclick = async () => {
+    const uid = auth.currentUser.uid;
+    const adminSnap = await getDoc(doc(db, "master_admin", uid));
+    if (adminSnap.exists()) { window.location.href = "../dashboard/admin.html"; return; }
+    const pastorSnap = await getDoc(doc(db, "pastors", uid));
+    if (pastorSnap.exists()) { window.location.href = "../dashboard/pastor.html"; return; }
+    window.location.href = "../dashboard/shepherd.html";
+  };
+
+  // Save All Changes
+  document.getElementById('saveProfile').onclick = async () => {
+    const btn = document.getElementById('saveProfile');
+    btn.disabled = true; btn.innerText = "Processing...";
+    const uid = auth.currentUser.uid;
+    let updateData = { full_name: document.getElementById('fullName').value };
+
+    try {
+      // 1. Upload Image if selected
+      if (selectedFile) {
+        const fileRef = ref(storage, `profiles/${uid}`);
+        await uploadBytes(fileRef, selectedFile);
+        updateData.profile_pic = await getDownloadURL(fileRef);
+      }
+      
+      // 2. Update Firestore
+      await updateDoc(doc(db, currentRoleColl, uid), updateData);
+      alert("Profile updated successfully!");
+    } catch (e) { alert("Error: " + e.message); }
+    finally { btn.disabled = false; btn.innerText = "Update Profile"; }
+  };
+
+  document.getElementById('resetPass').onclick = async () => {
+    if (confirm("Send reset link?")) {
+      await sendPasswordResetEmail(auth, auth.currentUser.email);
+      alert("Email sent!");
+    }
+  };
+</script>
+</body>
+</html>
