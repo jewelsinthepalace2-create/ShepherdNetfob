@@ -9,8 +9,12 @@
     :root { --primary: #4facfe; --accent: #00f2fe; --glass: rgba(255, 255, 255, 0.05); }
     body { background: #0f172a; color: white; font-family: 'Poppins', sans-serif; display: flex; justify-content: center; padding: 20px; min-height: 100vh; }
     
-    .profile-card { width: 100%; max-width: 600px; background: var(--glass); padding: 30px; border-radius: 24px; border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(10px); }
+    .profile-card { width: 100%; max-width: 600px; background: var(--glass); padding: 30px; border-radius: 24px; border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(10px); position: relative; }
     
+    /* Edit Toggle Styling */
+    .edit-btn { position: absolute; top: 30px; right: 30px; background: rgba(255,255,255,0.1); border: 1px solid var(--border); color: var(--primary); padding: 8px 15px; border-radius: 12px; cursor: pointer; font-size: 0.8rem; }
+    .save-btn { display: none; width: 100%; background: #10b981; color: white; border: none; padding: 15px; border-radius: 12px; font-weight: 600; cursor: pointer; margin-top: 20px; }
+
     .header { text-align: center; margin-bottom: 30px; }
     h1 { color: var(--primary); font-weight: 600; margin-bottom: 5px; font-size: 1.8rem; }
     .badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; background: rgba(79, 172, 254, 0.2); color: var(--accent); }
@@ -18,47 +22,62 @@
     .section-title { font-size: 0.7rem; color: var(--primary); text-transform: uppercase; letter-spacing: 2px; margin: 25px 0 10px 0; display: block; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 5px; }
     
     .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-    .info-item { display: flex; flex-direction: column; }
-    .full-width { grid-column: 1 / -1; }
-
     .label { color: #64748b; font-size: 0.75rem; margin-bottom: 2px; }
-    .value { font-size: 1rem; color: #f1f5f9; word-break: break-word; }
-
-    .notes-box { background: rgba(0,0,0,0.2); padding: 15px; border-radius: 12px; font-size: 0.9rem; line-height: 1.6; color: #cbd5e1; border: 1px solid rgba(255,255,255,0.05); }
     
-    .back-btn { text-decoration: none; color: #888; font-size: 0.9rem; transition: 0.3s; display: inline-block; margin-bottom: 20px; }
-    .back-btn:hover { color: var(--primary); }
+    /* View vs Edit Inputs */
+    .value { font-size: 1rem; color: #f1f5f9; padding: 5px 0; border-bottom: 1px solid transparent; }
+    input.edit-mode, select.edit-mode, textarea.edit-mode { 
+        display: none; width: 100%; background: rgba(0,0,0,0.3); border: 1px solid var(--primary); 
+        color: white; padding: 8px; border-radius: 8px; font-family: inherit; font-size: 1rem;
+    }
 
+    .notes-box { background: rgba(0,0,0,0.2); padding: 15px; border-radius: 12px; min-height: 80px; border: 1px solid rgba(255,255,255,0.05); }
+    .back-btn { text-decoration: none; color: #888; font-size: 0.9rem; margin-bottom: 20px; display: inline-block; }
     .call-btn { display: block; width: 100%; background: var(--primary); color: #0f172a; text-align: center; padding: 12px; border-radius: 12px; text-decoration: none; font-weight: 600; margin-top: 25px; }
   </style>
 </head>
 <body>
 
 <div class="profile-card">
-  <a href="index.html" class="back-btn">← Back to List</a>
+  <a href="index.html" class="back-btn">← Back</a>
+  <button id="toggleEdit" class="edit-btn">Edit Member</button>
   
   <div class="header">
-    <h1 id="pName">Loading...</h1>
-    <span class="badge" id="pStatus">Member Status</span>
+    <h1 id="pName_view">...</h1>
+    <input type="text" id="pName_edit" class="edit-mode">
+    <br>
+    <span class="badge" id="pStatus_view">...</span>
+    <select id="pStatus_edit" class="edit-mode">
+        <option value="New Convert">New Convert</option>
+        <option value="Regular Member">Regular Member</option>
+        <option value="Worker">Worker</option>
+    </select>
   </div>
 
   <span class="section-title">Personal Details</span>
   <div class="info-grid">
     <div class="info-item">
       <span class="label">Gender</span>
-      <span class="value" id="pGender">-</span>
+      <span class="value" id="pGender_view">-</span>
+      <select id="pGender_edit" class="edit-mode">
+        <option value="Male">Male</option>
+        <option value="Female">Female</option>
+      </select>
     </div>
     <div class="info-item">
       <span class="label">Birthday</span>
-      <span class="value" id="pBirthday">-</span>
+      <span class="value" id="pBirthday_view">-</span>
+      <input type="text" id="pBirthday_edit" class="edit-mode">
     </div>
     <div class="info-item">
-      <span class="label">Phone Number</span>
-      <span class="value" id="pPhone">-</span>
+      <span class="label">Phone</span>
+      <span class="value" id="pPhone_view">-</span>
+      <input type="tel" id="pPhone_edit" class="edit-mode">
     </div>
     <div class="info-item">
-      <span class="label">Hostel / Residence</span>
-      <span class="value" id="pHostel">-</span>
+      <span class="label">Residence</span>
+      <span class="value" id="pHostel_view">-</span>
+      <input type="text" id="pHostel_edit" class="edit-mode">
     </div>
   </div>
 
@@ -66,93 +85,98 @@
   <div class="info-grid">
     <div class="info-item">
       <span class="label">Department</span>
-      <span class="value" id="pDept">-</span>
+      <span class="value" id="pDept_view">-</span>
+      <input type="text" id="pDept_edit" class="edit-mode">
     </div>
     <div class="info-item">
       <span class="label">Date Joined</span>
-      <span class="value" id="pDateJoined">-</span>
-    </div>
-  </div>
-
-  <span class="section-title">Emergency Contact</span>
-  <div class="info-grid">
-    <div class="info-item">
-      <span class="label">Contact Person</span>
-      <span class="value" id="pEmergencyName">-</span>
-    </div>
-    <div class="info-item">
-      <span class="label">Emergency Phone</span>
-      <span class="value" id="pEmergencyPhone">-</span>
+      <span class="value" id="pDateJoined_view">-</span>
+      <input type="date" id="pDateJoined_edit" class="edit-mode">
     </div>
   </div>
 
   <span class="section-title">Spiritual Notes</span>
-  <div class="notes-box" id="pNotes">No notes available for this member.</div>
+  <div class="notes-box">
+    <span class="value" id="pNotes_view">-</span>
+    <textarea id="pNotes_edit" class="edit-mode" rows="4"></textarea>
+  </div>
 
+  <button id="saveBtn" class="save-btn">Save Changes</button>
   <a href="#" id="callLink" class="call-btn">Call Member Now</a>
-  
-  <p style="text-align:center; font-size:0.6rem; color:#334155; margin-top:30px;">
-    MEMBER SYSTEM ID: <span id="pId">---</span>
-  </p>
 </div>
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
-  import { initializeFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+  import { initializeFirestore, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
 
-  const firebaseConfig = {
-    apiKey: "AIzaSyCBv60eRCO0e4dFBMKGKnIATouxTuk1Bcc",
-    authDomain: "fob-database-139d1.firebaseapp.com",
-    projectId: "fob-database-139d1",
-    storageBucket: "fob-database-139d1.firebasestorage.app",
-    messagingSenderId: "375165731354",
-    appId: "1:375165731354:web:b5fa57dcb2d71ee0d8c7a3"
-  };
-
+  const firebaseConfig = { apiKey: "AIzaSyCBv60eRCO0e4dFBMKGKnIATouxTuk1Bcc", authDomain: "fob-database-139d1.firebaseapp.com", projectId: "fob-database-139d1", storageBucket: "fob-database-139d1.firebasestorage.app", messagingSenderId: "375165731354", appId: "1:375165731354:web:b5fa57dcb2d71ee0d8c7a3" };
   const app = initializeApp(firebaseConfig);
   const db = initializeFirestore(app, { experimentalForceLongPolling: true }, "fobrealdbase");
 
+  const urlParams = new URLSearchParams(window.location.search);
+  const docId = urlParams.get('id');
+
   async function loadProfile() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const docId = urlParams.get('id');
     if (!docId) return;
+    const docSnap = await getDoc(doc(db, "members", docId));
+    if (docSnap.exists()) {
+      const d = docSnap.data();
+      // View Elements
+      document.getElementById('pName_view').textContent = d.full_name || "-";
+      document.getElementById('pStatus_view').textContent = d.status || "-";
+      document.getElementById('pGender_view').textContent = d.gender || "-";
+      document.getElementById('pBirthday_view').textContent = d.birthday || "-";
+      document.getElementById('pPhone_view').textContent = d.phone || "-";
+      document.getElementById('pHostel_view').textContent = d.hostel_level || "-";
+      document.getElementById('pDept_view').textContent = d.department || "-";
+      document.getElementById('pDateJoined_view').textContent = d.date_joined || "-";
+      document.getElementById('pNotes_view').textContent = d.notes || "-";
+      
+      // Edit Inputs
+      document.getElementById('pName_edit').value = d.full_name || "";
+      document.getElementById('pStatus_edit').value = d.status || "Regular Member";
+      document.getElementById('pGender_edit').value = d.gender || "Male";
+      document.getElementById('pBirthday_edit').value = d.birthday || "";
+      document.getElementById('pPhone_edit').value = d.phone || "";
+      document.getElementById('pHostel_edit').value = d.hostel_level || "";
+      document.getElementById('pDept_edit').value = d.department || "";
+      document.getElementById('pDateJoined_edit').value = d.date_joined || "";
+      document.getElementById('pNotes_edit').value = d.notes || "";
 
-    try {
-      const docSnap = await getDoc(doc(db, "members", docId));
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        
-        // Populate UI
-        document.getElementById('pName').textContent = data.full_name || "Unknown";
-        document.getElementById('pStatus').textContent = data.status || "Regular Member";
-        document.getElementById('pGender').textContent = data.gender || "Not Specified";
-        document.getElementById('pBirthday').textContent = data.birthday || "Not Set";
-        document.getElementById('pPhone').textContent = data.phone || "No Phone";
-        document.getElementById('pHostel').textContent = data.hostel_level || "Not Provided";
-        document.getElementById('pDept').textContent = data.department || "None";
-        document.getElementById('pDateJoined').textContent = data.date_joined || "N/A";
-        document.getElementById('pEmergencyName').textContent = data.emergency_contact_name || "-";
-        document.getElementById('pEmergencyPhone').textContent = data.emergency_contact_phone || "-";
-        
-        if (data.notes) {
-          document.getElementById('pNotes').textContent = data.notes;
-        }
-
-        document.getElementById('pId').textContent = docId;
-
-        // Setup Call Button
-        if (data.phone) {
-          document.getElementById('callLink').href = `tel:${data.phone}`;
-        } else {
-          document.getElementById('callLink').style.display = "none";
-        }
-      } else {
-        document.body.innerHTML = "<h1>Member not found</h1>";
-      }
-    } catch (e) {
-      console.error(e);
+      if(d.phone) document.getElementById('callLink').href = `tel:${d.phone}`;
     }
   }
+
+  // Toggle Function
+  document.getElementById('toggleEdit').addEventListener('click', () => {
+    const isEditing = document.getElementById('saveBtn').style.display === "block";
+    document.querySelectorAll('.value').forEach(el => el.style.display = isEditing ? "block" : "none");
+    document.querySelectorAll('.edit-mode').forEach(el => el.style.display = isEditing ? "none" : "block");
+    document.getElementById('saveBtn').style.display = isEditing ? "none" : "block";
+    document.getElementById('toggleEdit').textContent = isEditing ? "Edit Member" : "Cancel";
+  });
+
+  // Save Function
+  document.getElementById('saveBtn').addEventListener('click', async () => {
+    const btn = document.getElementById('saveBtn');
+    btn.disabled = true; btn.textContent = "Updating...";
+    
+    try {
+      await updateDoc(doc(db, "members", docId), {
+        full_name: document.getElementById('pName_edit').value,
+        status: document.getElementById('pStatus_edit').value,
+        gender: document.getElementById('pGender_edit').value,
+        birthday: document.getElementById('pBirthday_edit').value,
+        phone: document.getElementById('pPhone_edit').value,
+        hostel_level: document.getElementById('pHostel_edit').value,
+        department: document.getElementById('pDept_edit').value,
+        date_joined: document.getElementById('pDateJoined_edit').value,
+        notes: document.getElementById('pNotes_edit').value
+      });
+      location.reload(); // Refresh to see changes
+    } catch (e) { alert("Error: " + e.message); btn.disabled = false; btn.textContent = "Save Changes"; }
+  });
+
   loadProfile();
 </script>
 </body>
