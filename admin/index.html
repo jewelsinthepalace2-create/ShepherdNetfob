@@ -89,106 +89,118 @@
     </div>
   </main>
 
-  <script type="module">
+<script type="module">
+    // 1. ALL IMPORTS AT THE TOP
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
     import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
-    import { initializeFirestore, doc, getDoc, collection, getCountFromServer } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
-    
-    const firebaseConfig = { apiKey: "AIzaSyCBv60eRCO0e4dFBMKGKnIATouxTuk1Bcc", authDomain: "fob-database-139d1.firebaseapp.com", projectId: "fob-database-139d1", storageBucket: "fob-database-139d1.firebasestorage.app", messagingSenderId: "375165731354", appId: "1:375165731354:web:b5fa57dcb2d71ee0d8c7a3" };
+    import { 
+        initializeFirestore, doc, getDoc, collection, 
+        getCountFromServer, query, where, getDocs 
+    } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+
+    const firebaseConfig = { 
+        apiKey: "AIzaSyCBv60eRCO0e4dFBMKGKnIATouxTuk1Bcc", 
+        authDomain: "fob-database-139d1.firebaseapp.com", 
+        projectId: "fob-database-139d1", 
+        storageBucket: "fob-database-139d1.firebasestorage.app", 
+        messagingSenderId: "375165731354", 
+        appId: "1:375165731354:web:b5fa57dcb2d71ee0d8c7a3" 
+    };
+
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
+    // Use the specific database ID "fobrealdbase"
     const db = initializeFirestore(app, { experimentalForceLongPolling: true }, "fobrealdbase");
 
     onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        // Fetch Admin Profile Data
-        const adminSnap = await getDoc(doc(db, "master_admin", user.uid));
-        if (adminSnap.exists()) {
-          const data = adminSnap.data();
-          const name = data.full_name || "Admin";
-          
-          // Update Welcome Text
-          document.getElementById('welcome-name').innerText = name.split(' ')[0];
-          
-          // Update Sidebar
-          document.getElementById('nav-name').innerText = name;
-          if (data.profile_pic) {
-            document.getElementById('nav-avatar').src = data.profile_pic;
-          }
+        if (!user) {
+            window.location.href = "../index.html";
+            return;
         }
+
+        // --- STEP 1: LOAD PROFILE (PRIORITY) ---
+        try {
+            const adminSnap = await getDoc(doc(db, "master_admin", user.uid));
+            if (adminSnap.exists()) {
+                const data = adminSnap.data();
+                const fullName = data.full_name || "Admin";
+                
+                // Update UI immediately
+                document.getElementById('welcome-name').innerText = fullName.split(' ')[0];
+                document.getElementById('nav-name').innerText = fullName;
+                
+                if (data.profile_pic) {
+                    document.getElementById('nav-avatar').src = data.profile_pic;
+                }
+            } else {
+                document.getElementById('nav-name').innerText = "Unknown Admin";
+            }
+        } catch (err) {
+            console.error("Profile Load Error:", err);
+            document.getElementById('nav-name').innerText = "Error Loading";
+        }
+
+        // --- STEP 2: LOAD BACKGROUND DATA ---
         getStats();
-      } else { window.location.href = "../index.html"; }
+        checkBirthdays();
     });
 
     async function getStats() {
-      try {
-        const [pCol, sCol, mCol] = await Promise.all([
-          getCountFromServer(collection(db, "pastors")),
-          getCountFromServer(collection(db, "shepherds")),
-          getCountFromServer(collection(db, "members"))
-        ]);
-        
-        document.getElementById('count-pastors').innerText = pCol.data().count;
-        document.getElementById('count-shepherds').innerText = sCol.data().count;
-        document.getElementById('count-members').innerText = mCol.data().count;
-      } catch (e) { console.error("Stats Error:", e); }
+        try {
+            const [pCol, sCol, mCol] = await Promise.all([
+                getCountFromServer(collection(db, "pastors")),
+                getCountFromServer(collection(db, "shepherds")),
+                getCountFromServer(collection(db, "members"))
+            ]);
+            
+            document.getElementById('count-pastors').innerText = pCol.data().count;
+            document.getElementById('count-shepherds').innerText = sCol.data().count;
+            document.getElementById('count-members').innerText = mCol.data().count;
+        } catch (e) { 
+            console.error("Stats Error:", e); 
+        }
     }
 
+    async function checkBirthdays() {
+        const alertContainer = document.getElementById('birthday-alerts');
+        const today = new Date();
+        const gmtMonth = String(today.getUTCMonth() + 1).padStart(2, '0');
+        const gmtDay = String(today.getUTCDate()).padStart(2, '0');
+        const todayGMT = `${gmtMonth}-${gmtDay}`;
+
+        try {
+            const q = query(collection(db, "members"), where("dob_day_month", "==", todayGMT));
+            const querySnapshot = await getDocs(q);
+            
+            if (querySnapshot.empty) {
+                alertContainer.innerHTML = "<p style='opacity:0.5; font-size:0.8rem;'>No birthdays today.</p>";
+                return;
+            }
+
+            let listHTML = "";
+            querySnapshot.forEach((doc) => {
+                const data = doc.data();
+                const birthYear = new Date(data.dob).getFullYear();
+                const age = today.getUTCFullYear() - birthYear;
+                listHTML += `<li><strong>${data.first_name} ${data.last_name}</strong> (Turning ${age})</li>`;
+            });
+
+            alertContainer.innerHTML = `
+                <div style="background: rgba(79, 172, 254, 0.1); border: 1px solid var(--primary); padding: 15px; border-radius: 15px;">
+                    <h4 style="color: var(--primary); margin-bottom: 5px;">🎉 Birthday Alerts</h4>
+                    <ul style="margin-top: 10px; list-style: none; font-size: 0.85rem;">${listHTML}</ul>
+                </div>
+            `;
+        } catch (e) {
+            console.error("Birthday Error:", e);
+        }
+    }
+
+    // Logout Handler
     document.getElementById('logoutBtn').onclick = (e) => {
         e.preventDefault();
         signOut(auth).then(() => window.location.href="../index.html");
     };
-    import { query, where, getDocs, collection } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
-
-async function checkBirthdays() {
-    const alertContainer = document.getElementById('birthday-alerts');
-    
-    // 1. Get Today's Date in GMT (MM-DD format)
-    // Using 'en-GB' ensures the format is consistent with Ghana's usage
-    const today = new Date();
-    const gmtMonth = String(today.getUTCMonth() + 1).padStart(2, '0');
-    const gmtDay = String(today.getUTCDate()).padStart(2, '0');
-    const todayGMT = `${gmtMonth}-${gmtDay}`;
-
-    try {
-        // 2. Query only members matching today's GMT date
-        const q = query(collection(db, "members"), where("dob_day_month", "==", todayGMT));
-        const querySnapshot = await getDocs(q);
-        
-        if (querySnapshot.empty) {
-            alertContainer.innerHTML = "<p style='opacity:0.5; font-size:0.8rem;'>No birthdays today.</p>";
-            return;
-        }
-
-        let birthdayList = [];
-        querySnapshot.forEach((doc) => {
-            const data = doc.data();
-            // Calculate Age at this moment
-            const birthYear = new Date(data.dob).getFullYear();
-            const age = today.getUTCFullYear() - birthYear;
-            
-            birthdayList.push({
-                name: `${data.first_name} ${data.last_name}`,
-                age: age,
-                role: data.status // e.g., 'Established Member'
-            });
-        });
-
-        // 3. Display the "3 people celebrating" message
-        alertContainer.innerHTML = `
-            <div style="background: rgba(79, 172, 254, 0.1); border: 1px solid var(--primary); padding: 15px; border-radius: 15px;">
-                <h4 style="color: var(--primary); margin-bottom: 5px;">🎉 Birthday Celebration!</h4>
-                <p style="font-size: 0.9rem;">${birthdayList.length} member(s) celebrating today:</p>
-                <ul style="margin-top: 10px; list-style: none; font-size: 0.85rem;">
-                    ${birthdayList.map(m => `<li><strong>${m.name}</strong> is turning ${m.age}!</li>`).join('')}
-                </ul>
-            </div>
-        `;
-
-    } catch (e) {
-        console.error("Birthday Query Error: ", e);
-    }
-}
-  </script>
+</script>
 </body>
 </html>
