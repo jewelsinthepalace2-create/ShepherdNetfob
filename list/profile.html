@@ -104,6 +104,8 @@
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
   import { getFirestore, doc, getDoc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+  // 1. IMPORT AUTH
+  import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
 
   const firebaseConfig = { 
     apiKey: "AIzaSyCBv60eRCO0e4dFBMKGKnIATouxTuk1Bcc", 
@@ -115,27 +117,35 @@
   };
 
   const app = initializeApp(firebaseConfig);
-  // This is the correct way to connect to your named database
   const db = getFirestore(app, "fobrealdbase");
+  const auth = getAuth(app); // 2. INITIALIZE AUTH
 
-  // Clean the ID from URL (removes any '#' attached)
   const urlParams = new URLSearchParams(window.location.search);
   const rawId = urlParams.get('id');
   const docId = rawId ? rawId.split('#')[0] : null;
 
-  async function loadProfile() {
-    if (!docId) {
-        console.error("No ID found in URL");
-        return;
+  // 3. AUTH PROTECTOR: This waits for the user to be logged in
+  onAuthStateChanged(auth, (user) => {
+    if (user) {
+      console.log("Authenticated as:", user.email);
+      loadProfile();
+    } else {
+      console.warn("No user logged in. Redirecting...");
+      document.getElementById('pName_view').textContent = "Unauthorized Access";
+      // Uncomment the line below to redirect users who aren't logged in
+      // window.location.href = "login.html"; 
     }
+  });
+
+  async function loadProfile() {
+    if (!docId) return;
     try {
         const docRef = doc(db, "members", docId);
         const docSnap = await getDoc(docRef);
 
         if (docSnap.exists()) {
             const d = docSnap.data();
-            console.log("Data Loaded:", d);
-
+            
             // Set UI elements
             const fullName = `${(d.first_name || '').trim()} ${(d.last_name || '').trim()}`;
             document.getElementById('pName_view').textContent = fullName || "Unnamed Member";
@@ -165,8 +175,9 @@
             document.getElementById('pName_view').textContent = "Member Not Found";
         }
     } catch (err) { 
-        console.error("Firebase Error:", err);
-        document.getElementById('pName_view').textContent = "Error Loading Data";
+        console.error("Detailed Firebase Error:", err);
+        // This usually triggers if rules block the read
+        document.getElementById('pName_view').textContent = "Access Denied"; 
     }
   }
 
@@ -209,8 +220,6 @@
         window.location.href = "index.html";
     }
   });
-
-  loadProfile();
 </script>
 </body>
 </html>
