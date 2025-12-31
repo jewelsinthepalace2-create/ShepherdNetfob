@@ -90,7 +90,7 @@
     // 2. Check if Pastor
     const pastorSnap = await getDoc(doc(db, "pastors", user.uid));
     if (pastorSnap.exists()) {
-      headerTitle.textContent = "Branch Management";
+      headerTitle.textContent = "Chapel Management";
       loadPastorView(user.uid);
       return;
     }
