@@ -24,9 +24,9 @@
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
   import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
-  import { initializeFirestore, doc, getDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+  import { initializeFirestore, doc, getDoc, collection, query, where, getDocs, orderBy } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
 
-  const firebaseConfig = {
+  const firebaseConfig = { 
     apiKey: "AIzaSyCBv60eRCO0e4dFBMKGKnIATouxTuk1Bcc",
     authDomain: "fob-database-139d1.firebaseapp.com",
     projectId: "fob-database-139d1",
@@ -39,101 +39,115 @@
   const auth = getAuth(app);
   const db = initializeFirestore(app, { experimentalForceLongPolling: true }, "fobrealdbase");
 
- async function loadGroupedFlock(user) {
-    const grid = document.getElementById('grid');
-    grid.innerHTML = "Organizing your branch...";
-
-    try {
-        // 1. Get the Pastor's data
-        const pastorSnap = await getDoc(doc(db, "pastors", user.uid));
-        if (!pastorSnap.exists()) {
-            grid.innerHTML = "Access Denied or Not a Pastor.";
-            return;
-        }
-
-        // 2. Fetch all Shepherds assigned to this Pastor
-        const shepherdsQ = query(collection(db, "shepherds"), where("assigned_pastor_id", "==", user.uid));
-        const shepherdSnaps = await getDocs(shepherdsQ);
-        
-        // Store shepherds in a map for easy access
-        let shepherdMap = {}; 
-        shepherdSnaps.forEach(s => {
-            shepherdMap[s.id] = { name: s.data().full_name, members: [] };
-        });
-
-        // 3. Fetch all Members assigned to this Pastor
-        const membersQ = query(collection(db, "members"), where("pastorId", "==", user.uid));
-        const memberSnaps = await getDocs(membersQ);
-
-        let directMembers = [];
-
-        // 4. Sort Members into their Shepherd's "buckets"
-        memberSnaps.forEach(m => {
-            const data = m.data();
-            const mId = m.id;
-            const shepherdId = data.shepherdId;
-
-            if (shepherdId && shepherdMap[shepherdId]) {
-                shepherdMap[shepherdId].members.push({ id: mId, ...data });
-            } else {
-                directMembers.push({ id: mId, ...data });
-            }
-        });
-
-        // 5. RENDER THE HTML
-        grid.innerHTML = ""; // Clear loader
-
-        // --- SECTION: Direct Members ---
-        if (directMembers.length > 0) {
-            renderHeader(grid, "Directly Under You");
-            directMembers.forEach(m => renderMemberCard(grid, m));
-        }
-
-        // --- SECTION: Shepherd Groups ---
-        for (const sId in shepherdMap) {
-            const shepherd = shepherdMap[sId];
-            renderHeader(grid, `Shepherd: ${shepherd.name}`); // THE SHEPHERD'S NAME APPEARS FIRST
-            
-            if (shepherd.members.length === 0) {
-                grid.innerHTML += `<p style="padding-left:20px; color:#666; font-size:0.8rem;">No members yet.</p>`;
-            } else {
-                shepherd.members.forEach(m => renderMemberCard(grid, m));
-            }
-        }
-
-    } catch (e) {
-        console.error(e);
-        grid.innerHTML = "Error loading list.";
+  async function startApp(user) {
+    const headerTitle = document.getElementById('headerTitle');
+    
+    // 1. Check if Master Admin
+    const adminSnap = await getDoc(doc(db, "master_admin", user.uid));
+    if (adminSnap.exists()) {
+      headerTitle.textContent = "Global Member Registry (Admin)";
+      loadAdminView();
+      return;
     }
-}
 
-// Helper: Create a Section Header
-function renderHeader(container, text) {
+    // 2. Check if Pastor
+    const pastorSnap = await getDoc(doc(db, "pastors", user.uid));
+    if (pastorSnap.exists()) {
+      headerTitle.textContent = "Branch Management";
+      loadPastorView(user.uid);
+      return;
+    }
+
+    // 3. Check if Shepherd
+    const shepSnap = await getDoc(doc(db, "shepherds", user.uid));
+    if (shepSnap.exists()) {
+      headerTitle.textContent = "My Assigned Souls";
+      loadShepherdView(user.uid);
+    }
+  }
+
+  // --- ADMIN VIEW: FETCH EVERYTHING ---
+  async function loadAdminView() {
+    const grid = document.getElementById('grid');
+    // Admin pulls all members ordered by name
+    const q = query(collection(db, "members"), orderBy("full_name"));
+    const snaps = await getDocs(q);
+    
+    grid.innerHTML = "";
+    renderHeader(grid, "All Church Members");
+    snaps.forEach(m => renderMemberCard(grid, { id: m.id, ...m.data() }));
+  }
+
+  // --- PASTOR VIEW: GROUPED BY SHEPHERD ---
+  async function loadPastorView(pastorId) {
+    const grid = document.getElementById('grid');
+    const shepQ = query(collection(db, "shepherds"), where("assigned_pastor_id", "==", pastorId));
+    const shepSnaps = await getDocs(shepQ);
+    
+    let shepherdMap = {};
+    shepSnaps.forEach(s => shepherdMap[s.id] = { name: s.data().full_name, members: [] });
+
+    const memQ = query(collection(db, "members"), where("pastorId", "==", pastorId));
+    const memSnaps = await getDocs(memQ);
+    
+    let directMembers = [];
+    memSnaps.forEach(m => {
+      const data = { id: m.id, ...m.data() };
+      if (data.shepherdId && shepherdMap[data.shepherdId]) {
+        shepherdMap[data.shepherdId].members.push(data);
+      } else {
+        directMembers.push(data);
+      }
+    });
+    renderGrouped(directMembers, shepherdMap);
+  }
+
+  // --- SHEPHERD VIEW: ONLY THEIR FLOCK ---
+  async function loadShepherdView(shepherdId) {
+    const grid = document.getElementById('grid');
+    const q = query(collection(db, "members"), where("shepherdId", "==", shepherdId));
+    const snaps = await getDocs(q);
+    grid.innerHTML = "";
+    snaps.forEach(m => renderMemberCard(grid, { id: m.id, ...m.data() }));
+  }
+
+  // UI HELPERS
+  function renderGrouped(direct, shepMap) {
+    const grid = document.getElementById('grid');
+    grid.innerHTML = "";
+    if (direct.length > 0) {
+      renderHeader(grid, "Directly Under Pastor");
+      direct.forEach(m => renderMemberCard(grid, m));
+    }
+    for (const id in shepMap) {
+      renderHeader(grid, `Shepherd: ${shepMap[id].name}`);
+      shepMap[id].members.forEach(m => renderMemberCard(grid, m));
+    }
+  }
+
+  function renderHeader(container, text) {
     const h = document.createElement('h3');
-    h.style = "grid-column: 1/-1; margin-top: 30px; border-left: 4px solid #4facfe; padding-left: 15px; color: #4facfe; font-size: 1rem; background: rgba(79, 172, 254, 0.05); padding-top: 10px; padding-bottom: 10px;";
+    h.style = "grid-column: 1/-1; margin-top: 25px; border-left: 4px solid #4facfe; padding: 10px; color: #4facfe; font-size: 0.9rem; background: rgba(255,255,255,0.03);";
     h.textContent = text;
     container.appendChild(h);
-}
+  }
 
-// Helper: Create a Member Card
-function renderMemberCard(container, member) {
+  function renderMemberCard(container, member) {
     const card = document.createElement('div');
     card.className = 'card';
     card.onclick = () => window.location.href = `profile.html?id=${member.id}`;
     card.innerHTML = `
         <div>
-          <h3>${member.full_name}</h3>
+          <h3 style="font-size:1rem;">${member.full_name}</h3>
           <span class="status">${member.status}</span>
         </div>
-        <div style="font-size:1.5rem">›</div>`;
+        <div style="opacity:0.3">›</div>`;
     container.appendChild(card);
-}
   }
 
   onAuthStateChanged(auth, (user) => {
-    if (user) loadFlock(user);
+    if (user) startApp(user);
     else window.location.href = "../index.html";
   });
 </script>
-</body>
 </html>
