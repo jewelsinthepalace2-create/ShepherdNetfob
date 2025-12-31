@@ -61,7 +61,7 @@
             <p id="nav-name">Loading...</p>
         </div>
     </a>
-    <a href="#" class="active">🌐 Global Overview</a>
+    <a href="#" class="active">🌐 General Overview</a>
     <a href="../list/index.html">📋 All Church Members</a>
     <a href="../dashboard/add-user.html">🔑 Manage Users</a>
     <div style="flex-grow: 1;"></div>
@@ -71,6 +71,8 @@
   <main>
     <h1 id="welcome-text">Welcome, <span id="welcome-name">Admin</span></h1>
     <p class="subtitle">System-wide analytics and management.</p>
+    <div id="birthday-alerts" style="margin-bottom: 30px;">
+    </div>
 
     <div class="stat-grid">
       <div class="card"><h3>Total Pastors</h3><p id="count-pastors">0</p></div>
@@ -136,6 +138,57 @@
         e.preventDefault();
         signOut(auth).then(() => window.location.href="../index.html");
     };
+    import { query, where, getDocs, collection } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+
+async function checkBirthdays() {
+    const alertContainer = document.getElementById('birthday-alerts');
+    
+    // 1. Get Today's Date in GMT (MM-DD format)
+    // Using 'en-GB' ensures the format is consistent with Ghana's usage
+    const today = new Date();
+    const gmtMonth = String(today.getUTCMonth() + 1).padStart(2, '0');
+    const gmtDay = String(today.getUTCDate()).padStart(2, '0');
+    const todayGMT = `${gmtMonth}-${gmtDay}`;
+
+    try {
+        // 2. Query only members matching today's GMT date
+        const q = query(collection(db, "members"), where("dob_day_month", "==", todayGMT));
+        const querySnapshot = await getDocs(q);
+        
+        if (querySnapshot.empty) {
+            alertContainer.innerHTML = "<p style='opacity:0.5; font-size:0.8rem;'>No birthdays today.</p>";
+            return;
+        }
+
+        let birthdayList = [];
+        querySnapshot.forEach((doc) => {
+            const data = doc.data();
+            // Calculate Age at this moment
+            const birthYear = new Date(data.dob).getFullYear();
+            const age = today.getUTCFullYear() - birthYear;
+            
+            birthdayList.push({
+                name: `${data.first_name} ${data.last_name}`,
+                age: age,
+                role: data.status // e.g., 'Established Member'
+            });
+        });
+
+        // 3. Display the "3 people celebrating" message
+        alertContainer.innerHTML = `
+            <div style="background: rgba(79, 172, 254, 0.1); border: 1px solid var(--primary); padding: 15px; border-radius: 15px;">
+                <h4 style="color: var(--primary); margin-bottom: 5px;">🎉 Birthday Celebration!</h4>
+                <p style="font-size: 0.9rem;">${birthdayList.length} member(s) celebrating today:</p>
+                <ul style="margin-top: 10px; list-style: none; font-size: 0.85rem;">
+                    ${birthdayList.map(m => `<li><strong>${m.name}</strong> is turning ${m.age}!</li>`).join('')}
+                </ul>
+            </div>
+        `;
+
+    } catch (e) {
+        console.error("Birthday Query Error: ", e);
+    }
+}
   </script>
 </body>
 </html>
