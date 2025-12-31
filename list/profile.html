@@ -119,8 +119,8 @@
   const db = initializeFirestore(app, { experimentalForceLongPolling: true }, "fobrealdbase");
 
   const urlParams = new URLSearchParams(window.location.search);
-  const docId = urlParams.get('id');
-
+  const rawId = urlParams.get('id');
+  const docId = rawId ? rawId.split('#')[0] : null; // This removes everything after the #
   async function loadProfile() {
     if (!docId) return;
     try {
