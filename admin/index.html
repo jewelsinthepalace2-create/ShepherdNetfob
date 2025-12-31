@@ -1,215 +1,206 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Admin Panel | ShepherdNet</title>
-  <link rel="icon" type="image/png" href="https://i.ibb.co/60bRQP5Z/Jewels-background-removed.png">
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
-  <style>
-    :root { 
-        /* Dark Mode (Default) */
-        --primary: #4facfe; 
-        --bg: #0f172a;
-        --glass: rgba(255, 255, 255, 0.05); 
-        --border: rgba(255, 255, 255, 0.1); 
-        --text: #ffffff;
-        --text-dim: rgba(255, 255, 255, 0.5);
-    }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Panel | ShepherdNet</title>
+  <link rel="icon" type="image/png" href="https://i.ibb.co/60bRQP5Z/Jewels-background-removed.png">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+  <style>
+    :root { 
+        --primary: #4facfe; --bg: #0f172a; --glass: rgba(255, 255, 255, 0.05); 
+        --border: rgba(255, 255, 255, 0.1); --text: #ffffff; --text-dim: rgba(255, 255, 255, 0.5);
+        --sidebar-width: 280px; --sidebar-collapsed: 80px;
+    }
+    [data-theme="light"] { --bg: #f1f5f9; --glass: #ffffff; --border: #e2e8f0; --text: #0f172a; --text-dim: #64748b; }
 
-    [data-theme="light"] {
-        /* Light Mode */
-        --bg: #f1f5f9;
-        --glass: #ffffff;
-        --border: #e2e8f0;
-        --text: #0f172a;
-        --text-dim: #64748b;
-    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Poppins', sans-serif; display: flex; min-height: 100vh; transition: 0.3s; overflow-x: hidden; }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { background: var(--bg); color: var(--text); font-family: 'Poppins', sans-serif; display: flex; min-height: 100vh; transition: 0.3s; }
-    
-    /* Sidebar */
-    nav { width: 280px; background: var(--glass); backdrop-filter: blur(15px); border-right: 1px solid var(--border); padding: 40px 20px; display: flex; flex-direction: column; }
-    
-    .profile-link { 
-        text-decoration: none; padding: 15px; background: rgba(79, 172, 254, 0.1); 
-        border-radius: 15px; margin-bottom: 40px; border: 1px solid var(--border);
-        transition: 0.3s; display: flex; align-items: center; gap: 12px;
-    }
-    .profile-link:hover { background: rgba(79, 172, 254, 0.2); transform: translateY(-2px); }
-    .nav-avatar { width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--primary); object-fit: cover; background: #1e293b; }
-    
-    .profile-info h2 { font-size: 0.6rem; color: var(--primary); margin: 0; letter-spacing: 1px; text-transform: uppercase; }
-    .profile-info p { font-size: 0.85rem; color: var(--text); margin: 2px 0 0 0; font-weight: 600; }
+    /* --- COLLAPSIBLE SIDEBAR --- */
+    nav { 
+        width: var(--sidebar-width); background: var(--glass); backdrop-filter: blur(15px); 
+        border-right: 1px solid var(--border); padding: 40px 20px; display: flex; 
+        flex-direction: column; transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        position: sticky; top: 0; height: 100vh; z-index: 1000;
+    }
+    body.sidebar-hidden nav { width: var(--sidebar-collapsed); padding: 40px 15px; }
 
-    nav a { display: block; color: var(--text); text-decoration: none; padding: 12px 15px; border-radius: 12px; opacity: 0.7; transition: 0.3s; margin-bottom: 5px; font-size: 0.9rem; }
-    nav a:hover, nav a.active { opacity: 1; color: var(--primary); background: var(--glass); }
+    .menu-toggle {
+        position: absolute; right: -15px; top: 30px; width: 30px; height: 30px;
+        background: var(--primary); border-radius: 50%; display: flex;
+        align-items: center; justify-content: center; cursor: pointer; color: #0f172a;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3); z-index: 1100; transition: 0.3s;
+    }
+    body.sidebar-hidden .menu-toggle { transform: rotate(180deg); }
 
-    /* Theme Toggle Switch */
-    .theme-switch {
-        margin-top: 20px; padding: 12px 15px; border-radius: 12px;
-        background: var(--glass); border: 1px solid var(--border);
-        display: flex; align-items: center; justify-content: space-between;
-        font-size: 0.8rem; cursor: pointer;
-    }
+    .profile-link { 
+        text-decoration: none; padding: 12px; background: rgba(79, 172, 254, 0.1); 
+        border-radius: 15px; margin-bottom: 40px; border: 1px solid var(--border);
+        display: flex; align-items: center; gap: 12px; overflow: hidden;
+    }
+    .nav-avatar { width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--primary); flex-shrink: 0; object-fit: cover; }
+    
+    body.sidebar-hidden .profile-info, body.sidebar-hidden nav a span:last-child { display: none; }
 
-    /* Main Content */
-    main { flex: 1; padding: 60px; overflow-y: auto; }
-    #welcome-text { font-size: 2.5rem; font-weight: 300; margin-bottom: 5px; }
-    #welcome-name { color: var(--primary); font-weight: 600; }
-    .subtitle { opacity: 0.5; margin-bottom: 40px; color: var(--text-dim); }
+    nav a { display: flex; align-items: center; gap: 15px; color: var(--text); text-decoration: none; padding: 12px 15px; border-radius: 12px; opacity: 0.7; transition: 0.3s; margin-bottom: 5px; font-size: 0.9rem; white-space: nowrap; }
+    nav a:hover, nav a.active { opacity: 1; color: var(--primary); background: var(--glass); }
 
-    .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; margin-bottom: 40px; }
-    .card { background: var(--glass); padding: 30px; border-radius: 24px; border: 1px solid var(--border); backdrop-filter: blur(10px); }
-    .card h3 { font-size: 0.8rem; opacity: 0.5; text-transform: uppercase; letter-spacing: 1px; color: var(--text-dim); }
-    .card p { font-size: 2.5rem; font-weight: bold; margin-top: 10px; color: var(--text); }
-    
-    .action-card { background: linear-gradient(135deg, rgba(79, 172, 254, 0.1), rgba(0, 0, 0, 0)); border-color: rgba(79, 172, 254, 0.3); }
-    .btn-group { display: flex; flex-wrap: wrap; gap: 15px; margin-top: 20px; }
-    button { background: var(--primary); color: #0f172a; border: none; padding: 14px 28px; border-radius: 12px; cursor: pointer; font-weight: 600; transition: 0.3s; }
-    button:hover { transform: scale(1.05); }
+    /* --- MAIN CONTENT --- */
+    main { flex: 1; padding: 60px; max-width: 1200px; margin: 0 auto; }
+    .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; margin-bottom: 40px; }
+    .card { background: var(--glass); padding: 30px; border-radius: 24px; border: 1px solid var(--border); backdrop-filter: blur(10px); }
+    .card p { font-size: 2.5rem; font-weight: bold; color: var(--primary); }
 
-    #logoutBtn { color: #ff6b6b; margin-top: auto; padding: 12px 15px; text-decoration: none; font-size: 0.9rem; }
-  </style>
+    .action-card { background: linear-gradient(135deg, rgba(79, 172, 254, 0.1), transparent); }
+    button { background: var(--primary); color: #0f172a; border: none; padding: 14px 28px; border-radius: 12px; cursor: pointer; font-weight: 600; transition: 0.3s; }
+    
+    #logoutBtn { color: #ff6b6b; margin-top: auto; cursor: pointer; }
+
+    @media (max-width: 768px) {
+        main { padding: 30px 20px; }
+        nav { position: fixed; left: 0; transform: translateX(-100%); }
+        body.mobile-nav nav { transform: translateX(0); width: 260px; }
+    }
+  </style>
 </head>
-<body>
+<body class="sidebar-hidden">
 
-  <nav>
-    <a href="../list/settings.html" class="profile-link">
-        <img id="nav-avatar" src="https://via.placeholder.com/40" class="nav-avatar">
-        <div class="profile-info">
-            <h2>Master Admin</h2>
-            <p id="nav-name">Loading...</p>
-        </div>
-    </a>
-    <a href="#" class="active">🌐 General Overview</a>
-    <a href="../list/index.html">📋 All Church Members</a>
-    <a href="../dashboard/add-user.html">🔑 Manage Users</a>
+  <nav id="sidebar">
+    <div class="menu-toggle" id="sidebarToggle">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="15 18 9 12 15 6"></polyline></svg>
+    </div>
 
-    <div class="theme-switch" id="themeToggle">
-        <span>Theme Mode</span>
-        <span id="themeIcon">🌙</span>
-    </div>
+    <a href="../list/settings.html" class="profile-link">
+        <img id="nav-avatar" src="https://via.placeholder.com/40" class="nav-avatar">
+        <div class="profile-info">
+            <h2 style="font-size: 0.6rem; color: var(--primary); text-transform: uppercase;">Master Admin</h2>
+            <p id="nav-name" style="font-size: 0.85rem; font-weight: 600;">Loading...</p>
+        </div>
+    </a>
 
-    <div style="flex-grow: 1;"></div>
-    <a href="#" id="logoutBtn">🚪 Sign Out</a>
-  </nav>
+    <a href="#" class="active"><span>🌐</span> <span>Overview</span></a>
+    <a href="../list/index.html"><span>📋</span> <span>All Members</span></a>
+    <a href="../dashboard/add-user.html"><span>🔑</span> <span>Manage Users</span></a>
 
-  <main>
-    <h1 id="welcome-text">Welcome, <span id="welcome-name">Admin</span></h1>
-    <p class="subtitle">System-wide analytics and management.</p>
-    <div id="birthday-alerts" style="margin-bottom: 30px;"></div>
+    <div style="margin-top: 20px; padding: 12px 15px; border-radius: 12px; background: var(--glass); display: flex; justify-content: space-between; cursor: pointer;" id="themeToggle">
+        <span style="font-size: 0.8rem;">Mode</span> <span id="themeIcon">🌙</span>
+    </div>
 
-    <div class="stat-grid">
-      <div class="card"><h3>Total Pastors</h3><p id="count-pastors">0</p></div>
-      <div class="card"><h3>Total Shepherds</h3><p id="count-shepherds">0</p></div>
-      <div class="card"><h3>Total Members</h3><p id="count-members">0</p></div>
-    </div>
-    
-    <div class="card action-card">
-      <h3>Quick Actions</h3>
-      <div class="btn-group">
-        <button onclick="location.href='../dashboard/add-user.html'">Add New Pastor</button>
-        <button onclick="location.href='../dashboard/add-member.html'" style="background: rgba(255,255,255,0.1); color: var(--text); border: 1px solid var(--border);">Add New Member</button>
-      </div>
-    </div>
-  </main>
+    <div style="flex-grow: 1;"></div>
+    <a id="logoutBtn"><span>🚪</span> <span>Sign Out</span></a>
+  </nav>
+
+  <main>
+    <h1 style="font-size: 2.5rem; font-weight: 300; margin-bottom: 5px;">Welcome, <span id="welcome-name" style="color: var(--primary); font-weight: 600;">Admin</span></h1>
+    <p style="opacity: 0.5; margin-bottom: 40px;">System-wide analytics and management.</p>
+
+    <div id="birthday-alerts"></div>
+
+    <div class="stat-grid">
+      <div class="card"><h3 style="font-size: 0.7rem; opacity: 0.5; text-transform: uppercase;">Pastors</h3><p id="count-pastors">0</p></div>
+      <div class="card"><h3 style="font-size: 0.7rem; opacity: 0.5; text-transform: uppercase;">Shepherds</h3><p id="count-shepherds">0</p></div>
+      <div class="card"><h3 style="font-size: 0.7rem; opacity: 0.5; text-transform: uppercase;">Members</h3><p id="count-members">0</p></div>
+    </div>
+    
+    <div class="card action-card">
+      <h3 style="font-size: 0.8rem; opacity: 0.5; text-transform: uppercase; margin-bottom: 20px;">Quick Actions</h3>
+      <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+        <button onclick="location.href='../dashboard/add-user.html'">Add New Pastor</button>
+        <button onclick="location.href='../dashboard/add-member.html'" style="background: rgba(255,255,255,0.1); color: var(--text); border: 1px solid var(--border);">Add New Member</button>
+      </div>
+    </div>
+  </main>
 
 <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
-    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
-    import { initializeFirestore, doc, getDoc, collection, getCountFromServer, query, where, getDocs } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
+    import { initializeFirestore, doc, getDoc, collection, getCountFromServer, query, where, getDocs } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
 
-    const firebaseConfig = { 
-        apiKey: "AIzaSyCBv60eRCO0e4dFBMKGKnIATouxTuk1Bcc", 
-        authDomain: "fob-database-139d1.firebaseapp.com", 
-        projectId: "fob-database-139d1", 
-        storageBucket: "fob-database-139d1.firebasestorage.app", 
-        messagingSenderId: "375165731354", 
-        appId: "1:375165731354:web:b5fa57dcb2d71ee0d8c7a3" 
-    };
+    const firebaseConfig = { 
+        apiKey: "AIzaSyCBv60eRCO0e4dFBMKGKnIATouxTuk1Bcc", 
+        authDomain: "fob-database-139d1.firebaseapp.com", 
+        projectId: "fob-database-139d1", 
+        storageBucket: "fob-database-139d1.firebasestorage.app", 
+        appId: "1:375165731354:web:b5fa57dcb2d71ee0d8c7a3" 
+    };
 
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = initializeFirestore(app, { experimentalForceLongPolling: true }, "fobrealdbase");
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = initializeFirestore(app, { experimentalForceLongPolling: true }, "fobrealdbase");
 
-    // --- THEME LOGIC ---
-    const themeToggle = document.getElementById('themeToggle');
-    const themeIcon = document.getElementById('themeIcon');
-    
-    // Load saved theme
-    const savedTheme = localStorage.getItem('theme') || 'dark';
-    document.documentElement.setAttribute('data-theme', savedTheme);
-    themeIcon.innerText = savedTheme === 'dark' ? '🌙' : '☀️';
+    // Sidebar Toggle Logic
+    document.getElementById('sidebarToggle').onclick = () => document.body.classList.toggle('sidebar-hidden');
 
-    themeToggle.addEventListener('click', () => {
-        const currentTheme = document.documentElement.getAttribute('data-theme');
-        const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-        
-        document.documentElement.setAttribute('data-theme', newTheme);
-        localStorage.setItem('theme', newTheme);
-        themeIcon.innerText = newTheme === 'dark' ? '🌙' : '☀️';
-    });
+    // Theme Logic
+    const themeToggle = document.getElementById('themeToggle');
+    const themeIcon = document.getElementById('themeIcon');
+    const savedTheme = localStorage.getItem('theme') || 'dark';
+    document.documentElement.setAttribute('data-theme', savedTheme);
+    themeIcon.innerText = savedTheme === 'dark' ? '🌙' : '☀️';
 
-    onAuthStateChanged(auth, async (user) => {
-        if (!user) { window.location.href = "../index.html"; return; }
+    themeToggle.onclick = () => {
+        const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+        document.documentElement.setAttribute('data-theme', next);
+        localStorage.setItem('theme', next);
+        themeIcon.innerText = next === 'dark' ? '🌙' : '☀️';
+    };
 
-        try {
-            const adminSnap = await getDoc(doc(db, "pastors", user.uid));
-            if (adminSnap.exists()) {
-                const data = adminSnap.data();
-                document.getElementById('welcome-name').innerText = (data.full_name || "Admin").split(' ')[0];
-                document.getElementById('nav-name').innerText = data.full_name || "Admin";
-                if (data.profile_pic) document.getElementById('nav-avatar').src = data.profile_pic;
-            }
-        } catch (err) { console.error(err); }
+    onAuthStateChanged(auth, async (user) => {
+        if (!user) { window.location.href = "../index.html"; return; }
 
-        getStats();
-        checkBirthdays();
-    });
+        // CHECK BOTH ADMIN AND PASTOR COLLECTIONS FOR THE USERNAME
+        const collections = ["master_admin", "pastors"];
+        for (const coll of collections) {
+            const snap = await getDoc(doc(db, coll, user.uid));
+            if (snap.exists()) {
+                const data = snap.data();
+                document.getElementById('welcome-name').innerText = data.full_name.split(' ')[0];
+                document.getElementById('nav-name').innerText = data.full_name;
+                if (data.profile_pic) document.getElementById('nav-avatar').src = data.profile_pic;
+                break;
+            }
+        }
 
-    // ... (rest of your getStats and checkBirthdays functions remain the same) ...
-    async function getStats() {
-        try {
-            const [pCol, sCol, mCol] = await Promise.all([
-                getCountFromServer(collection(db, "pastors")),
-                getCountFromServer(collection(db, "shepherds")),
-                getCountFromServer(collection(db, "members"))
-            ]);
-            document.getElementById('count-pastors').innerText = pCol.data().count;
-            document.getElementById('count-shepherds').innerText = sCol.data().count;
-            document.getElementById('count-members').innerText = mCol.data().count;
-        } catch (e) { console.error(e); }
-    }
+        getStats();
+        checkBirthdays();
+    });
 
-    async function checkBirthdays() {
-        const alertContainer = document.getElementById('birthday-alerts');
-        const today = new Date();
-        const gmtMonth = String(today.getUTCMonth() + 1).padStart(2, '0');
-        const gmtDay = String(today.getUTCDate()).padStart(2, '0');
-        const todayGMT = `${gmtMonth}-${gmtDay}`;
+    async function getStats() {
+        try {
+            const [pCol, sCol, mCol] = await Promise.all([
+                getCountFromServer(collection(db, "pastors")),
+                getCountFromServer(collection(db, "shepherds")),
+                getCountFromServer(collection(db, "members"))
+            ]);
+            document.getElementById('count-pastors').innerText = pCol.data().count;
+            document.getElementById('count-shepherds').innerText = sCol.data().count;
+            document.getElementById('count-members').innerText = mCol.data().count;
+        } catch (e) { console.error(e); }
+    }
 
-        try {
-            const q = query(collection(db, "members"), where("dob_day_month", "==", todayGMT));
-            const querySnapshot = await getDocs(q);
-            if (querySnapshot.empty) { alertContainer.innerHTML = ""; return; }
+    async function checkBirthdays() {
+        const today = new Date();
+        const m = String(today.getUTCMonth() + 1).padStart(2, '0');
+        const d = String(today.getUTCDate()).padStart(2, '0');
+        const todayKey = `${m}-${d}`;
 
-            let listHTML = "";
-            querySnapshot.forEach((doc) => {
-                const data = doc.data();
-                listHTML += `<li><strong>${data.first_name} ${data.last_name}</strong></li>`;
-            });
+        const q = query(collection(db, "members"), where("dob_day_month", "==", todayKey));
+        const snap = await getDocs(q);
+        if (snap.empty) return;
 
-            alertContainer.innerHTML = `<div style="background: rgba(79, 172, 254, 0.1); border: 1px solid var(--primary); padding: 15px; border-radius: 15px;"><h4 style="color: var(--primary);">🎉 Birthdays Today</h4><ul style="list-style: none; font-size: 0.85rem; margin-top:5px;">${listHTML}</ul></div>`;
-        } catch (e) { console.error(e); }
-    }
+        let names = [];
+        snap.forEach(doc => names.push(doc.data().first_name + " " + doc.data().last_name));
+        
+        document.getElementById('birthday-alerts').innerHTML = `
+            <div style="background: rgba(79, 172, 254, 0.15); border: 1px solid var(--primary); padding: 20px; border-radius: 20px; margin-bottom: 30px;">
+                <h4 style="color: var(--primary); margin-bottom: 10px;">🎉 Birthdays Today</h4>
+                <p style="font-size: 0.9rem;">${names.join(', ')}</p>
+            </div>
+        `;
+    }
 
-    document.getElementById('logoutBtn').onclick = (e) => {
-        e.preventDefault();
-        signOut(auth).then(() => window.location.href="../index.html");
-    };
+    document.getElementById('logoutBtn').onclick = () => signOut(auth).then(() => window.location.href="../index.html");
 </script>
 </body>
 </html>
-
