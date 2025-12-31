@@ -8,17 +8,17 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
         :root { 
-            /* Dark Mode (Default) */
             --primary: #4facfe; 
             --bg: #0f172a;
             --glass: rgba(255, 255, 255, 0.05); 
             --border: rgba(255, 255, 255, 0.1); 
             --text: #ffffff;
             --text-dim: rgba(255, 255, 255, 0.5);
+            --sidebar-width: 280px;
+            --sidebar-collapsed: 80px;
         }
 
         [data-theme="light"] {
-            /* Light Mode */
             --bg: #f1f5f9;
             --glass: #ffffff;
             --border: #e2e8f0;
@@ -27,37 +27,70 @@
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { background: var(--bg); color: var(--text); font-family: 'Poppins', sans-serif; display: flex; min-height: 100vh; transition: 0.3s; }
+        body { background: var(--bg); color: var(--text); font-family: 'Poppins', sans-serif; display: flex; min-height: 100vh; transition: 0.3s; overflow-x: hidden; }
 
-        /* Sidebar Styles */
+        /* --- SIDEBAR SYSTEM --- */
         nav { 
-            width: 280px; 
+            width: var(--sidebar-width); 
             background: var(--glass); 
             backdrop-filter: blur(15px); 
             border-right: 1px solid var(--border); 
             padding: 40px 20px; 
             display: flex; 
             flex-direction: column; 
-            transition: 0.3s;
+            transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1), padding 0.4s, transform 0.4s;
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            z-index: 1000;
         }
 
-        .profile-link { 
-            text-decoration: none; 
-            padding: 15px; 
-            background: rgba(79, 172, 254, 0.1); 
-            border-radius: 15px; 
-            margin-bottom: 40px; 
-            border: 1px solid var(--border);
-            transition: 0.3s;
+        /* Desktop Collapse Logic */
+        body.sidebar-hidden nav { width: var(--sidebar-collapsed); padding: 40px 15px; }
+        body.sidebar-hidden .profile-info, 
+        body.sidebar-hidden nav a span:last-child, 
+        body.sidebar-hidden .theme-switch span:first-child { 
+            display: none; 
+        }
+
+        /* Toggle Button Stylings */
+        .menu-toggle {
+            position: absolute;
+            right: -15px;
+            top: 30px;
+            width: 30px;
+            height: 30px;
+            background: var(--primary);
+            border-radius: 50%;
             display: flex;
             align-items: center;
-            gap: 12px;
+            justify-content: center;
+            cursor: pointer;
+            color: #0f172a;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            z-index: 1100;
+            transition: 0.3s;
         }
-        .profile-link:hover { background: rgba(79, 172, 254, 0.2); transform: translateY(-2px); }
-        .profile-link h2 { font-size: 0.6rem; color: var(--primary); margin: 0; letter-spacing: 1px; text-transform: uppercase; }
-        .profile-link p { font-size: 0.85rem; color: var(--text); margin: 2px 0 0 0; font-weight: 600; }
+        body.sidebar-hidden .menu-toggle { transform: rotate(180deg); }
 
-        nav a { display: block; color: var(--text); text-decoration: none; padding: 12px 15px; border-radius: 12px; opacity: 0.7; transition: 0.3s; margin-bottom: 5px; font-size: 0.9rem; }
+        /* Profile Area */
+        .profile-link { 
+            text-decoration: none; padding: 12px; background: rgba(79, 172, 254, 0.1); 
+            border-radius: 15px; margin-bottom: 40px; border: 1px solid var(--border);
+            display: flex; align-items: center; gap: 12px; overflow: hidden;
+            transition: 0.3s;
+        }
+        .profile-link:hover { background: rgba(79, 172, 254, 0.2); }
+        .profile-info h2 { font-size: 0.6rem; color: var(--primary); margin: 0; letter-spacing: 1px; text-transform: uppercase; }
+        .profile-info p { font-size: 0.85rem; color: var(--text); font-weight: 600; white-space: nowrap; }
+
+        /* Navigation Links */
+        nav a { 
+            display: flex; align-items: center; gap: 15px; color: var(--text); 
+            text-decoration: none; padding: 12px 15px; border-radius: 12px; 
+            opacity: 0.7; transition: 0.3s; margin-bottom: 8px; font-size: 0.9rem;
+            white-space: nowrap;
+        }
         nav a:hover, nav a.active { opacity: 1; color: var(--primary); background: var(--glass); }
 
         /* Theme Toggle Switch */
@@ -68,23 +101,45 @@
             font-size: 0.8rem; cursor: pointer;
         }
 
+        /* Mobile Responsiveness */
+        @media (max-width: 768px) {
+            nav { position: fixed; left: 0; transform: translateX(-100%); }
+            body.mobile-nav-open nav { transform: translateX(0); width: 260px; }
+            .mobile-trigger {
+                display: block !important;
+                position: fixed; bottom: 20px; right: 20px;
+                background: var(--primary); padding: 15px; border-radius: 50%;
+                z-index: 2000; box-shadow: 0 10px 20px rgba(0,0,0,0.4);
+            }
+        }
+        .mobile-trigger { display: none; cursor: pointer; }
+
         /* Main Content */
-        main { flex: 1; padding: 60px; overflow-y: auto; }
+        main { flex: 1; padding: 60px; overflow-y: auto; transition: 0.4s; }
         #welcome-text { font-size: 2.5rem; font-weight: 300; margin-bottom: 5px; }
         #welcome-name { color: var(--primary); font-weight: 600; }
         .subtitle { opacity: 0.5; margin-bottom: 40px; color: var(--text-dim); }
 
         .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; }
         .card { background: var(--glass); padding: 30px; border-radius: 24px; border: 1px solid var(--border); backdrop-filter: blur(10px); transition: 0.3s; }
-        .card:hover { border-color: var(--primary); }
+        .card:hover { border-color: var(--primary); transform: translateY(-5px); }
         .card h3 { font-size: 0.8rem; opacity: 0.5; text-transform: uppercase; letter-spacing: 1px; color: var(--text-dim); }
         .card p { font-size: 2.5rem; font-weight: bold; margin-top: 10px; color: var(--text); }
         
-        #logoutBtn { color: #ff6b6b; margin-top: auto; padding: 12px 15px; text-decoration: none; font-size: 0.9rem; }
+        #logoutBtn { color: #ff6b6b; margin-top: auto; padding: 12px 15px; text-decoration: none; font-size: 0.9rem; display: flex; align-items: center; gap: 15px; }
     </style>
 </head>
-<body>
-    <nav>
+<body class="sidebar-hidden">
+
+    <div class="mobile-trigger" id="mobileBtn">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#0f172a" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+    </div>
+
+    <nav id="sidebar">
+        <div class="menu-toggle" id="toggleBtn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="15 18 9 12 15 6"></polyline></svg>
+        </div>
+
         <a href="../list/settings.html" class="profile-link">
             <div class="profile-info">
                 <h2>Pastor Profile</h2>
@@ -92,9 +147,9 @@
             </div>
         </a>
 
-        <a href="#" class="active">🏠 Chapel Dashboard</a>
-        <a href="../list/index.html">👥 My Members</a>
-        <a href="../dashboard/add-member.html">➕ Add New Member</a>
+        <a href="#" class="active"><span>🏠</span> <span>Chapel Dashboard</span></a>
+        <a href="../list/index.html"><span>👥</span> <span>My Members</span></a>
+        <a href="../dashboard/add-member.html"><span>➕</span> <span>Add New Member</span></a>
 
         <div class="theme-switch" id="themeToggle">
             <span>Theme Mode</span>
@@ -102,7 +157,7 @@
         </div>
 
         <div style="flex-grow: 1;"></div>
-        <a href="#" id="logoutBtn">🚪 Sign Out</a>
+        <a href="#" id="logoutBtn"><span>🚪</span> <span>Sign Out</span></a>
     </nav>
 
     <main>
@@ -139,10 +194,28 @@
         const auth = getAuth(app);
         const db = initializeFirestore(app, { experimentalForceLongPolling: true }, "fobrealdbase");
 
+        // --- SIDEBAR & MOBILE LOGIC ---
+        const toggleBtn = document.getElementById('toggleBtn');
+        const mobileBtn = document.getElementById('mobileBtn');
+        const sidebar = document.getElementById('sidebar');
+
+        toggleBtn.addEventListener('click', () => {
+            document.body.classList.toggle('sidebar-hidden');
+        });
+
+        mobileBtn.addEventListener('click', () => {
+            document.body.classList.toggle('mobile-nav-open');
+        });
+
+        document.addEventListener('click', (e) => {
+            if (window.innerWidth <= 768 && !sidebar.contains(e.target) && !mobileBtn.contains(e.target)) {
+                document.body.classList.remove('mobile-nav-open');
+            }
+        });
+
         // --- THEME LOGIC ---
         const themeToggle = document.getElementById('themeToggle');
         const themeIcon = document.getElementById('themeIcon');
-        
         const savedTheme = localStorage.getItem('theme') || 'dark';
         document.documentElement.setAttribute('data-theme', savedTheme);
         themeIcon.innerText = savedTheme === 'dark' ? '🌙' : '☀️';
@@ -158,7 +231,6 @@
         onAuthStateChanged(auth, async (user) => {
             if (user) {
                 try {
-                    // 1. Fetch Pastor's Name
                     const pastorSnap = await getDoc(doc(db, "pastors", user.uid));
                     if (pastorSnap.exists()) {
                         const fullName = pastorSnap.data().full_name;
@@ -166,7 +238,6 @@
                         document.getElementById('nav-name').innerText = fullName;
                     }
 
-                    // 2. Counts
                     const sQuery = query(collection(db, "shepherds"), where("assigned_pastor_id", "==", user.uid));
                     const mQuery = query(collection(db, "members"), where("pastorId", "==", user.uid));
                     
