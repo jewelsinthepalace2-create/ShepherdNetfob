@@ -188,14 +188,44 @@
     }
   };
 
+  // Smart Back Button with Role-Specific Routing
   document.getElementById('backBtn').onclick = async () => {
-    const uid = auth.currentUser.uid;
-    // Simple logic: if pastor, go to pastor dashboard, else shepherd
-    const pastorSnap = await getDoc(doc(db, "pastors", uid));
-    if (pastorSnap.exists()) {
-        window.location.href = "../dashboard/index.html"; // Adjust path to your admin/pastor dash
-    } else {
-        window.location.href = "../shepherd/index.html";
+    const btn = document.getElementById('backBtn');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = "Verifying Role..."; // Feedback during async check
+    
+    try {
+        const uid = auth.currentUser.uid;
+
+        // 1. Check Master Admin
+        const adminSnap = await getDoc(doc(db, "master_admin", uid));
+        if (adminSnap.exists()) {
+            window.location.href = "../admin/index.html";
+            return;
+        }
+
+        // 2. Check Pastor
+        const pastorSnap = await getDoc(doc(db, "pastors", uid));
+        if (pastorSnap.exists()) {
+            window.location.href = "../pastor/index.html";
+            return;
+        }
+
+        // 3. Default to Shepherd (or check shepherd collection)
+        // We can check the shepherd collection explicitly for safety
+        const shepherdSnap = await getDoc(doc(db, "shepherds", uid));
+        if (shepherdSnap.exists()) {
+            window.location.href = "../shepherd/index.html";
+            return;
+        }
+
+        // Fallback if no specific role record is found
+        window.location.href = "../index.html"; 
+        
+    } catch (error) {
+        console.error("Routing error:", error);
+        btn.innerHTML = originalText;
+        alert("Navigation failed. Please try again.");
     }
   };
 
