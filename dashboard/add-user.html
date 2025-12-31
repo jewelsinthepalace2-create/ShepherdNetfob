@@ -29,7 +29,7 @@
 
 <div class="signup-container">
   <a href="admin.html" style="color:#666; text-decoration:none; font-size:0.9rem;">← Return to Admin Panel</a>
-  <h2>Register New User</h2>
+  <h2>Register New Staff</h2>
 
   <form id="signupForm">
     <div class="form-grid">
@@ -81,7 +81,7 @@
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
   import { getAuth, createUserWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
-  import { initializeFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+  import { initializeFirestore, doc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
 
   const firebaseConfig = { 
     apiKey: "AIzaSyCBv60eRCO0e4dFBMKGKnIATouxTuk1Bcc", 
@@ -113,34 +113,200 @@
     }
 
     btn.disabled = true;
-    btn.innerText = "Registering User...";
+    btn.innerText = "Processing in Ghana Time...";
 
     const email = document.getElementById('email').value;
     const password = document.getElementById('password').value;
-    const role = document.getElementById('role').value;
+    const collectionName = document.getElementById('role').value; // 'pastors' or 'shepherds'
+    
+    // Convert plural collection name to singular role value
+    const roleValue = collectionName.slice(0, -1); 
+
+    // Ghana Local Time String for display purposes
+    const ghanaTimeStr = new Date().toLocaleString("en-GB", { timeZone: "Africa/Accra" });
 
     try {
-      // 1. Create the new user (This logs the Admin out automatically)
+      // 1. Create the new user
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const newUser = userCredential.user;
 
       // 2. Save profile data to Firestore
-      await setDoc(doc(db, role, newUser.uid), {
+      await setDoc(doc(db, collectionName, newUser.uid), {
         full_name: document.getElementById('fullName').value,
         contact: contact,
         email: email,
         level: document.getElementById('level').value,
         course: document.getElementById('course').value,
         job: document.getElementById('job').value,
-        role: role,
-        created_at: new Date().toISOString()
+        role: roleValue, // 'pastor' or 'shepherd'
+        created_at: serverTimestamp(), // Best practice: Use Firestore's server clock
+        registration_date_local: ghanaTimeStr // Human readable Ghana time
       });
 
-      alert("User Created Successfully! You will be logged out to finalize the record.");
+      alert(`Success! ${roleValue.toUpperCase()} created.\nLocal Registration: ${ghanaTimeStr}\n\nYou will be logged out to protect Admin session.`);
 
-      // 3. Sign out the newly created user and redirect Admin to login
+      // 3. Clear session and redirect
       await signOut(auth);
-      window.location.href = "admin.html"; // Or index.html if they need to re-login
+      window.location.href = "admin.html"; 
+
+    } catch (error) {
+      alert("Error: " + error.message);
+      btn.disabled = false;
+      btn.innerText = "Create User Account";
+    }
+  };
+</script>
+</body>
+</html><!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Add New User | ShepherdNet</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+  <style>
+    :root { --primary: #4facfe; --glass: rgba(255, 255, 255, 0.05); --border: rgba(255, 255, 255, 0.1); }
+    body { background: #0f172a; color: white; font-family: 'Poppins', sans-serif; display: flex; justify-content: center; padding: 40px 20px; }
+    
+    .signup-container { width: 100%; max-width: 600px; background: var(--glass); padding: 40px; border-radius: 24px; border: 1px solid var(--border); backdrop-filter: blur(10px); }
+    h2 { color: var(--primary); margin-bottom: 30px; text-align: center; font-weight: 600; }
+
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .full-width { grid-column: span 2; }
+
+    .form-group { margin-bottom: 15px; }
+    label { display: block; font-size: 0.75rem; color: #888; margin-bottom: 5px; text-transform: uppercase; }
+    input, select { width: 100%; padding: 12px; background: rgba(0,0,0,0.2); border: 1px solid var(--border); border-radius: 10px; color: white; font-family: inherit; box-sizing: border-box; }
+    input:focus { border-color: var(--primary); outline: none; }
+    
+    .btn-register { width: 100%; padding: 15px; background: var(--primary); border: none; border-radius: 12px; color: #0f172a; font-weight: 600; cursor: pointer; margin-top: 20px; transition: 0.3s; }
+    .btn-register:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(79, 172, 254, 0.3); }
+    .error-msg { color: #ff6b6b; font-size: 0.8rem; margin-top: 5px; display: none; }
+  </style>
+</head>
+<body>
+
+<div class="signup-container">
+  <a href="admin.html" style="color:#666; text-decoration:none; font-size:0.9rem;">← Return to Admin Panel</a>
+  <h2>Register New Staff</h2>
+
+  <form id="signupForm">
+    <div class="form-grid">
+      <div class="form-group full-width">
+        <label>System Role</label>
+        <select id="role" required>
+          <option value="shepherds">Shepherd</option>
+          <option value="pastors">Pastor</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Full Name</label>
+        <input type="text" id="fullName" placeholder="e.g. Kofi Mensah" required>
+      </div>
+      <div class="form-group">
+        <label>Contact Number (Ghana)</label>
+        <input type="tel" id="contact" placeholder="024XXXXXXX" required>
+        <div id="contactError" class="error-msg">Invalid Ghana number (0XX or +233)</div>
+      </div>
+
+      <div class="form-group">
+        <label>Email Address</label>
+        <input type="email" id="email" required>
+      </div>
+      <div class="form-group">
+        <label>Initial Password</label>
+        <input type="password" id="password" required minlength="6">
+      </div>
+
+      <div class="form-group">
+        <label>Level (e.g. 100, 400, Alumnus)</label>
+        <input type="text" id="level" placeholder="Level">
+      </div>
+      <div class="form-group">
+        <label>Course of Study</label>
+        <input type="text" id="course" placeholder="e.g. BSc Computer Science">
+      </div>
+      <div class="form-group full-width">
+        <label>Current Job / Occupation</label>
+        <input type="text" id="job" placeholder="e.g. Software Developer">
+      </div>
+    </div>
+
+    <button type="submit" class="btn-register" id="submitBtn">Create User Account</button>
+  </form>
+</div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
+  import { getAuth, createUserWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
+  import { initializeFirestore, doc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+
+  const firebaseConfig = { 
+    apiKey: "AIzaSyCBv60eRCO0e4dFBMKGKnIATouxTuk1Bcc", 
+    authDomain: "fob-database-139d1.firebaseapp.com", 
+    projectId: "fob-database-139d1", 
+    storageBucket: "fob-database-139d1.firebasestorage.app", 
+    messagingSenderId: "375165731354", 
+    appId: "1:375165731354:web:b5fa57dcb2d71ee0d8c7a3" 
+  };
+  
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = initializeFirestore(app, { experimentalForceLongPolling: true }, "fobrealdbase");
+
+  const ghanaPhoneRegex = /^(?:\+233|0)[235][0-9]{8}$/;
+
+  document.getElementById('signupForm').onsubmit = async (e) => {
+    e.preventDefault();
+    
+    const contact = document.getElementById('contact').value;
+    const contactError = document.getElementById('contactError');
+    const btn = document.getElementById('submitBtn');
+
+    if (!ghanaPhoneRegex.test(contact)) {
+      contactError.style.display = 'block';
+      return;
+    } else {
+      contactError.style.display = 'none';
+    }
+
+    btn.disabled = true;
+    btn.innerText = "Processing in Ghana Time...";
+
+    const email = document.getElementById('email').value;
+    const password = document.getElementById('password').value;
+    const collectionName = document.getElementById('role').value; // 'pastors' or 'shepherds'
+    
+    // Convert plural collection name to singular role value
+    const roleValue = collectionName.slice(0, -1); 
+
+    // Ghana Local Time String for display purposes
+    const ghanaTimeStr = new Date().toLocaleString("en-GB", { timeZone: "Africa/Accra" });
+
+    try {
+      // 1. Create the new user
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const newUser = userCredential.user;
+
+      // 2. Save profile data to Firestore
+      await setDoc(doc(db, collectionName, newUser.uid), {
+        full_name: document.getElementById('fullName').value,
+        contact: contact,
+        email: email,
+        level: document.getElementById('level').value,
+        course: document.getElementById('course').value,
+        job: document.getElementById('job').value,
+        role: roleValue, // 'pastor' or 'shepherd'
+        created_at: serverTimestamp(), // Best practice: Use Firestore's server clock
+        registration_date_local: ghanaTimeStr // Human readable Ghana time
+      });
+
+      alert(`Success! ${roleValue.toUpperCase()} created.\nLocal Registration: ${ghanaTimeStr}\n\nYou will be logged out to protect Admin session.`);
+
+      // 3. Clear session and redirect
+      await signOut(auth);
+      window.location.href = "admin.html"; 
 
     } catch (error) {
       alert("Error: " + error.message);
