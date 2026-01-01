@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Member Profile | ShepherdNet</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        :root { 
+            --primary: #4facfe; --bg: #0f172a; --glass: rgba(255, 255, 255, 0.05); 
+            --border: rgba(255, 255, 255, 0.1); --text: #ffffff; --green: #00ff88; --red: #ff4b5c;
+        }
+        body { background: var(--bg); color: white; font-family: 'Poppins', sans-serif; padding: 20px; }
+        .container { max-width: 500px; margin: 0 auto; }
+
+        /* Profile Header */
+        .profile-card {
+            background: var(--glass); backdrop-filter: blur(15px);
+            padding: 30px; border-radius: 24px; border: 1px solid var(--border);
+            text-align: center; margin-bottom: 20px;
+        }
+        .profile-img { width: 100px; height: 100px; border-radius: 50%; border: 3px solid var(--primary); object-fit: cover; margin-bottom: 15px; background: #1e293b; }
+        h1 { font-size: 1.4rem; margin-bottom: 5px; }
+        .joined-date { font-size: 0.75rem; color: rgba(255,255,255,0.5); margin-bottom: 15px; }
+
+        /* Stats Grid */
+        .stats-row { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }
+        .stat-card { background: var(--glass); padding: 15px; border-radius: 15px; text-align: center; border: 1px solid var(--border); }
+        .stat-val { display: block; font-size: 1.2rem; font-weight: 700; color: var(--primary); }
+        .stat-lab { font-size: 0.65rem; text-transform: uppercase; opacity: 0.6; }
+
+        /* Chart Section */
+        .chart-box { background: var(--glass); padding: 20px; border-radius: 24px; border: 1px solid var(--border); margin-bottom: 20px; }
+        
+        /* History List */
+        .history-list { background: var(--glass); padding: 20px; border-radius: 24px; border: 1px solid var(--border); }
+        .history-item { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 0.85rem; }
+        .status-pill { padding: 2px 8px; border-radius: 5px; font-size: 0.7rem; font-weight: bold; }
+        .pill-present { background: rgba(0, 255, 136, 0.2); color: var(--green); }
+        .pill-absent { background: rgba(255, 75, 92, 0.2); color: var(--red); }
+
+        .back-btn { display: inline-block; margin-bottom: 20px; color: var(--primary); text-decoration: none; font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <a href="index.html" class="back-btn">← Back to Registry</a>
+
+    <div class="profile-card" id="profileCard">
+        <img src="https://via.placeholder.com/100" class="profile-img" id="memberPic">
+        <h1 id="memberName">Loading...</h1>
+        <div class="joined-date" id="joinDate">Joined: --</div>
+        <div id="pastorCredit" style="font-size: 0.8rem; color: var(--primary)"></div>
+    </div>
+
+    <div class="stats-row">
+        <div class="stat-card"><span class="stat-val" id="totalServices">0</span><span class="stat-lab">Total Services</span></div>
+        <div class="stat-card"><span class="stat-val" id="attRate">0%</span><span class="stat-lab">Attendance</span></div>
+    </div>
+
+    <div class="chart-box">
+        <canvas id="attendanceChart"></canvas>
+    </div>
+
+    <h3 style="margin: 20px 0 10px; font-size: 1rem;">Service History</h3>
+    <div class="history-list" id="historyList">
+        </div>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
+    import { getFirestore, doc, getDoc, collection, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+
+    const firebaseConfig = { 
+        apiKey: "AIzaSyCBv60eRCO0e4dFBMKGKnIATouxTuk1Bcc",
+        authDomain: "fob-database-139d1.firebaseapp.com",
+        projectId: "fob-database-139d1",
+        storageBucket: "fob-database-139d1.firebasestorage.app",
+        appId: "1:375165731354:web:b5fa57dcb2d71ee0d8c7a3"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app, "fobrealdbase");
+
+    // 1. Get Member ID from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const memberId = urlParams.get('id');
+
+    async function loadFullProfile() {
+        if (!memberId) return;
+
+        // Fetch Member Data
+        const mSnap = await getDoc(doc(db, "members", memberId));
+        if (!mSnap.exists()) return;
+        const m = mSnap.data();
+
+        // Update UI
+        document.getElementById('memberName').innerText = `${m.first_name} ${m.last_name}`;
+        document.getElementById('joinDate').innerText = `Joined: ${m.date_joined || 'Unknown'}`;
+        if(m.profile_pic) document.getElementById('memberPic').src = m.profile_pic;
+
+        // Fetch Pastor/Admin Name (for Master Admin visibility)
+        const pSnap = await getDoc(doc(db, "pastors", m.pastorId));
+        if(pSnap.exists()) document.getElementById('pastorCredit').innerText = `Under Pastor: ${pSnap.data().full_name}`;
+
+        // Fetch All Events and Attendance Records
+        const eventsSnap = await getDocs(query(collection(db, "events"), orderBy("date", "desc")));
+        const historyDiv = document.getElementById('historyList');
+        
+        let presentCount = 0;
+        let totalCount = eventsSnap.docs.length;
+
+        for (const evDoc of eventsSnap.docs) {
+            const ev = evDoc.data();
+            const attSnap = await getDoc(doc(db, "attendance", `${memberId}_${evDoc.id}`));
+            const isPresent = attSnap.exists();
+            if(isPresent) presentCount++;
+
+            historyDiv.innerHTML += `
+                <div class="history-item">
+                    <span>${ev.name} <br><small style="opacity:0.5">${ev.date}</small></span>
+                    <span class="status-pill ${isPresent ? 'pill-present' : 'pill-absent'}">
+                        ${isPresent ? 'ATTENDED' : 'ABSENT'}
+                    </span>
+                </div>`;
+        }
+
+        // Update Stats
+        document.getElementById('totalServices').innerText = totalCount;
+        const rate = totalCount > 0 ? Math.round((presentCount / totalCount) * 100) : 0;
+        document.getElementById('attRate').innerText = `${rate}%`;
+
+        // Render Pie Chart
+        renderChart(presentCount, totalCount - presentCount);
+    }
+
+    function renderChart(present, absent) {
+        new Chart(document.getElementById('attendanceChart'), {
+            type: 'pie',
+            data: {
+                labels: ['Attended', 'Missed'],
+                datasets: [{
+                    data: [present, absent],
+                    backgroundColor: ['#00ff88', '#ff4b5c'],
+                    borderColor: 'transparent'
+                }]
+            },
+            options: {
+                plugins: { legend: { labels: { color: 'white', family: 'Poppins' } } }
+            }
+        });
+    }
+
+    loadFullProfile();
+</script>
+</body>
+</html>
