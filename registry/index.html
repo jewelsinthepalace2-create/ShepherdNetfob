@@ -81,7 +81,7 @@
     <h2 style="margin-bottom: 30px; color: var(--primary);">ShepherdNet</h2>
     <a href="#" class="nav-item active">Registry</a>
     <a href="" id="dashLink" class="nav-item">Dashboard</a>
-    <a href="../settings.html" class="nav-item">Settings</a>
+    <a href="../list/settings.html" class="nav-item">Settings</a>
     <hr style="opacity: 0.1; margin: 20px 0;">
     <a href="#" onclick="logout()" class="nav-item" style="color: var(--red);">Logout</a>
 </div>
@@ -199,9 +199,9 @@
                 
                 // Dynamic Dashboard Link
                 const dashLink = document.getElementById('dashLink');
-                if (role === "master_admin") dashLink.href = "../dashboard/admin-dash.html";
-                else if (role === "pastors") dashLink.href = "../dashboard/pastor-dash.html";
-                else dashLink.href = "../dashboard/shepherd-dash.html";
+                if (role === "master_admin") dashLink.href = "../admin/index.html";
+                else if (role === "pastors") dashLink.href = "../pastor/index.html";
+                else dashLink.href = "../shepherd/index.html";
 
                 let q = query(collection(db, "members"), orderBy("last_name"));
                 if (role === "pastors") q = query(collection(db, "members"), where("pastorId", "==", user.uid));
