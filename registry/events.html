@@ -16,6 +16,7 @@
         input, select, button { width: 100%; padding: 14px; margin: 10px 0; border-radius: 12px; border: 1px solid var(--border); background: rgba(0,0,0,0.3); color: white; outline: none; box-sizing: border-box; }
         
         .btn-auto { background: linear-gradient(45deg, #4facfe, #00f2fe); color: #0f172a; font-weight: 600; cursor: pointer; border: none; }
+        .btn-auto:disabled { opacity: 0.5; cursor: not-allowed; }
         .btn-special { background: transparent; border: 1px solid var(--primary); color: var(--primary); font-weight: 600; cursor: pointer; }
         .btn-special:hover { background: var(--primary); color: #000; }
         
@@ -31,7 +32,7 @@
 
     <span class="section-label">System Automation</span>
     <button id="btnAutoGenerate" class="btn-auto">Auto-Generate 2026 Schedule</button>
-    <small style="font-size: 0.65rem; opacity: 0.5; display: block; text-align: center;">This will set all Sunday, Wednesday, Friday, Dawn, and Monthly events for 2026.</small>
+    <small id="status-msg" style="font-size: 0.65rem; opacity: 0.5; display: block; text-align: center;">This will set all Sunday, Wednesday, Friday, Dawn, and Monthly events for 2026.</small>
 
     <hr>
 
@@ -50,8 +51,7 @@
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
-    import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
-    // 1. ADD THIS: Import Auth
+    import { getFirestore, collection, addDoc, doc, writeBatch } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
 
     const firebaseConfig = { 
@@ -64,14 +64,13 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app, "fobrealdbase");
-    // 2. ADD THIS: Initialize Auth
     const auth = getAuth(app);
 
-    // 3. ADD THIS: Protect the page. If not logged in, they can't stay here.
+    // Verify Auth State
     onAuthStateChanged(auth, (user) => {
         if (!user) {
-            alert("Please login first!");
-            window.location.href = "../index.html"; // Redirect to login
+            alert("Unauthorized. Redirecting to login...");
+            window.location.href = "../index.html";
         }
     });
 
@@ -88,67 +87,70 @@
                 name: name,
                 date: date,
                 category: cat,
-                createdBy: auth.currentUser.uid, // Good practice to track who made it
-                timestamp: new Date()
+                timestamp: new Date(),
+                createdBy: auth.currentUser.uid
             });
             alert("Special Event Created!");
             window.location.reload();
-        } catch (e) { 
-            console.error(e);
-            alert("Permission Denied: Ensure you are logged in as Admin."); 
-        }
+        } catch (e) { alert("Error: " + e.message); }
     };
 
-    // --- 2. AUTO GENERATION LOGIC ---
+    // --- 2. AUTO GENERATION LOGIC (BATCHED) ---
     document.getElementById('btnAutoGenerate').onclick = async () => {
-        if(!confirm("Generate all recurring events for 2026? This may take a moment.")) return;
+        if(!confirm("Generate all recurring events for 2026? This will process in batches.")) return;
         
         const btn = document.getElementById('btnAutoGenerate');
-        btn.innerText = "Processing... Please Wait";
+        const msg = document.getElementById('status-msg');
+        btn.innerText = "Processing...";
         btn.disabled = true;
 
-        const start = new Date(2026, 0, 2); // Jan 2, 2026
-        const end = new Date(2026, 11, 31); // Dec 31, 2026
+        const start = new Date(2026, 0, 1); 
+        const end = new Date(2026, 11, 31);
         
         let currentDate = new Date(start);
-        const eventsBatch = [];
+        const eventsList = [];
 
+        // Build the list of events
         while (currentDate <= end) {
-            const day = currentDate.getDay(); // 0=Sun, 1=Mon...
+            const day = currentDate.getDay(); 
             const dateStr = currentDate.toISOString().split('T')[0];
             
-            // A. DAWN PRAYERS (Every Day)
-            eventsBatch.push({ name: "Dawn Prayers", date: dateStr, category: "Daily" });
+            eventsList.push({ name: "Dawn Prayers", date: dateStr, category: "Daily" });
 
-            // B. WEEKLY EVENTS
-            if (day === 0) eventsBatch.push({ name: "Sunday Service", date: dateStr, category: "Sunday Service" });
-            if (day === 3) eventsBatch.push({ name: "Wednesday Brake Fuel Prayers", date: dateStr, category: "Mid-Week" });
-            if (day === 5) eventsBatch.push({ name: "Friday Freeflow", date: dateStr, category: "Mid-Week" });
+            if (day === 0) eventsList.push({ name: "Sunday Service", date: dateStr, category: "Sunday Service" });
+            if (day === 3) eventsList.push({ name: "Wednesday Brake Fuel Prayers", date: dateStr, category: "Mid-Week" });
+            if (day === 5) eventsList.push({ name: "Friday Freeflow", date: dateStr, category: "Mid-Week" });
 
-            // C. PRAYER SECRETS CONFERENCE (Last Saturday of the Month)
             if (day === 6) {
                 let nextWeek = new Date(currentDate);
                 nextWeek.setDate(currentDate.getDate() + 7);
                 if (nextWeek.getMonth() !== currentDate.getMonth()) {
-                    eventsBatch.push({ name: "Prayer Secrets Conference", date: dateStr, category: "Conference" });
+                    eventsList.push({ name: "Prayer Secrets Conference", date: dateStr, category: "Conference" });
                 }
             }
-
             currentDate.setDate(currentDate.getDate() + 1);
         }
 
         try {
-            // Adding in small chunks to avoid Firebase timeouts
-            for (const ev of eventsBatch) {
-                await addDoc(collection(db, "events"), {
-                    ...ev,
-                    timestamp: new Date()
+            // Firestore batches are limited to 500 writes
+            const chunkSize = 400; 
+            for (let i = 0; i < eventsList.length; i += chunkSize) {
+                const batch = writeBatch(db);
+                const chunk = eventsList.slice(i, i + chunkSize);
+                
+                chunk.forEach(ev => {
+                    const newDocRef = doc(collection(db, "events"));
+                    batch.set(newDocRef, { ...ev, timestamp: new Date(), createdBy: auth.currentUser.uid });
                 });
+
+                msg.innerText = `Saving batch ${Math.ceil((i+chunkSize)/chunkSize)}...`;
+                await batch.commit();
             }
-            alert(`Success! ${eventsBatch.length} events generated for 2026.`);
+
+            alert(`Success! Generated ${eventsList.length} events.`);
             window.location.href = "index.html";
         } catch (e) { 
-            alert("Error: " + e.message); 
+            alert("Batch Error: " + e.message); 
             btn.innerText = "Auto-Generate 2026 Schedule";
             btn.disabled = false;
         }
