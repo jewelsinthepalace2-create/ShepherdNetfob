@@ -5,11 +5,12 @@
     <title>Member Profile | ShepherdNet</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="icon" type="image/png" href="https://i.ibb.co/60bRQP5Z/Jewels-background-removed.png">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
         :root { 
             --primary: #4facfe; --bg: #0f172a; --glass: rgba(255, 255, 255, 0.05); 
-            --border: rgba(255, 255, 255, 0.1); --text: #ffffff; --green: #00ff88; --red: #ff4b5c;
+            --border: rgba(255, 255, 255, 0.1); --text: #ffffff; --green: #00ff88; --red: #ff4b5c; --neutral: #64748b;
         }
         body { background: var(--bg); color: white; font-family: 'Poppins', sans-serif; padding: 20px; }
         .container { max-width: 500px; margin: 0 auto; padding-bottom: 50px; }
@@ -29,9 +30,10 @@
         .service-info { flex: 1; }
         .note-preview { font-size: 0.75rem; color: var(--primary); margin-top: 5px; font-style: italic; display: block; }
         .status-area { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
-        .status-pill { padding: 4px 10px; border-radius: 6px; font-size: 0.65rem; font-weight: bold; }
+        .status-pill { padding: 4px 10px; border-radius: 6px; font-size: 0.65rem; font-weight: bold; text-transform: uppercase; }
         .pill-present { background: rgba(0, 255, 136, 0.15); color: var(--green); }
         .pill-absent { background: rgba(255, 75, 92, 0.15); color: var(--red); }
+        .pill-neutral { background: rgba(100, 116, 139, 0.15); color: var(--neutral); }
         .note-btn { background: var(--glass); border: 1px solid var(--border); color: white; padding: 5px 8px; border-radius: 6px; cursor: pointer; font-size: 0.8rem; }
         .modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); align-items: center; justify-content: center; }
         .modal-content { background: #1e293b; padding: 25px; border-radius: 24px; width: 90%; max-width: 400px; border: 1px solid var(--border); }
@@ -44,7 +46,6 @@
 
 <div class="container">
     <a href="index.html" class="back-btn">← Back to Registry</a>
-
     <div class="profile-card">
         <img src="https://via.placeholder.com/100" class="profile-img" id="memberPic">
         <h1 id="memberName">Loading Profile...</h1>
@@ -52,12 +53,8 @@
 
     <div class="filter-box">
         <select id="timeFilter">
-            <optgroup label="Relative">
-                <option value="all">Full History</option>
-                <option value="last-7">Past 7 Days</option>
-                <option value="last-30">Past 30 Days</option>
-            </optgroup>
-            <optgroup label="2026 Months">
+            <option value="all">Full 2026 Calendar</option>
+            <optgroup label="Months">
                 <option value="2026-01">January</option><option value="2026-02">February</option>
                 <option value="2026-03">March</option><option value="2026-04">April</option>
                 <option value="2026-05">May</option><option value="2026-06">June</option>
@@ -65,31 +62,22 @@
                 <option value="2026-09">September</option><option value="2026-10">October</option>
                 <option value="2026-11">November</option><option value="2026-12">December</option>
             </optgroup>
-            <optgroup label="Years">
-                <option value="2025">Year 2025</option>
-                <option value="2026">Year 2026</option>
-            </optgroup>
         </select>
     </div>
 
     <div class="stats-row">
-        <div class="stat-card"><span class="stat-val" id="totalServices">0</span><span class="stat-lab">Total Services</span></div>
-        <div class="stat-card"><span class="stat-val" id="attRate">0%</span><span class="stat-lab">Overall Rate</span></div>
+        <div class="stat-card"><span class="stat-val" id="totalPastEvents">0</span><span class="stat-lab">Services To Date</span></div>
+        <div class="stat-card"><span class="stat-val" id="attRate">0%</span><span class="stat-lab">Attendance Rate</span></div>
     </div>
 
-    <div class="chart-box">
-        <canvas id="attendanceChart"></canvas>
-    </div>
-
-    <div id="historyList" class="history-list">
-        <p style="text-align:center; opacity:0.5;">Loading history...</p>
-    </div>
+    <div class="chart-box"><canvas id="attendanceChart"></canvas></div>
+    <div id="historyList" class="history-list"></div>
 </div>
 
 <div id="noteModal" class="modal">
     <div class="modal-content">
-        <h3 id="modalTitle" style="color: var(--primary); margin-bottom:10px;">Service Note</h3>
-        <textarea id="noteInput" placeholder="Write follow-up details here..."></textarea>
+        <h3 id="modalTitle" style="color: var(--primary); margin-bottom:10px;">Note</h3>
+        <textarea id="noteInput"></textarea>
         <button class="btn-save-note" id="saveNoteBtn">Save Note</button>
         <button onclick="document.getElementById('noteModal').style.display='none'" style="background:none; border:none; color:gray; width:100%; margin-top:10px; cursor:pointer;">Cancel</button>
     </div>
@@ -97,7 +85,7 @@
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
-    import { getFirestore, doc, getDoc, collection, getDocs, query, orderBy, setDoc } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+    import { getFirestore, doc, getDoc, collection, getDocs, query, where, orderBy, setDoc } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
 
     const firebaseConfig = { 
@@ -111,7 +99,6 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app, "fobrealdbase");
     const auth = getAuth(app);
-
     const urlParams = new URLSearchParams(window.location.search);
     const memberId = urlParams.get('id');
     let myChart = null;
@@ -128,87 +115,78 @@
 
         try {
             const mSnap = await getDoc(doc(db, "members", memberId));
-            if (!mSnap.exists()) {
-                document.getElementById('memberName').innerText = "Member not found";
-                return;
-            }
-            document.getElementById('memberName').innerText = `${mSnap.data().first_name} ${mSnap.data().last_name}`;
+            if (mSnap.exists()) document.getElementById('memberName').innerText = `${mSnap.data().first_name} ${mSnap.data().last_name}`;
 
-            // Get events sorted ASCENDING (Jan to Dec)
+            const attQuery = query(collection(db, "attendance"), where("memberId", "==", memberId));
+            const attDocs = await getDocs(attQuery);
+            const attendanceMap = {};
+            attDocs.forEach(d => attendanceMap[d.data().eventId] = d.data());
+
             const eventsSnap = await getDocs(query(collection(db, "events"), orderBy("date", "asc")));
-            historyDiv.innerHTML = "";
             
-            // Global Stats Variables
-            let totalGlobalEvents = 0;
-            let totalGlobalPresent = 0;
+            let presentCount = 0;
+            let pastEventsCount = 0; // Only events <= Today
+            let listHtml = "";
 
-            const today = new Date();
+            const todayStr = new Date().toISOString().split('T')[0]; // Format: YYYY-MM-DD
 
-            for (const evDoc of eventsSnap.docs) {
+            eventsSnap.forEach(evDoc => {
                 const ev = evDoc.data();
-                const eventDate = new Date(ev.date);
-                const attId = `${memberId}_${evDoc.id}`;
-                const attSnap = await getDoc(doc(db, "attendance", attId));
+                const attData = attendanceMap[evDoc.id] || {};
+                const hasStatus = attData.status !== undefined;
+                const isPresent = attData.status === 'present';
+                const isPast = ev.date <= todayStr;
                 
-                const isPresent = attSnap.exists() && attSnap.data().status === 'present';
-                const note = attSnap.exists() ? (attSnap.data().note || "") : "";
-
-                // 1. Calculate Overall Stats (Independent of filter)
-                totalGlobalEvents++;
-                if(isPresent) totalGlobalPresent++;
-
-                // 2. Determine if it should show in History List (Filtered)
-                let showInHistory = true;
-                if (filterValue === "last-7") {
-                    showInHistory = (today - eventDate) / 86400000 <= 7;
-                } else if (filterValue === "last-30") {
-                    showInHistory = (today - eventDate) / 86400000 <= 30;
-                } else if (filterValue !== "all") {
-                    // Match "2026-05" or "2026"
-                    showInHistory = ev.date.startsWith(filterValue);
+                // MATH LOGIC: Only calculate stats for events that have happened
+                if (isPast) {
+                    pastEventsCount++;
+                    if (isPresent) presentCount++;
                 }
 
-                if (showInHistory) {
-                    historyDiv.innerHTML += `
-                        <div class="history-item">
+                // UI LOGIC: Filtered History List
+                if (filterValue === "all" || ev.date.startsWith(filterValue)) {
+                    let statusLabel = "Scheduled";
+                    let pillClass = "pill-neutral";
+                    
+                    if (hasStatus) {
+                        statusLabel = isPresent ? "Present" : "Absent";
+                        pillClass = isPresent ? "pill-present" : "pill-absent";
+                    }
+
+                    listHtml += `
+                        <div class="history-item" style="${!isPast ? 'opacity:0.7' : ''}">
                             <div class="service-info">
                                 <span style="font-weight:600">${ev.name}</span><br>
-                                <small style="opacity:0.5">${ev.date}</small>
-                                ${note ? `<span class="note-preview">📝 ${note}</span>` : ''}
+                                <small style="opacity:0.5">${ev.date} ${!isPast ? '(Future)' : ''}</small>
+                                ${attData.note ? `<span class="note-preview">📝 ${attData.note}</span>` : ''}
                             </div>
                             <div class="status-area">
-                                <span class="status-pill ${isPresent ? 'pill-present' : 'pill-absent'}">
-                                    ${isPresent ? 'PRESENT' : 'ABSENT'}
-                                </span>
+                                <span class="status-pill ${pillClass}">${statusLabel}</span>
                                 <div style="display:flex; gap:5px;">
-                                    <button class="note-btn" onclick="toggleStatus('${evDoc.id}', ${isPresent})">
-                                        ${isPresent ? 'Mark Absent' : 'Mark Present'}
-                                    </button>
-                                    <button class="note-btn" onclick="openNote('${evDoc.id}', '${ev.name.replace(/'/g, "\\'")}', '${note.replace(/'/g, "\\'")}')">💬</button>
+                                    <button class="note-btn" onclick="toggleStatus('${evDoc.id}', '${attData.status || 'none'}')">Mark</button>
+                                    <button class="note-btn" onclick="openNote('${evDoc.id}', '${ev.name.replace(/'/g, "\\'")}', '${(attData.note || "").replace(/'/g, "\\'")}')">💬</button>
                                 </div>
                             </div>
                         </div>`;
                 }
-            }
+            });
 
-            if (historyDiv.innerHTML === "") historyDiv.innerHTML = "<p style='text-align:center; opacity:0.5;'>No events found for this filter.</p>";
+            historyDiv.innerHTML = listHtml;
+            document.getElementById('totalPastEvents').innerText = pastEventsCount;
+            document.getElementById('attRate').innerText = `${pastEventsCount > 0 ? Math.round((presentCount / pastEventsCount) * 100) : 0}%`;
+            renderChart(presentCount, pastEventsCount - presentCount);
 
-            // Update Stats Display (All Time)
-            document.getElementById('totalServices').innerText = totalGlobalEvents;
-            document.getElementById('attRate').innerText = `${totalGlobalEvents > 0 ? Math.round((totalGlobalPresent / totalGlobalEvents) * 100) : 0}%`;
-            renderChart(totalGlobalPresent, totalGlobalEvents - totalGlobalPresent);
-
-        } catch (error) {
-            console.error(error);
-            historyDiv.innerHTML = `<p style="color:red; font-size:0.8rem">Error fetching history. Check index/rules.</p>`;
-        }
+        } catch (error) { console.error(error); }
     }
 
-    window.toggleStatus = async (eventId, isCurrentlyPresent) => {
-        const newStatus = isCurrentlyPresent ? 'absent' : 'present';
-        const attRef = doc(db, "attendance", `${memberId}_${eventId}`);
+    // UPDATED: Cycle through None -> Present -> Absent
+    window.toggleStatus = async (eventId, currentStatus) => {
+        let newStatus;
+        if (currentStatus === 'none' || currentStatus === 'absent') newStatus = 'present';
+        else newStatus = 'absent';
+
         try {
-            await setDoc(attRef, { 
+            await setDoc(doc(db, "attendance", `${memberId}_${eventId}`), { 
                 status: newStatus, memberId, eventId, lastUpdated: new Date()
             }, { merge: true });
             loadFullProfile();
@@ -221,10 +199,17 @@
         myChart = new Chart(ctx, {
             type: 'doughnut',
             data: {
-                labels: ['Present', 'Absent'],
-                datasets: [{ data: [present, absent], backgroundColor: ['#00ff88', '#ff4b5c'], borderColor: 'transparent' }]
+                labels: ['Attended', 'Missed'],
+                datasets: [{ 
+                    data: [present, absent], 
+                    backgroundColor: ['#00ff88', '#ff4b5c'], 
+                    borderColor: 'transparent' 
+                }]
             },
-            options: { cutout: '75%', plugins: { legend: { display: false } } }
+            options: { 
+                cutout: '75%', 
+                plugins: { legend: { display: false } }
+            }
         });
     }
 
@@ -236,10 +221,8 @@
     };
 
     document.getElementById('saveNoteBtn').onclick = async () => {
-        const attRef = doc(db, "attendance", `${memberId}_${window.activeEventId}`);
-        await setDoc(attRef, { 
-            note: document.getElementById('noteInput').value,
-            memberId, eventId: window.activeEventId 
+        await setDoc(doc(db, "attendance", `${memberId}_${window.activeEventId}`), { 
+            note: document.getElementById('noteInput').value, memberId, eventId: window.activeEventId 
         }, { merge: true });
         document.getElementById('noteModal').style.display = 'none';
         loadFullProfile();
