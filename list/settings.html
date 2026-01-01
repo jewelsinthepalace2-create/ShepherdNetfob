@@ -29,74 +29,108 @@
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { background: var(--bg); color: var(--text); font-family: 'Poppins', sans-serif; display: flex; min-height: 100vh; transition: 0.3s; overflow-x: hidden; }
+    body { background: var(--bg); color: var(--text); font-family: 'Poppins', sans-serif; display: flex; min-height: 100vh; transition: background 0.3s; overflow-x: hidden; }
 
     /* --- SIDEBAR SYSTEM --- */
     nav { 
-        width: var(--sidebar-width); background: var(--glass); backdrop-filter: blur(15px); 
-        border-right: 1px solid var(--border); padding: 40px 20px; display: flex; 
-        flex-direction: column; transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-        position: sticky; top: 0; height: 100vh; z-index: 1000;
+        width: var(--sidebar-width); 
+        background: var(--glass); 
+        backdrop-filter: blur(15px); 
+        border-right: 1px solid var(--border); 
+        padding: 40px 15px; 
+        display: flex; 
+        flex-direction: column; 
+        transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        position: sticky; 
+        top: 0; 
+        height: 100vh; 
+        z-index: 1000;
+        overflow: hidden;
     }
     
-    body.sidebar-hidden nav { width: var(--sidebar-collapsed); padding: 40px 15px; }
+    /* Collapse Logic */
+    body.sidebar-hidden nav { width: var(--sidebar-collapsed); }
 
     .menu-toggle {
-        position: absolute; right: -15px; top: 30px; width: 30px; height: 30px;
+        position: absolute; right: 15px; top: 30px; width: 30px; height: 30px;
         background: var(--primary); border-radius: 50%; display: flex;
         align-items: center; justify-content: center; cursor: pointer; color: #0f172a;
         box-shadow: 0 4px 12px rgba(0,0,0,0.3); z-index: 1100; transition: 0.3s;
     }
-    body.sidebar-hidden .menu-toggle { transform: rotate(180deg); }
+    body.sidebar-hidden .menu-toggle { right: 25px; transform: rotate(180deg); }
 
-    nav .nav-logo { font-weight: 800; color: var(--primary); margin-bottom: 40px; white-space: nowrap; overflow: hidden; }
+    .nav-logo { 
+        font-weight: 800; 
+        color: var(--primary); 
+        margin-bottom: 40px; 
+        white-space: nowrap; 
+        padding-left: 10px;
+        transition: opacity 0.2s, visibility 0.2s;
+    }
     
     nav a { 
         display: flex; align-items: center; gap: 15px; color: var(--text); 
-        text-decoration: none; padding: 12px 15px; border-radius: 12px; 
+        text-decoration: none; padding: 12px 18px; border-radius: 12px; 
         opacity: 0.7; transition: 0.3s; margin-bottom: 8px; font-size: 0.9rem; white-space: nowrap;
     }
-    nav a:hover { opacity: 1; color: var(--primary); background: var(--glass); }
-    nav a.active { opacity: 1; background: var(--glass); border: 1px solid var(--border); color: var(--primary); }
-    
-    body.sidebar-hidden nav a span:last-child { display: none; }
+    nav a:hover, nav a.active { opacity: 1; color: var(--primary); background: var(--glass); }
+
+    /* Hide text when collapsed */
+    body.sidebar-hidden .nav-logo,
+    body.sidebar-hidden nav a span:last-child { 
+        opacity: 0;
+        visibility: hidden;
+    }
 
     /* --- MAIN CONTENT --- */
     main { flex: 1; padding: 40px 20px; display: flex; justify-content: center; align-items: flex-start; }
-    
     .settings-container { width: 100%; max-width: 500px; background: var(--glass); padding: 40px 30px; border-radius: 24px; border: 1px solid var(--border); backdrop-filter: blur(10px); }
     
+    /* --- MOBILE REFINEMENTS --- */
+    .mobile-trigger {
+        position: fixed; top: 20px; left: 20px; z-index: 1200;
+        background: var(--primary); color: #0f172a; width: 40px; height: 40px;
+        border-radius: 8px; display: none; align-items: center; justify-content: center;
+        cursor: pointer; font-size: 20px;
+    }
+
+    @media (max-width: 768px) {
+        .mobile-trigger { display: flex; }
+        .menu-toggle { display: none; }
+        nav { 
+            position: fixed; left: 0; top: 0;
+            width: var(--sidebar-width) !important;
+            transform: translateX(-100%); 
+            transition: transform 0.3s ease;
+        }
+        body.mobile-open nav { transform: translateX(0); }
+        body.mobile-open .nav-logo, 
+        body.mobile-open nav a span:last-child { opacity: 1; visibility: visible; }
+    }
+
+    /* Form Styles remain the same as your input */
     .header { text-align: center; margin-bottom: 30px; }
     .role-badge { display: inline-block; padding: 6px 18px; background: var(--primary); color: #0f172a; border-radius: 20px; font-size: 0.7rem; font-weight: bold; text-transform: uppercase; margin-bottom: 15px; }
-    
     .profile-pic-container { position: relative; width: 110px; height: 110px; margin: 0 auto 20px auto; }
     #profileDisplay { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; border: 3px solid var(--primary); background: #1e293b; }
     .upload-label { position: absolute; bottom: 0; right: 0; background: var(--primary); color: #0f172a; width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 3px solid var(--bg); font-weight: bold; }
-
     .form-group { margin-bottom: 20px; }
     label { display: block; font-size: 0.75rem; color: var(--text-dim); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600; }
     input { width: 100%; padding: 14px; background: var(--input-bg); border: 1px solid var(--border); border-radius: 12px; color: var(--text); font-family: inherit; outline: none; transition: 0.3s; }
-    input:focus { border-color: var(--primary); }
-    
     .btn-save { width: 100%; padding: 16px; background: var(--primary); border: none; border-radius: 12px; color: #0f172a; font-weight: 600; cursor: pointer; transition: 0.3s; margin-top: 10px; font-size: 1rem; }
-
     .theme-section { margin-top: 30px; padding-top: 20px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
     .theme-btn { background: var(--glass); border: 1px solid var(--border); color: var(--text); padding: 8px 15px; border-radius: 10px; cursor: pointer; display: flex; align-items: center; gap: 8px; font-size: 0.8rem; }
-
-    @media (max-width: 768px) {
-        nav { position: fixed; left: 0; transform: translateX(-100%); }
-        body.mobile-nav nav { transform: translateX(0); width: 260px; }
-        .menu-toggle { display: none; }
-    }
   </style>
 </head>
 <body class="sidebar-hidden">
+
+<div class="mobile-trigger" id="mobileMenuBtn">☰</div>
 
 <nav id="sidebar">
   <div class="menu-toggle" id="sidebarToggle">
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="15 18 9 12 15 6"></polyline></svg>
   </div>
-  <div class="nav-logo">S-NET</div>
+  <div class="nav-logo">SHEPHERDNET</div>
   <a href="#" id="backNav"><span>🏠</span> <span>Dashboard</span></a>
   <a href="#" class="active"><span>⚙️</span> <span>Settings</span></a>
 </nav>
@@ -160,9 +194,27 @@
   let currentRoleColl = "";
   let selectedFile = null;
 
-  // --- SIDEBAR TOGGLE ---
+  // --- FIXED SIDEBAR LOGIC ---
+  const sidebar = document.getElementById('sidebar');
   const sidebarToggle = document.getElementById('sidebarToggle');
-  sidebarToggle.onclick = () => document.body.classList.toggle('sidebar-hidden');
+  const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+
+  sidebarToggle.onclick = (e) => {
+      e.stopPropagation();
+      document.body.classList.toggle('sidebar-hidden');
+  };
+
+  mobileMenuBtn.onclick = (e) => {
+      e.stopPropagation();
+      document.body.classList.toggle('mobile-open');
+  };
+
+  // Close mobile menu when clicking main content
+  document.addEventListener('click', (e) => {
+      if (window.innerWidth <= 768 && !sidebar.contains(e.target)) {
+          document.body.classList.remove('mobile-open');
+      }
+  });
 
   // --- THEME ENGINE ---
   const themeToggle = document.getElementById('themeToggle');
@@ -193,7 +245,6 @@
   });
 
  async function loadUserData(uid) {
-    // ADD "master_admin" to this array
     const roles = [
         { coll: "master_admin", label: "Master Admin" }, 
         { coll: "pastors", label: "Pastor" }, 
@@ -203,7 +254,7 @@
     for (let r of roles) {
       const snap = await getDoc(doc(db, r.coll, uid));
       if (snap.exists()) {
-        currentRoleColl = r.coll; // This ensures saving works for the right collection
+        currentRoleColl = r.coll; 
         const d = snap.data();
         document.getElementById('userRole').innerText = r.label;
         document.getElementById('fullName').value = d.full_name || "";
@@ -213,7 +264,7 @@
     }
 }
 
-  // --- FILE SELECTION ---
+  // File selection, Back navigation, and Save Profile logic remains unchanged...
   document.getElementById('fileInput').onchange = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -224,7 +275,6 @@
     }
   };
 
-  // --- SMART BACK NAV ---
   document.getElementById('backNav').onclick = async (e) => {
     e.preventDefault();
     const uid = auth.currentUser.uid;
@@ -235,7 +285,6 @@
     window.location.href = "../shepherd/index.html";
   };
 
-  // --- SAVE PROFILE ---
   document.getElementById('saveProfile').onclick = async () => {
     const btn = document.getElementById('saveProfile');
     btn.disabled = true; btn.innerText = "Saving...";
