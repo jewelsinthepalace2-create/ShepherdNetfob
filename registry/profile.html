@@ -149,26 +149,46 @@
         return dateStr.startsWith(filterValue);
     }
 
-    async function loadFullProfile(filter = "all") {
-        if (!memberId) return;
+    // ... (Keep your HTML/CSS exactly the same) ...
 
+async function loadFullProfile(filter = "all") {
+    if (!memberId) {
+        document.getElementById('memberName').innerText = "No Member ID in URL (?id=...)";
+        return;
+    }
+
+    try {
+        // 1. Get Member Data
         const mSnap = await getDoc(doc(db, "members", memberId));
-        if (!mSnap.exists()) return;
-        const m = mSnap.data();
-        document.getElementById('memberName').innerText = `${m.first_name} ${m.last_name}`;
+        if (!mSnap.exists()) {
+            document.getElementById('memberName').innerText = "Member ID not found.";
+            return;
+        }
+        document.getElementById('memberName').innerText = `${mSnap.data().first_name} ${mSnap.data().last_name}`;
 
+        // 2. Get ALL Events (The source of your list)
         const eventsSnap = await getDocs(query(collection(db, "events"), orderBy("date", "desc")));
         const historyDiv = document.getElementById('historyList');
         historyDiv.innerHTML = "";
         
-        let presentCount = 0, displayedCount = 0;
+        if (eventsSnap.empty) {
+            historyDiv.innerHTML = "<p style='text-align:center;'>No events created yet.</p>";
+            return;
+        }
 
+        let presentCount = 0;
+        let displayedCount = 0;
+
+        // 3. Loop Events -> Find Attendance if it exists
         for (const evDoc of eventsSnap.docs) {
             const ev = evDoc.data();
-            if (!isDateInRange(ev.date, filter)) continue;
-
             displayedCount++;
-            const attSnap = await getDoc(doc(db, "attendance", `${memberId}_${evDoc.id}`));
+
+            // Attempt to find attendance
+            const attId = `${memberId}_${evDoc.id}`;
+            const attSnap = await getDoc(doc(db, "attendance", attId));
+            
+            // If the collection is empty, attSnap.exists() will simply be false
             const isPresent = attSnap.exists() && attSnap.data().status === 'present';
             const note = attSnap.exists() ? (attSnap.data().note || "") : "";
             
@@ -182,17 +202,24 @@
                         ${note ? `<span class="note-preview">📝 ${note}</span>` : ''}
                     </div>
                     <div class="status-area">
-                        <span class="status-pill ${isPresent ? 'pill-present' : 'pill-absent'}">${isPresent ? 'ATTENDED' : 'ABSENT'}</span>
-                        <button class="note-btn" onclick="openNote('${evDoc.id}', '${ev.name}', '${note.replace(/'/g, "\\'")}')">💬 Note</button>
+                        <span class="status-pill ${isPresent ? 'pill-present' : 'pill-absent'}">
+                            ${isPresent ? 'PRESENT' : 'ABSENT'}
+                        </span>
+                        <button class="note-btn" onclick="openNote('${evDoc.id}', '${ev.name}', '${note}')">💬 Note</button>
                     </div>
                 </div>`;
         }
 
+        // Update Stats
         document.getElementById('totalServices').innerText = displayedCount;
         document.getElementById('attRate').innerText = `${displayedCount > 0 ? Math.round((presentCount / displayedCount) * 100) : 0}%`;
         renderChart(presentCount, displayedCount - presentCount);
-    }
 
+    } catch (error) {
+        console.error("Try:", error);
+        document.getElementById('historyList').innerHTML = `<p style="color:red">Check Browser Console (F12) for Index Link.</p>`;
+    }
+}
     function renderChart(present, absent) {
         const ctx = document.getElementById('attendanceChart').getContext('2d');
         if (myChart) myChart.destroy();
