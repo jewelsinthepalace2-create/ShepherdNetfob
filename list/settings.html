@@ -192,12 +192,18 @@
     } else { window.location.href = "../index.html"; }
   });
 
-  async function loadUserData(uid) {
-    const roles = [{ coll: "pastors", label: "Pastor" }, { coll: "shepherds", label: "Shepherd" }];
+ async function loadUserData(uid) {
+    // ADD "master_admin" to this array
+    const roles = [
+        { coll: "master_admin", label: "Master Admin" }, 
+        { coll: "pastors", label: "Pastor" }, 
+        { coll: "shepherds", label: "Shepherd" }
+    ];
+    
     for (let r of roles) {
       const snap = await getDoc(doc(db, r.coll, uid));
       if (snap.exists()) {
-        currentRoleColl = r.coll;
+        currentRoleColl = r.coll; // This ensures saving works for the right collection
         const d = snap.data();
         document.getElementById('userRole').innerText = r.label;
         document.getElementById('fullName').value = d.full_name || "";
@@ -205,9 +211,7 @@
         return;
       }
     }
-    document.getElementById('userRole').innerText = "Admin";
-    currentRoleColl = "pastors"; 
-  }
+}
 
   // --- FILE SELECTION ---
   document.getElementById('fileInput').onchange = (e) => {
