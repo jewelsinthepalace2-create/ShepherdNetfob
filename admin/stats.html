@@ -27,13 +27,16 @@
         h3 { font-size: 1.1rem; margin-bottom: 15px; display: flex; align-items: center; gap: 8px; }
 
         /* Tables & Lists */
-        .list-container { max-height: 300px; overflow-y: auto; }
+        .list-container { max-height: 350px; overflow-y: auto; }
         .list-item { 
-            display: flex; justify-content: space-between; padding: 12px; 
+            display: flex; justify-content: space-between; align-items: center; padding: 12px; 
             border-bottom: 1px solid var(--border); font-size: 0.85rem;
+            text-decoration: none; color: inherit; transition: 0.2s;
         }
+        .list-item:hover { background: rgba(255,255,255,0.03); }
+        
         .rank { color: var(--gold); font-weight: bold; width: 25px; display: inline-block; }
-        .at-risk-name { color: var(--red); font-weight: 600; }
+        .at-risk-name { color: var(--red); font-weight: 600; text-decoration: underline; }
         .chapel-tag { font-size: 0.7rem; opacity: 0.6; display: block; }
 
         /* Buttons */
@@ -72,6 +75,7 @@
 
         <div class="stat-card" style="grid-column: 1 / -1; border-color: rgba(255, 75, 92, 0.3);">
             <h3 style="color: var(--red);">⚠️ At-Risk Souls (Missed 3+ Services)</h3>
+            <p style="font-size: 0.75rem; opacity: 0.6; margin-bottom: 10px;">Click a name to view their profile and call them.</p>
             <div class="list-container" id="atRiskList">
                 <p style="text-align:center; padding:20px; opacity:0.5;">Analyzing attendance patterns...</p>
             </div>
@@ -118,29 +122,25 @@
             };
         });
 
-        // Map all attendance for fast lookup [MemberID_EventID]
         const attSet = new Set();
         attSnap.forEach(d => attSet.add(d.id));
 
-        // Process Members
         memberSnap.forEach(doc => {
             const m = doc.data();
             const mId = doc.id;
             
-            // 1. Maturity Count
             const label = m.status === "Established Member" ? "Established Members" : "New Converts";
             maturity[label]++;
 
-            // 2. Rankings logic (Count Established per Pastor)
             if(m.status === "Established Member") {
                 rankings[m.pastorId] = (rankings[m.pastorId] || 0) + 1;
             }
 
-            // 3. At-Risk Logic (Check if missed ALL 3 latest events)
             if (latestEvents.length === 3) {
                 const missedAll = latestEvents.every(eId => !attSet.has(`${mId}_${eId}`));
                 if (missedAll) {
                     atRisk.push({
+                        id: mId,
                         name: `${m.first_name} ${m.last_name}`,
                         chapel: chapelMap[m.pastorId]?.name || "Unassigned"
                     });
@@ -168,13 +168,13 @@
     function renderAtRisk(list) {
         const container = document.getElementById('atRiskList');
         container.innerHTML = list.map(p => `
-            <div class="list-item">
+            <a href="../list/profile.html?id=${p.id}" class="list-item">
                 <div>
                     <span class="at-risk-name">${p.name}</span>
                     <span class="chapel-tag">Chapel: ${p.chapel}</span>
                 </div>
-                <span style="color:var(--red); font-size: 0.7rem; font-weight:bold;">MISSING IN ACTION</span>
-            </div>
+                <span style="color:var(--red); font-size: 0.7rem; font-weight:bold;">MISSING 3+ SERVICES ➔</span>
+            </a>
         `).join('') || "<p style='padding:20px; text-align:center; color:var(--green)'>✅ All members accounted for!</p>";
     }
 
