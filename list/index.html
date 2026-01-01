@@ -184,40 +184,52 @@
     }
   }
 
-  async function loadAdminView() {
+async function loadAdminView() {
     const list = document.getElementById('list');
     const q = query(collection(db, "members"), orderBy("last_name"));
     const snaps = await getDocs(q);
     list.innerHTML = "";
     
-    // Create a cache so we don't fetch the same pastor/shepherd twice
+    // Cache to prevent looking up the same person multiple times
     const nameCache = {};
 
     for (const m of snaps.docs) {
         const data = m.data();
-        let addedBy = "Staff";
+        let addedBy = "Registry";
+        
+        // 1. APPLY YOUR LOGIC: Prioritize Shepherd unless it's a direct pastor entry
+        let targetId = null;
+        if (data.shepherdId && data.shepherdId !== "direct_pastor_entry") {
+            targetId = data.shepherdId;
+        } else {
+            targetId = data.pastorId;
+        }
 
-        // 1. Try to use names already on the member document
-        if (data.shepherdName) {
-            addedBy = `Shepherd: ${data.shepherdName}`;
-        } else if (data.pastorName) {
-            addedBy = `Pastor: ${data.pastorName}`;
-        } 
-        // 2. FALLBACK: If names are missing, look them up using IDs
-        else if (data.shepherdId || data.pastorId) {
-            const role = data.shepherdId ? "shepherds" : "pastors";
-            const id = data.shepherdId || data.pastorId;
+        // 2. Perform the smart lookup if we have an ID
+        if (targetId) {
+            if (!nameCache[targetId]) {
+                // Check all three possible collections
+                const collections = ["shepherds", "pastors", "master_admin"];
+                let foundName = "Unknown User";
 
-            if (!nameCache[id]) {
-                const userSnap = await getDoc(doc(db, role, id));
-                nameCache[id] = userSnap.exists() ? userSnap.data().full_name : "Unknown User";
+                for (const coll of collections) {
+                    const userSnap = await getDoc(doc(db, coll, targetId));
+                    if (userSnap.exists()) {
+                        const userData = userSnap.data();
+                        const roleLabel = coll === "shepherds" ? "Shep." : 
+                                        coll === "pastors" ? "Past." : "Admin";
+                        foundName = `${roleLabel}: ${userData.full_name || 'No Name'}`;
+                        break; // Stop searching once found
+                    }
+                }
+                nameCache[targetId] = foundName;
             }
-            addedBy = `${role === 'shepherds' ? 'Shepherd' : 'Pastor'}: ${nameCache[id]}`;
+            addedBy = nameCache[targetId];
         }
 
         renderMemberTab(list, { id: m.id, ...data }, addedBy);
     }
-  }
+}
 
   async function loadPastorView(pastorId) {
     const list = document.getElementById('list');
