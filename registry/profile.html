@@ -13,43 +13,29 @@
         }
         body { background: var(--bg); color: white; font-family: 'Poppins', sans-serif; padding: 20px; }
         .container { max-width: 500px; margin: 0 auto; padding-bottom: 50px; }
-
-        .profile-card {
-            background: var(--glass); backdrop-filter: blur(15px);
-            padding: 30px; border-radius: 24px; border: 1px solid var(--border);
-            text-align: center; margin-bottom: 20px;
-        }
+        .profile-card { background: var(--glass); backdrop-filter: blur(15px); padding: 30px; border-radius: 24px; border: 1px solid var(--border); text-align: center; margin-bottom: 20px; }
         .profile-img { width: 100px; height: 100px; border-radius: 50%; border: 3px solid var(--primary); object-fit: cover; margin-bottom: 15px; background: #1e293b; }
         h1 { font-size: 1.4rem; margin-bottom: 5px; }
-
         .filter-box { margin-bottom: 20px; }
-        select { 
-            width: 100%; padding: 12px; border-radius: 12px; background: #1e293b; 
-            color: white; border: 1px solid var(--border); outline: none; font-family: inherit;
-        }
-
+        select { width: 100%; padding: 12px; border-radius: 12px; background: #1e293b; color: white; border: 1px solid var(--border); outline: none; font-family: inherit; }
         .stats-row { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }
         .stat-card { background: var(--glass); padding: 15px; border-radius: 15px; text-align: center; border: 1px solid var(--border); }
         .stat-val { display: block; font-size: 1.2rem; font-weight: 700; color: var(--primary); }
         .stat-lab { font-size: 0.65rem; text-transform: uppercase; opacity: 0.6; }
-
         .chart-box { background: var(--glass); padding: 20px; border-radius: 24px; border: 1px solid var(--border); margin-bottom: 20px; }
-        
         .history-list { background: var(--glass); padding: 20px; border-radius: 24px; border: 1px solid var(--border); }
         .history-item { display: flex; justify-content: space-between; align-items: flex-start; padding: 15px 0; border-bottom: 1px solid var(--border); }
         .history-item:last-child { border-bottom: none; }
         .service-info { flex: 1; }
         .note-preview { font-size: 0.75rem; color: var(--primary); margin-top: 5px; font-style: italic; display: block; }
-        
         .status-area { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
         .status-pill { padding: 4px 10px; border-radius: 6px; font-size: 0.65rem; font-weight: bold; }
         .pill-present { background: rgba(0, 255, 136, 0.15); color: var(--green); }
         .pill-absent { background: rgba(255, 75, 92, 0.15); color: var(--red); }
-
         .note-btn { background: var(--glass); border: 1px solid var(--border); color: white; padding: 5px 8px; border-radius: 6px; cursor: pointer; font-size: 0.8rem; }
         .modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); align-items: center; justify-content: center; }
         .modal-content { background: #1e293b; padding: 25px; border-radius: 24px; width: 90%; max-width: 400px; border: 1px solid var(--border); }
-        textarea { width: 100%; height: 120px; background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 12px; color: white; padding: 12px; margin-bottom: 15px; }
+        textarea { width: 100%; height: 120px; background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 12px; color: white; padding: 12px; margin-bottom: 15px; box-sizing: border-box;}
         .btn-save-note { width: 100%; padding: 14px; background: var(--primary); border: none; border-radius: 12px; font-weight: 600; cursor: pointer; }
         .back-btn { display: inline-block; margin-bottom: 20px; color: var(--primary); text-decoration: none; }
     </style>
@@ -61,20 +47,34 @@
 
     <div class="profile-card">
         <img src="https://via.placeholder.com/100" class="profile-img" id="memberPic">
-        <h1 id="memberName">Checking Access...</h1>
+        <h1 id="memberName">Loading Profile...</h1>
     </div>
 
     <div class="filter-box">
         <select id="timeFilter">
-            <option value="all">All History</option>
-            <option value="last-7">Last 7 Days</option>
-            <option value="last-30">Last 30 Days</option>
+            <optgroup label="Relative">
+                <option value="all">Full History</option>
+                <option value="last-7">Past 7 Days</option>
+                <option value="last-30">Past 30 Days</option>
+            </optgroup>
+            <optgroup label="2026 Months">
+                <option value="2026-01">January</option><option value="2026-02">February</option>
+                <option value="2026-03">March</option><option value="2026-04">April</option>
+                <option value="2026-05">May</option><option value="2026-06">June</option>
+                <option value="2026-07">July</option><option value="2026-08">August</option>
+                <option value="2026-09">September</option><option value="2026-10">October</option>
+                <option value="2026-11">November</option><option value="2026-12">December</option>
+            </optgroup>
+            <optgroup label="Years">
+                <option value="2025">Year 2025</option>
+                <option value="2026">Year 2026</option>
+            </optgroup>
         </select>
     </div>
 
     <div class="stats-row">
-        <div class="stat-card"><span class="stat-val" id="totalServices">0</span><span class="stat-lab">Services</span></div>
-        <div class="stat-card"><span class="stat-val" id="attRate">0%</span><span class="stat-lab">Attendance</span></div>
+        <div class="stat-card"><span class="stat-val" id="totalServices">0</span><span class="stat-lab">Total Services</span></div>
+        <div class="stat-card"><span class="stat-val" id="attRate">0%</span><span class="stat-lab">Overall Rate</span></div>
     </div>
 
     <div class="chart-box">
@@ -88,8 +88,8 @@
 
 <div id="noteModal" class="modal">
     <div class="modal-content">
-        <h3 id="modalTitle" style="color: var(--primary); margin-bottom:10px;">Note</h3>
-        <textarea id="noteInput"></textarea>
+        <h3 id="modalTitle" style="color: var(--primary); margin-bottom:10px;">Service Note</h3>
+        <textarea id="noteInput" placeholder="Write follow-up details here..."></textarea>
         <button class="btn-save-note" id="saveNoteBtn">Save Note</button>
         <button onclick="document.getElementById('noteModal').style.display='none'" style="background:none; border:none; color:gray; width:100%; margin-top:10px; cursor:pointer;">Cancel</button>
     </div>
@@ -116,18 +116,14 @@
     const memberId = urlParams.get('id');
     let myChart = null;
 
-    // 1. AUTH CHECK: Only load if logged in
     onAuthStateChanged(auth, (user) => {
-        if (user) {
-            loadFullProfile();
-        } else {
-            window.location.href = "login.html";
-        }
+        if (user) loadFullProfile();
+        else window.location.href = "login.html";
     });
 
-    // 2. MAIN LOAD FUNCTION
-    async function loadFullProfile(filter = "all") {
+    async function loadFullProfile() {
         if (!memberId) return;
+        const filterValue = document.getElementById('timeFilter').value;
         const historyDiv = document.getElementById('historyList');
 
         try {
@@ -138,76 +134,87 @@
             }
             document.getElementById('memberName').innerText = `${mSnap.data().first_name} ${mSnap.data().last_name}`;
 
-            const eventsSnap = await getDocs(query(collection(db, "events"), orderBy("date", "desc")));
+            // Get events sorted ASCENDING (Jan to Dec)
+            const eventsSnap = await getDocs(query(collection(db, "events"), orderBy("date", "asc")));
             historyDiv.innerHTML = "";
             
-            let presentCount = 0;
-            let displayedCount = 0;
+            // Global Stats Variables
+            let totalGlobalEvents = 0;
+            let totalGlobalPresent = 0;
+
             const today = new Date();
 
             for (const evDoc of eventsSnap.docs) {
                 const ev = evDoc.data();
                 const eventDate = new Date(ev.date);
-
-                // Date Filtering
-                if (filter === "last-7" && (today - eventDate) / 86400000 > 7) continue;
-                if (filter === "last-30" && (today - eventDate) / 86400000 > 30) continue;
-
-                displayedCount++;
                 const attId = `${memberId}_${evDoc.id}`;
                 const attSnap = await getDoc(doc(db, "attendance", attId));
                 
                 const isPresent = attSnap.exists() && attSnap.data().status === 'present';
                 const note = attSnap.exists() ? (attSnap.data().note || "") : "";
-                if(isPresent) presentCount++;
 
-                historyDiv.innerHTML += `
-                    <div class="history-item">
-                        <div class="service-info">
-                            <span style="font-weight:600">${ev.name}</span><br>
-                            <small style="opacity:0.5">${ev.date}</small>
-                            ${note ? `<span class="note-preview">📝 ${note}</span>` : ''}
-                        </div>
-                        <div class="status-area">
-                            <span class="status-pill ${isPresent ? 'pill-present' : 'pill-absent'}">
-                                ${isPresent ? 'PRESENT' : 'ABSENT'}
-                            </span>
-                            <div style="display:flex; gap:5px;">
-                                <button class="note-btn" onclick="toggleStatus('${evDoc.id}', ${isPresent})">
-                                    ${isPresent ? 'Mark Absent' : 'Mark Present'}
-                                </button>
-                                <button class="note-btn" onclick="openNote('${evDoc.id}', '${ev.name.replace(/'/g, "\\'")}', '${note.replace(/'/g, "\\'")}')">💬</button>
+                // 1. Calculate Overall Stats (Independent of filter)
+                totalGlobalEvents++;
+                if(isPresent) totalGlobalPresent++;
+
+                // 2. Determine if it should show in History List (Filtered)
+                let showInHistory = true;
+                if (filterValue === "last-7") {
+                    showInHistory = (today - eventDate) / 86400000 <= 7;
+                } else if (filterValue === "last-30") {
+                    showInHistory = (today - eventDate) / 86400000 <= 30;
+                } else if (filterValue !== "all") {
+                    // Match "2026-05" or "2026"
+                    showInHistory = ev.date.startsWith(filterValue);
+                }
+
+                if (showInHistory) {
+                    historyDiv.innerHTML += `
+                        <div class="history-item">
+                            <div class="service-info">
+                                <span style="font-weight:600">${ev.name}</span><br>
+                                <small style="opacity:0.5">${ev.date}</small>
+                                ${note ? `<span class="note-preview">📝 ${note}</span>` : ''}
                             </div>
-                        </div>
-                    </div>`;
+                            <div class="status-area">
+                                <span class="status-pill ${isPresent ? 'pill-present' : 'pill-absent'}">
+                                    ${isPresent ? 'PRESENT' : 'ABSENT'}
+                                </span>
+                                <div style="display:flex; gap:5px;">
+                                    <button class="note-btn" onclick="toggleStatus('${evDoc.id}', ${isPresent})">
+                                        ${isPresent ? 'Mark Absent' : 'Mark Present'}
+                                    </button>
+                                    <button class="note-btn" onclick="openNote('${evDoc.id}', '${ev.name.replace(/'/g, "\\'")}', '${note.replace(/'/g, "\\'")}')">💬</button>
+                                </div>
+                            </div>
+                        </div>`;
+                }
             }
 
-            document.getElementById('totalServices').innerText = displayedCount;
-            document.getElementById('attRate').innerText = `${displayedCount > 0 ? Math.round((presentCount / displayedCount) * 100) : 0}%`;
-            renderChart(presentCount, displayedCount - presentCount);
+            if (historyDiv.innerHTML === "") historyDiv.innerHTML = "<p style='text-align:center; opacity:0.5;'>No events found for this filter.</p>";
+
+            // Update Stats Display (All Time)
+            document.getElementById('totalServices').innerText = totalGlobalEvents;
+            document.getElementById('attRate').innerText = `${totalGlobalEvents > 0 ? Math.round((totalGlobalPresent / totalGlobalEvents) * 100) : 0}%`;
+            renderChart(totalGlobalPresent, totalGlobalEvents - totalGlobalPresent);
 
         } catch (error) {
             console.error(error);
-            historyDiv.innerHTML = `<p style="color:red; font-size:0.8rem">Error: Check Console for Index Link.</p>`;
+            historyDiv.innerHTML = `<p style="color:red; font-size:0.8rem">Error fetching history. Check index/rules.</p>`;
         }
     }
 
-    // 3. TOGGLE ATTENDANCE LOGIC
     window.toggleStatus = async (eventId, isCurrentlyPresent) => {
         const newStatus = isCurrentlyPresent ? 'absent' : 'present';
         const attRef = doc(db, "attendance", `${memberId}_${eventId}`);
         try {
             await setDoc(attRef, { 
-                status: newStatus, 
-                memberId: memberId, 
-                eventId: eventId,
-                lastUpdated: new Date()
+                status: newStatus, memberId, eventId, lastUpdated: new Date()
             }, { merge: true });
-            loadFullProfile(document.getElementById('timeFilter').value);
+            loadFullProfile();
         } catch (e) { alert(e.message); }
     };
 
-    // 4. CHART & NOTES
     function renderChart(present, absent) {
         const ctx = document.getElementById('attendanceChart').getContext('2d');
         if (myChart) myChart.destroy();
@@ -230,12 +237,15 @@
 
     document.getElementById('saveNoteBtn').onclick = async () => {
         const attRef = doc(db, "attendance", `${memberId}_${window.activeEventId}`);
-        await setDoc(attRef, { note: document.getElementById('noteInput').value }, { merge: true });
+        await setDoc(attRef, { 
+            note: document.getElementById('noteInput').value,
+            memberId, eventId: window.activeEventId 
+        }, { merge: true });
         document.getElementById('noteModal').style.display = 'none';
-        loadFullProfile(document.getElementById('timeFilter').value);
+        loadFullProfile();
     };
 
-    document.getElementById('timeFilter').onchange = (e) => loadFullProfile(e.target.value);
+    document.getElementById('timeFilter').onchange = () => loadFullProfile();
 </script>
 </body>
 </html>
