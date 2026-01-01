@@ -15,64 +15,37 @@
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { background: var(--bg); color: var(--text); font-family: 'Poppins', sans-serif; min-height: 100vh; overflow-x: hidden; }
 
-        /* Sidebar Styles */
-        .sidebar {
-            position: fixed; top: 0; left: calc(-1 * var(--sidebar-w));
-            width: var(--sidebar-w); height: 100%;
-            background: #111827; border-right: 1px solid var(--border);
-            z-index: 1000; transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            padding: 30px 20px;
-        }
+        /* Sidebar & Layout Styles */
+        .sidebar { position: fixed; top: 0; left: calc(-1 * var(--sidebar-w)); width: var(--sidebar-w); height: 100%; background: #111827; border-right: 1px solid var(--border); z-index: 1000; transition: 0.3s; padding: 30px 20px; }
         .sidebar.open { left: 0; box-shadow: 10px 0 30px rgba(0,0,0,0.5); }
-        
-        .nav-item {
-            display: block; padding: 15px; color: white; text-decoration: none;
-            border-radius: 12px; margin-bottom: 10px; transition: 0.2s;
-            font-weight: 400; font-size: 0.95rem;
-        }
-        .nav-item:hover { background: var(--glass); color: var(--primary); }
+        .nav-item { display: block; padding: 15px; color: white; text-decoration: none; border-radius: 12px; margin-bottom: 10px; font-size: 0.95rem; }
         .nav-item.active { background: var(--primary); color: #0f172a; font-weight: 600; }
-
-        /* Overlay */
-        .overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.5); backdrop-filter: blur(4px);
-            display: none; z-index: 900;
-        }
+        .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: none; z-index: 900; backdrop-filter: blur(4px); }
         .overlay.show { display: block; }
 
-        /* Main Content */
-        .main-content { padding: 20px; transition: 0.3s; width: 100%; max-width: 600px; margin: 0 auto; }
+        .main-content { padding: 20px; width: 100%; max-width: 600px; margin: 0 auto; padding-bottom: 100px; }
         
-        /* Navbar */
-        .navbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 30px; }
-        .menu-btn { background: var(--glass); border: 1px solid var(--border); color: white; padding: 10px; border-radius: 10px; cursor: pointer; }
+        /* Search & Filter UI */
+        .controls-container { margin-bottom: 25px; display: flex; flex-direction: column; gap: 12px; }
+        .search-box { width: 100%; padding: 12px 15px; background: var(--glass); border: 1px solid var(--border); border-radius: 12px; color: white; outline: none; transition: 0.3s; }
+        .search-box:focus { border-color: var(--primary); background: rgba(255,255,255,0.08); }
+        
+        .filter-row { display: flex; gap: 10px; }
+        .filter-select { flex: 1; padding: 10px; background: var(--glass); border: 1px solid var(--border); border-radius: 10px; color: white; font-size: 0.85rem; }
 
         /* Member Cards */
-        .member-link { text-decoration: none; color: inherit; display: block; margin-bottom: 15px; }
-        .member-card {
-            background: var(--glass); backdrop-filter: blur(10px); border: 1px solid var(--border);
-            border-radius: 18px; padding: 20px; display: flex; justify-content: space-between;
-            align-items: center; transition: 0.3s;
-        }
+        .member-link { text-decoration: none; color: inherit; display: block; margin-bottom: 12px; }
+        .member-card { background: var(--glass); border: 1px solid var(--border); border-radius: 18px; padding: 18px; display: flex; justify-content: space-between; align-items: center; transition: 0.3s; }
         .member-card.alert-danger { border-color: var(--red); animation: pulse-red 2s infinite; }
         
-        @keyframes pulse-red {
-            0%, 100% { box-shadow: 0 0 0px rgba(255, 75, 92, 0.2); }
-            50% { box-shadow: 0 0 15px rgba(255, 75, 92, 0.4); }
-        }
+        @keyframes pulse-red { 0%, 100% { box-shadow: 0 0 0px rgba(255, 75, 92, 0.2); } 50% { box-shadow: 0 0 12px rgba(255, 75, 92, 0.4); } }
 
-        .streak-container { display: flex; gap: 8px; margin-top: 12px; }
-        .dot { width: 14px; height: 14px; border-radius: 50%; background: rgba(255, 255, 255, 0.1); border: 1px solid var(--border); cursor: pointer; }
+        .streak-container { display: flex; gap: 6px; margin-top: 10px; }
+        .dot { width: 12px; height: 12px; border-radius: 50%; background: rgba(255, 255, 255, 0.1); border: 1px solid var(--border); }
         .dot.present { background: var(--green); border: none; box-shadow: 0 0 8px var(--green); }
         .dot.absent { background: var(--red); border: none; box-shadow: 0 0 8px var(--red); }
 
-        .fab {
-            position: fixed; bottom: 30px; right: 30px; width: 60px; height: 60px;
-            background: var(--primary); border-radius: 50%; display: flex; align-items: center;
-            justify-content: center; color: #0f172a; font-size: 24px; text-decoration: none;
-            box-shadow: 0 10px 20px rgba(79, 172, 254, 0.3); z-index: 100;
-        }
+        .fab { position: fixed; bottom: 30px; right: 30px; width: 60px; height: 60px; background: var(--primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #0f172a; text-decoration: none; font-size: 24px; box-shadow: 0 10px 20px rgba(79, 172, 254, 0.3); z-index: 100; }
     </style>
 </head>
 <body>
@@ -89,13 +62,23 @@
 <div class="overlay" id="overlay" onclick="toggleMenu()"></div>
 
 <div class="main-content">
-    <nav class="navbar">
-        <button class="menu-btn" onclick="toggleMenu()">☰</button>
+    <nav style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
+        <button onclick="toggleMenu()" style="background:var(--glass); border:1px solid var(--border); color:white; padding:10px; border-radius:10px; cursor:pointer;">☰</button>
         <div style="text-align: right;">
             <h1 style="font-size: 1.2rem;">Registry</h1>
-            <p id="roleInfo" style="font-size: 0.7rem; opacity: 0.6;">Loading...</p>
+            <p id="roleInfo" style="font-size: 0.7rem; opacity: 0.6;">Connecting...</p>
         </div>
     </nav>
+
+    <div class="controls-container">
+        <input type="text" id="searchInput" class="search-box" placeholder="Search by name...">
+        <div class="filter-row" id="adminFilters" style="display: none;">
+            <select id="sortBy" class="filter-select">
+                <option value="last_name">Sort by Last Name</option>
+                <option value="first_name">Sort by First Name</option>
+            </select>
+        </div>
+    </div>
 
     <div id="memberList"></div>
 </div>
@@ -119,15 +102,15 @@
     const auth = getAuth(app);
     const db = getFirestore(app, "fobrealdbase");
 
-    // Sidebar Toggle Logic
+    let allMembers = [];
+    let latestEvents = [];
+
     window.toggleMenu = () => {
         document.getElementById('sidebar').classList.toggle('open');
         document.getElementById('overlay').classList.toggle('show');
     };
 
     window.logout = () => signOut(auth).then(() => window.location.href = "/index.html");
-
-    let latestEvents = [];
 
     async function fetchLatestEvents() {
         const todayStr = new Date().toISOString().split('T')[0];
@@ -136,41 +119,81 @@
         latestEvents = snap.docs.map(d => ({ id: d.id, ...d.data() })).reverse();
     }
 
-    async function loadRegistry(userQuery) {
+    async function getAttendanceDots(memberId) {
+        let dots = "";
+        let absentCount = 0;
+        for (const ev of latestEvents) {
+            const attSnap = await getDoc(doc(db, "attendance", `${memberId}_${ev.id}`));
+            let status = attSnap.exists() ? attSnap.data().status : 'unmarked';
+            if (status !== 'present') absentCount++;
+            dots += `<div class="dot ${status === 'unmarked' ? '' : status}" onclick="toggleAttendance(event, this, '${memberId}', '${ev.id}')"></div>`;
+        }
+        return { html: dots, isAtRisk: absentCount >= 3 };
+    }
+
+    async function renderList(members) {
         const listDiv = document.getElementById('memberList');
-        const snaps = await getDocs(userQuery);
-        listDiv.innerHTML = "";
+        listDiv.innerHTML = members.length ? "" : "<p style='text-align:center; opacity:0.5;'>No members found.</p>";
 
-        for (const mDoc of snaps.docs) {
-            const m = mDoc.data();
-            let absentCount = 0;
-            let dotsHtml = `<div class="streak-container">`;
-
-            for (const ev of latestEvents) {
-                const attSnap = await getDoc(doc(db, "attendance", `${mDoc.id}_${ev.id}`));
-                let statusClass = "";
-                if (attSnap.exists()) {
-                    statusClass = attSnap.data().status;
-                    if (statusClass === 'absent') absentCount++;
-                } else { absentCount++; }
-                
-                dotsHtml += `<div class="dot ${statusClass}" onclick="toggleAttendance(event, this, '${mDoc.id}', '${ev.id}')"></div>`;
-            }
-            dotsHtml += `</div>`;
-
+        for (const m of members) {
+            const { html, isAtRisk } = await getAttendanceDots(m.id);
             listDiv.innerHTML += `
-                <a href="profile.html?id=${mDoc.id}" class="member-link">
-                    <div class="member-card ${absentCount >= 3 ? 'alert-danger' : ''}">
+                <a href="profile.html?id=${m.id}" class="member-link">
+                    <div class="member-card ${isAtRisk ? 'alert-danger' : ''}">
                         <div>
                             <div style="font-weight:600;">${m.first_name} ${m.last_name}</div>
-                            <div style="font-size:0.7rem; opacity:0.5;">Tap to view profile</div>
-                            ${dotsHtml}
+                            <div style="font-size:0.7rem; opacity:0.5;">ID: ${m.id.substring(0,8)}...</div>
+                            <div class="streak-container">${html}</div>
                         </div>
                         <div style="opacity:0.2;">›</div>
                     </div>
                 </a>`;
         }
     }
+
+    // Client-side search and sort
+    function filterAndSort() {
+        const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+        const sortBy = document.getElementById('sortBy').value;
+
+        let filtered = allMembers.filter(m => 
+            `${m.first_name} ${m.last_name}`.toLowerCase().includes(searchTerm)
+        );
+
+        filtered.sort((a, b) => (a[sortBy] || "").localeCompare(b[sortBy] || ""));
+        renderList(filtered);
+    }
+
+    document.getElementById('searchInput').oninput = filterAndSort;
+    document.getElementById('sortBy').onchange = filterAndSort;
+
+    onAuthStateChanged(auth, async (user) => {
+        if (!user) { window.location.href = "../index.html"; return; }
+        await fetchLatestEvents();
+        
+        const roles = ["master_admin", "pastors", "shepherds"];
+        for (const role of roles) {
+            const snap = await getDoc(doc(db, role, user.uid));
+            if (snap.exists()) {
+                document.getElementById('roleInfo').innerText = `${role.replace('_',' ')}: ${snap.data().full_name}`;
+                if (role === "master_admin") document.getElementById('adminFilters').style.display = 'flex';
+
+                // Set dashboard link
+                const dashLink = document.getElementById('dashLink');
+                dashLink.href = role === "master_admin" ? "../admin/index.html" : role === "pastors" ? "../pastor/index.html" : "../shepherd/index.html";
+
+                // Fetch data based on role
+                let q = collection(db, "members");
+                if (role === "pastors") q = query(q, where("pastorId", "==", user.uid));
+                if (role === "shepherds") q = query(q, where("shepherdId", "==", user.uid));
+
+                const memberSnap = await getDocs(q);
+                allMembers = memberSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+                filterAndSort();
+                break;
+            }
+        }
+    });
 
     window.toggleAttendance = async (event, dot, memberId, eventId) => {
         event.preventDefault(); event.stopPropagation();
@@ -186,31 +209,6 @@
             dot.className = 'dot';
         }
     };
-
-    onAuthStateChanged(auth, async (user) => {
-        if (!user) { window.location.href = "../index.html"; return; }
-        await fetchLatestEvents();
-        
-        const roles = ["master_admin", "pastors", "shepherds"];
-        for (const role of roles) {
-            const snap = await getDoc(doc(db, role, user.uid));
-            if (snap.exists()) {
-                document.getElementById('roleInfo').innerText = `${role.replace('_',' ')}: ${snap.data().full_name}`;
-                
-                // Dynamic Dashboard Link
-                const dashLink = document.getElementById('dashLink');
-                if (role === "master_admin") dashLink.href = "../admin/index.html";
-                else if (role === "pastors") dashLink.href = "../pastor/index.html";
-                else dashLink.href = "../shepherd/index.html";
-
-                let q = query(collection(db, "members"), orderBy("last_name"));
-                if (role === "pastors") q = query(collection(db, "members"), where("pastorId", "==", user.uid));
-                if (role === "shepherds") q = query(collection(db, "members"), where("shepherdId", "==", user.uid));
-                loadRegistry(q);
-                break;
-            }
-        }
-    });
 </script>
 </body>
 </html>
