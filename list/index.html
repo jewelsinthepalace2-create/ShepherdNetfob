@@ -216,8 +216,8 @@ async function loadAdminView() {
                     const userSnap = await getDoc(doc(db, coll, targetId));
                     if (userSnap.exists()) {
                         const userData = userSnap.data();
-                        const roleLabel = coll === "shepherds" ? "Shep." : 
-                                        coll === "pastors" ? "Past." : "Admin";
+                        const roleLabel = coll === "shepherds" ? "Shepherd" : 
+                                        coll === "pastors" ? "Pastor" : "Admin";
                         foundName = `${roleLabel}: ${userData.full_name || 'No Name'}`;
                         break; // Stop searching once found
                     }
