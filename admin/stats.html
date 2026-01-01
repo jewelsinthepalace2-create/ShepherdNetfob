@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Global Stats | ShepherdNet</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        :root { 
+            --primary: #4facfe; --bg: #0f172a; --glass: rgba(255, 255, 255, 0.05); 
+            --border: rgba(255, 255, 255, 0.1); --green: #00ff88; --red: #ff4b5c; --gold: #ffd700;
+        }
+        body { background: var(--bg); color: white; font-family: 'Poppins', sans-serif; padding: 20px; }
+        .container { max-width: 1000px; margin: 0 auto; padding-bottom: 60px; }
+        
+        .header { text-align: left; margin-bottom: 30px; display: flex; justify-content: space-between; align-items: flex-end; }
+        .back-btn { color: var(--primary); text-decoration: none; font-size: 0.9rem; margin-bottom: 10px; display: inline-block; }
+
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; }
+        
+        .stat-card { 
+            background: var(--glass); backdrop-filter: blur(15px); 
+            padding: 25px; border-radius: 24px; border: 1px solid var(--border); 
+        }
+
+        h3 { font-size: 1.1rem; margin-bottom: 15px; display: flex; align-items: center; gap: 8px; }
+
+        /* Tables & Lists */
+        .list-container { max-height: 300px; overflow-y: auto; }
+        .list-item { 
+            display: flex; justify-content: space-between; padding: 12px; 
+            border-bottom: 1px solid var(--border); font-size: 0.85rem;
+        }
+        .rank { color: var(--gold); font-weight: bold; width: 25px; display: inline-block; }
+        .at-risk-name { color: var(--red); font-weight: 600; }
+        .chapel-tag { font-size: 0.7rem; opacity: 0.6; display: block; }
+
+        /* Buttons */
+        .btn-report { background: var(--gold); color: #000; border: none; padding: 12px 20px; border-radius: 12px; font-weight: 600; cursor: pointer; transition: 0.3s; }
+        .btn-report:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(255, 215, 0, 0.3); }
+
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <a href="index.html" class="back-btn">← Admin Dashboard</a>
+    
+    <div class="header">
+        <div>
+            <h1>Ministry Oversight</h1>
+            <p style="opacity:0.6">Performance & Risk Analysis</p>
+        </div>
+        <button id="generateReport" class="btn-report">📋 Copy WhatsApp Report</button>
+    </div>
+
+    <div class="grid">
+        <div class="stat-card">
+            <h3>📊 Maturity Ratio</h3>
+            <canvas id="maturityChart" style="max-height: 200px;"></canvas>
+        </div>
+
+        <div class="stat-card">
+            <h3>🏆 Chapel Rankings</h3>
+            <div class="list-container" id="leaderboard">
+                <p style="text-align:center; padding:20px; opacity:0.5;">Loading Rankings...</p>
+            </div>
+        </div>
+
+        <div class="stat-card" style="grid-column: 1 / -1; border-color: rgba(255, 75, 92, 0.3);">
+            <h3 style="color: var(--red);">⚠️ At-Risk Souls (Missed 3+ Services)</h3>
+            <div class="list-container" id="atRiskList">
+                <p style="text-align:center; padding:20px; opacity:0.5;">Analyzing attendance patterns...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<textarea id="copyBuffer" style="position: absolute; left: -9999px;"></textarea>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
+    import { getFirestore, collection, getDocs, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+
+    const firebaseConfig = { 
+        apiKey: "AIzaSyCBv60eRCO0e4dFBMKGKnIATouxTuk1Bcc",
+        authDomain: "fob-database-139d1.firebaseapp.com",
+        projectId: "fob-database-139d1",
+        storageBucket: "fob-database-139d1.firebasestorage.app",
+        appId: "1:375165731354:web:b5fa57dcb2d71ee0d8c7a3"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app, "fobrealdbase");
+
+    let finalReport = "";
+
+    async function runOversight() {
+        const memberSnap = await getDocs(collection(db, "members"));
+        const pastorSnap = await getDocs(collection(db, "pastors"));
+        const eventSnap = await getDocs(query(collection(db, "events"), orderBy("date", "desc"), limit(3)));
+        const attSnap = await getDocs(collection(db, "attendance"));
+
+        const latestEvents = eventSnap.docs.map(d => d.id);
+        const chapelMap = {};
+        const maturity = { "New Converts": 0, "Established Members": 0 };
+        const rankings = {};
+        const atRisk = [];
+
+        // Map Pastors to Chapels
+        pastorSnap.forEach(d => {
+            chapelMap[d.id] = { 
+                name: d.data().name_of_chapel || "Unknown", 
+                leader: d.data().full_name 
+            };
+        });
+
+        // Map all attendance for fast lookup [MemberID_EventID]
+        const attSet = new Set();
+        attSnap.forEach(d => attSet.add(d.id));
+
+        // Process Members
+        memberSnap.forEach(doc => {
+            const m = doc.data();
+            const mId = doc.id;
+            
+            // 1. Maturity Count
+            const label = m.status === "Established Member" ? "Established Members" : "New Converts";
+            maturity[label]++;
+
+            // 2. Rankings logic (Count Established per Pastor)
+            if(m.status === "Established Member") {
+                rankings[m.pastorId] = (rankings[m.pastorId] || 0) + 1;
+            }
+
+            // 3. At-Risk Logic (Check if missed ALL 3 latest events)
+            if (latestEvents.length === 3) {
+                const missedAll = latestEvents.every(eId => !attSet.has(`${mId}_${eId}`));
+                if (missedAll) {
+                    atRisk.push({
+                        name: `${m.first_name} ${m.last_name}`,
+                        chapel: chapelMap[m.pastorId]?.name || "Unassigned"
+                    });
+                }
+            }
+        });
+
+        renderLeaderboard(rankings, chapelMap);
+        renderAtRisk(atRisk);
+        renderMaturityChart(maturity);
+        prepareReport(maturity, rankings, chapelMap, atRisk);
+    }
+
+    function renderLeaderboard(data, chapels) {
+        const container = document.getElementById('leaderboard');
+        const sorted = Object.entries(data).sort((a,b) => b[1] - a[1]);
+        container.innerHTML = sorted.map(([id, count], i) => `
+            <div class="list-item">
+                <span><span class="rank">#${i+1}</span> <b>${chapels[id]?.name}</b></span>
+                <span style="font-weight:600">${count} Souls</span>
+            </div>
+        `).join('') || "No rankings yet.";
+    }
+
+    function renderAtRisk(list) {
+        const container = document.getElementById('atRiskList');
+        container.innerHTML = list.map(p => `
+            <div class="list-item">
+                <div>
+                    <span class="at-risk-name">${p.name}</span>
+                    <span class="chapel-tag">Chapel: ${p.chapel}</span>
+                </div>
+                <span style="color:var(--red); font-size: 0.7rem; font-weight:bold;">MISSING IN ACTION</span>
+            </div>
+        `).join('') || "<p style='padding:20px; text-align:center; color:var(--green)'>✅ All members accounted for!</p>";
+    }
+
+    function renderMaturityChart(data) {
+        new Chart(document.getElementById('maturityChart'), {
+            type: 'doughnut',
+            data: {
+                labels: Object.keys(data),
+                datasets: [{
+                    data: Object.values(data),
+                    backgroundColor: ['#ff4b5c', '#00ff88'],
+                    borderColor: 'transparent'
+                }]
+            },
+            options: { plugins: { legend: { position: 'bottom', labels: { color: '#fff' } } } }
+        });
+    }
+
+    function prepareReport(maturity, rankings, chapels, atRisk) {
+        let text = `*SHEPHERDNET GLOBAL REPORT*\n`;
+        text += `--------------------------\n`;
+        text += `📊 *MATURITY:* Established: ${maturity["Established Members"]} | New: ${maturity["New Converts"]}\n\n`;
+        text += `🏆 *TOP CHAPELS:*\n`;
+        Object.entries(rankings).sort((a,b) => b[1] - a[1]).slice(0,3).forEach(([id, val], i) => {
+            text += `${i+1}. ${chapels[id]?.name}: ${val} Established\n`;
+        });
+        text += `\n⚠️ *AT-RISK SOULS:* ${atRisk.length} members missed the last 3 services.\n`;
+        finalReport = text;
+    }
+
+    document.getElementById('generateReport').onclick = () => {
+        const buf = document.getElementById('copyBuffer');
+        buf.value = finalReport;
+        buf.select();
+        document.execCommand('copy');
+        alert("WhatsApp Report Copied!");
+    };
+
+    runOversight();
+</script>
+</body>
+</html>
