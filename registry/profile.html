@@ -14,7 +14,6 @@
         body { background: var(--bg); color: white; font-family: 'Poppins', sans-serif; padding: 20px; }
         .container { max-width: 500px; margin: 0 auto; padding-bottom: 50px; }
 
-        /* Profile Header */
         .profile-card {
             background: var(--glass); backdrop-filter: blur(15px);
             padding: 30px; border-radius: 24px; border: 1px solid var(--border);
@@ -24,54 +23,36 @@
         h1 { font-size: 1.4rem; margin-bottom: 5px; }
         .joined-date { font-size: 0.75rem; color: rgba(255,255,255,0.5); margin-bottom: 15px; }
 
-        /* Stats Grid */
+        .filter-box { margin-bottom: 20px; }
+        select { 
+            width: 100%; padding: 12px; border-radius: 12px; background: #1e293b; 
+            color: white; border: 1px solid var(--border); outline: none; font-family: inherit;
+        }
+
         .stats-row { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }
         .stat-card { background: var(--glass); padding: 15px; border-radius: 15px; text-align: center; border: 1px solid var(--border); }
         .stat-val { display: block; font-size: 1.2rem; font-weight: 700; color: var(--primary); }
         .stat-lab { font-size: 0.65rem; text-transform: uppercase; opacity: 0.6; }
 
-        /* Chart Section */
         .chart-box { background: var(--glass); padding: 20px; border-radius: 24px; border: 1px solid var(--border); margin-bottom: 20px; }
         
-        /* History List */
         .history-list { background: var(--glass); padding: 20px; border-radius: 24px; border: 1px solid var(--border); }
-        .history-item { 
-            display: flex; justify-content: space-between; align-items: flex-start; 
-            padding: 15px 0; border-bottom: 1px solid var(--border); 
-        }
+        .history-item { display: flex; justify-content: space-between; align-items: flex-start; padding: 15px 0; border-bottom: 1px solid var(--border); }
         .history-item:last-child { border-bottom: none; }
         .service-info { flex: 1; }
         .note-preview { font-size: 0.75rem; color: var(--primary); margin-top: 5px; font-style: italic; display: block; }
         
         .status-area { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
-        .status-pill { padding: 4px 10px; border-radius: 6px; font-size: 0.65rem; font-weight: bold; letter-spacing: 0.5px; }
+        .status-pill { padding: 4px 10px; border-radius: 6px; font-size: 0.65rem; font-weight: bold; }
         .pill-present { background: rgba(0, 255, 136, 0.15); color: var(--green); }
         .pill-absent { background: rgba(255, 75, 92, 0.15); color: var(--red); }
 
         .note-btn { background: var(--glass); border: 1px solid var(--border); color: white; padding: 5px 8px; border-radius: 6px; cursor: pointer; font-size: 0.8rem; }
-        .note-btn:hover { background: var(--primary); color: #000; }
-
-        /* Modal */
-        .modal {
-            display: none; position: fixed; z-index: 2000; left: 0; top: 0;
-            width: 100%; height: 100%; background: rgba(0,0,0,0.85);
-            backdrop-filter: blur(8px); align-items: center; justify-content: center;
-        }
-        .modal-content {
-            background: #1e293b; padding: 25px; border-radius: 24px;
-            width: 90%; max-width: 400px; border: 1px solid var(--border);
-        }
-        .modal-content h3 { margin-bottom: 15px; font-size: 1.1rem; color: var(--primary); }
-        textarea {
-            width: 100%; height: 120px; background: rgba(0,0,0,0.3);
-            border: 1px solid var(--border); border-radius: 12px; color: white;
-            padding: 12px; font-family: inherit; resize: none; outline: none; margin-bottom: 15px;
-        }
-        .modal-actions { display: flex; gap: 10px; }
-        .btn-save-note { flex: 2; padding: 14px; background: var(--primary); border: none; border-radius: 12px; font-weight: 600; cursor: pointer; }
-        .btn-close-note { flex: 1; padding: 14px; background: rgba(255,255,255,0.1); border: none; border-radius: 12px; color: white; cursor: pointer; }
-
-        .back-btn { display: inline-block; margin-bottom: 20px; color: var(--primary); text-decoration: none; font-size: 0.9rem; }
+        .modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); align-items: center; justify-content: center; }
+        .modal-content { background: #1e293b; padding: 25px; border-radius: 24px; width: 90%; max-width: 400px; border: 1px solid var(--border); }
+        textarea { width: 100%; height: 120px; background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 12px; color: white; padding: 12px; margin-bottom: 15px; }
+        .btn-save-note { width: 100%; padding: 14px; background: var(--primary); border: none; border-radius: 12px; font-weight: 600; cursor: pointer; }
+        .back-btn { display: inline-block; margin-bottom: 20px; color: var(--primary); text-decoration: none; }
     </style>
 </head>
 <body>
@@ -82,12 +63,34 @@
     <div class="profile-card">
         <img src="https://via.placeholder.com/100" class="profile-img" id="memberPic">
         <h1 id="memberName">Loading...</h1>
-        <div class="joined-date" id="joinDate">Joined: --</div>
         <div id="pastorCredit" style="font-size: 0.8rem; color: var(--primary)"></div>
     </div>
 
+    <div class="filter-box">
+        <select id="timeFilter">
+            <optgroup label="General">
+                <option value="all">All Time</option>
+                <option value="last-7">Last 7 Days</option>
+                <option value="last-30">Last 30 Days</option>
+            </optgroup>
+            <optgroup label="2026 Months">
+                <option value="2026-01">January</option>
+                <option value="2026-02">February</option>
+                <option value="2026-03">March</option>
+                <option value="2026-04">April</option>
+                <option value="2026-05">May</option>
+                <option value="2026-06">June</option>
+                <option value="2026-07">July</option>
+            </optgroup>
+            <optgroup label="Years">
+                <option value="2025">Year 2025</option>
+                <option value="2026">Year 2026</option>
+            </optgroup>
+        </select>
+    </div>
+
     <div class="stats-row">
-        <div class="stat-card"><span class="stat-val" id="totalServices">0</span><span class="stat-lab">Total Services</span></div>
+        <div class="stat-card"><span class="stat-val" id="totalServices">0</span><span class="stat-lab">Services</span></div>
         <div class="stat-card"><span class="stat-val" id="attRate">0%</span><span class="stat-lab">Attendance</span></div>
     </div>
 
@@ -95,19 +98,15 @@
         <canvas id="attendanceChart"></canvas>
     </div>
 
-    <h3 style="margin: 20px 0 15px; font-size: 1.1rem; padding-left: 5px;">Service History</h3>
-    <div class="history-list" id="historyList">
-        </div>
+    <div class="history-list" id="historyList"></div>
 </div>
 
 <div id="noteModal" class="modal">
     <div class="modal-content">
-        <h3 id="modalTitle">Follow-up Note</h3>
-        <textarea id="noteInput" placeholder="Why did they miss? Any updates?"></textarea>
-        <div class="modal-actions">
-            <button class="btn-close-note" id="closeModal">Cancel</button>
-            <button class="btn-save-note" id="saveNoteBtn">Save Note</button>
-        </div>
+        <h3 id="modalTitle" style="color: var(--primary); margin-bottom:10px;">Note</h3>
+        <textarea id="noteInput"></textarea>
+        <button class="btn-save-note" id="saveNoteBtn">Save Note</button>
+        <button onclick="document.getElementById('noteModal').style.display='none'" style="background:none; border:none; color:gray; width:100; margin-top:10px; cursor:pointer;">Cancel</button>
     </div>
 </div>
 
@@ -128,116 +127,100 @@
 
     const urlParams = new URLSearchParams(window.location.search);
     const memberId = urlParams.get('id');
-    let activeEventId = null;
+    let myChart = null;
 
-    // --- MODAL LOGIC ---
-    const modal = document.getElementById('noteModal');
-    const noteInput = document.getElementById('noteInput');
+    // Filter Logic
+    function isDateInRange(dateStr, filterValue) {
+        if (filterValue === "all") return true;
+        
+        const eventDate = new Date(dateStr);
+        const today = new Date();
 
-    window.openNote = (eventId, eventName, currentNote) => {
-        activeEventId = eventId;
-        document.getElementById('modalTitle').innerText = `Note: ${eventName}`;
-        noteInput.value = currentNote || "";
-        modal.style.display = 'flex';
-    };
-
-    document.getElementById('closeModal').onclick = () => modal.style.display = 'none';
-
-    document.getElementById('saveNoteBtn').onclick = async () => {
-        if (!activeEventId) return;
-        const btn = document.getElementById('saveNoteBtn');
-        btn.disabled = true;
-        btn.innerText = "Saving...";
-
-        try {
-            const attRef = doc(db, "attendance", `${memberId}_${activeEventId}`);
-            await setDoc(attRef, { note: noteInput.value }, { merge: true });
-            modal.style.display = 'none';
-            location.reload(); 
-        } catch (e) {
-            alert("Error: " + e.message);
-            btn.disabled = false;
-            btn.innerText = "Save Note";
+        if (filterValue === "last-7") {
+            const diff = (today - eventDate) / (1000 * 60 * 60 * 24);
+            return diff <= 7 && diff >= 0;
         }
-    };
+        if (filterValue === "last-30") {
+            const diff = (today - eventDate) / (1000 * 60 * 60 * 24);
+            return diff <= 30 && diff >= 0;
+        }
+        
+        // Matches "2026-05" (Month) or "2026" (Year)
+        return dateStr.startsWith(filterValue);
+    }
 
-    // --- DATA LOADING ---
-    async function loadFullProfile() {
+    async function loadFullProfile(filter = "all") {
         if (!memberId) return;
 
         const mSnap = await getDoc(doc(db, "members", memberId));
         if (!mSnap.exists()) return;
         const m = mSnap.data();
-
         document.getElementById('memberName').innerText = `${m.first_name} ${m.last_name}`;
-        document.getElementById('joinDate').innerText = `Joined: ${m.date_joined || '---'}`;
-        if(m.profile_pic) document.getElementById('memberPic').src = m.profile_pic;
-
-        const pSnap = await getDoc(doc(db, "pastors", m.pastorId));
-        if(pSnap.exists()) document.getElementById('pastorCredit').innerText = `Under Pastor: ${pSnap.data().full_name}`;
 
         const eventsSnap = await getDocs(query(collection(db, "events"), orderBy("date", "desc")));
         const historyDiv = document.getElementById('historyList');
+        historyDiv.innerHTML = "";
         
-        let presentCount = 0;
-        let totalCount = eventsSnap.docs.length;
+        let presentCount = 0, displayedCount = 0;
 
         for (const evDoc of eventsSnap.docs) {
             const ev = evDoc.data();
-            const evId = evDoc.id;
-            const attSnap = await getDoc(doc(db, "attendance", `${memberId}_${evId}`));
-            
+            if (!isDateInRange(ev.date, filter)) continue;
+
+            displayedCount++;
+            const attSnap = await getDoc(doc(db, "attendance", `${memberId}_${evDoc.id}`));
             const isPresent = attSnap.exists() && attSnap.data().status === 'present';
             const note = attSnap.exists() ? (attSnap.data().note || "") : "";
             
             if(isPresent) presentCount++;
 
-            const item = document.createElement('div');
-            item.className = 'history-item';
-            item.innerHTML = `
-                <div class="service-info">
-                    <span style="font-weight:600">${ev.name}</span><br>
-                    <small style="opacity:0.5">${ev.date}</small>
-                    ${note ? `<span class="note-preview">📝 ${note}</span>` : ''}
-                </div>
-                <div class="status-area">
-                    <span class="status-pill ${isPresent ? 'pill-present' : 'pill-absent'}">
-                        ${isPresent ? 'ATTENDED' : 'ABSENT'}
-                    </span>
-                    <button class="note-btn" onclick="openNote('${evId}', '${ev.name}', '${note.replace(/'/g, "\\'")}')">💬 Note</button>
-                </div>
-            `;
-            historyDiv.appendChild(item);
+            historyDiv.innerHTML += `
+                <div class="history-item">
+                    <div class="service-info">
+                        <span style="font-weight:600">${ev.name}</span><br>
+                        <small style="opacity:0.5">${ev.date}</small>
+                        ${note ? `<span class="note-preview">📝 ${note}</span>` : ''}
+                    </div>
+                    <div class="status-area">
+                        <span class="status-pill ${isPresent ? 'pill-present' : 'pill-absent'}">${isPresent ? 'ATTENDED' : 'ABSENT'}</span>
+                        <button class="note-btn" onclick="openNote('${evDoc.id}', '${ev.name}', '${note.replace(/'/g, "\\'")}')">💬 Note</button>
+                    </div>
+                </div>`;
         }
 
-        document.getElementById('totalServices').innerText = totalCount;
-        const rate = totalCount > 0 ? Math.round((presentCount / totalCount) * 100) : 0;
-        document.getElementById('attRate').innerText = `${rate}%`;
-
-        renderChart(presentCount, totalCount - presentCount);
+        document.getElementById('totalServices').innerText = displayedCount;
+        document.getElementById('attRate').innerText = `${displayedCount > 0 ? Math.round((presentCount / displayedCount) * 100) : 0}%`;
+        renderChart(presentCount, displayedCount - presentCount);
     }
 
     function renderChart(present, absent) {
-        new Chart(document.getElementById('attendanceChart'), {
+        const ctx = document.getElementById('attendanceChart').getContext('2d');
+        if (myChart) myChart.destroy();
+        myChart = new Chart(ctx, {
             type: 'doughnut',
             data: {
-                labels: ['Attended', 'Missed'],
-                datasets: [{
-                    data: [present, absent],
-                    backgroundColor: ['#00ff88', '#ff4b5c'],
-                    borderColor: 'transparent',
-                    hoverOffset: 4
-                }]
+                labels: ['Present', 'Absent'],
+                datasets: [{ data: [present, absent], backgroundColor: ['#00ff88', '#ff4b5c'], borderColor: 'transparent' }]
             },
-            options: {
-                cutout: '70%',
-                plugins: { 
-                    legend: { position: 'bottom', labels: { color: 'white', padding: 20, font: { family: 'Poppins' } } } 
-                }
-            }
+            options: { cutout: '75%', plugins: { legend: { display: false } } }
         });
     }
 
+    window.openNote = (id, name, note) => {
+        window.activeEventId = id;
+        document.getElementById('modalTitle').innerText = name;
+        document.getElementById('noteInput').value = note;
+        document.getElementById('noteModal').style.display = 'flex';
+    };
+
+    document.getElementById('saveNoteBtn').onclick = async () => {
+        const attRef = doc(db, "attendance", `${memberId}_${window.activeEventId}`);
+        await setDoc(attRef, { note: document.getElementById('noteInput').value }, { merge: true });
+        document.getElementById('noteModal').style.display = 'none';
+        loadFullProfile(document.getElementById('timeFilter').value);
+    };
+
+    document.getElementById('timeFilter').onchange = (e) => loadFullProfile(e.target.value);
     loadFullProfile();
 </script>
 </body>
