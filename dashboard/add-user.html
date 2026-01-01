@@ -120,8 +120,8 @@
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
-  import { getAuth, createUserWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
-  import { initializeFirestore, doc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+  import { getAuth, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
+  import { initializeFirestore, doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
 
   const firebaseConfig = { 
     apiKey: "AIzaSyCBv60eRCO0e4dFBMKGKnIATouxTuk1Bcc", 
@@ -134,11 +134,27 @@
   
   // 1. Initialize Main App (Admin Session)
   const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
   const db = initializeFirestore(app, { experimentalForceLongPolling: true }, "fobrealdbase");
 
   // 2. Initialize Secondary App (For creating users without logging out admin)
   const secondaryApp = initializeApp(firebaseConfig, "Secondary");
   const secondaryAuth = getAuth(secondaryApp);
+
+  // --- SECURITY CHECK: VERIFY MASTER ADMIN ---
+  onAuthStateChanged(auth, async (user) => {
+    if (user) {
+      const adminDoc = await getDoc(doc(db, "master_admin", user.uid));
+      if (!adminDoc.exists() || adminDoc.data().role !== "master_admin") {
+        alert("Access Denied: You do not have Master Admin privileges.");
+        window.location.href = "../index.html"; // Redirect unauthorized users
+      } else {
+        console.log("Admin verified: Access granted.");
+      }
+    } else {
+      window.location.href = "../index.html"; // Redirect if not logged in at all
+    }
+  });
 
   const ghanaPhoneRegex = /^(?:\+233|0)[235][0-9]{8}$/;
 
@@ -166,7 +182,7 @@
       const userCredential = await createUserWithEmailAndPassword(secondaryAuth, email, password);
       const newUser = userCredential.user;
 
-      // Write data using the MAIN db instance (where Admin is logged in)
+      // Write data using the MAIN db instance (Authorized by verified Master Admin)
       await setDoc(doc(db, collectionName, newUser.uid), {
         full_name: document.getElementById('fullName').value,
         gender: document.getElementById('gender').value,
@@ -180,17 +196,16 @@
         created_at: serverTimestamp()
       });
 
-      // Log out the new user from the secondary app only
       await signOut(secondaryAuth);
 
-      alert(`Success! ${document.getElementById('fullName').value} has been registered. You are still logged in as Admin.`);
-      
+      alert(`Success! ${document.getElementById('fullName').value} registered.`);
       document.getElementById('signupForm').reset();
       btn.disabled = false;
       btn.innerText = "Create User Account";
 
     } catch (error) {
-      alert("Registration Error: " + error.message);
+      console.error(error);
+      alert("Error: " + error.message);
       btn.disabled = false;
       btn.innerText = "Create User Account";
     }
