@@ -2,37 +2,55 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Create Event | ShepherdNet</title>
+    <title>Manage Events | ShepherdNet</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
-        :root { --primary: #4facfe; --bg: #0f172a; --glass: rgba(255, 255, 255, 0.05); --border: rgba(255, 255, 255, 0.1); }
+        :root { --primary: #4facfe; --bg: #0f172a; --glass: rgba(255, 255, 255, 0.05); --border: rgba(255, 255, 255, 0.1); --gold: #ffd700; }
         body { background: var(--bg); color: white; font-family: 'Poppins', sans-serif; display: flex; justify-content: center; padding: 20px; }
-        .card { background: var(--glass); backdrop-filter: blur(10px); padding: 30px; border-radius: 20px; border: 1px solid var(--border); width: 100%; max-width: 400px; }
-        h2 { color: var(--primary); margin-bottom: 20px; text-align: center; }
-        input, select, button { width: 100%; padding: 14px; margin: 10px 0; border-radius: 12px; border: 1px solid var(--border); background: rgba(0,0,0,0.3); color: white; outline: none; }
-        button { background: var(--primary); color: #0f172a; font-weight: 600; cursor: pointer; border: none; margin-top: 20px; }
+        .card { background: var(--glass); backdrop-filter: blur(10px); padding: 30px; border-radius: 20px; border: 1px solid var(--border); width: 100%; max-width: 450px; }
+        h2 { color: var(--primary); margin-bottom: 5px; text-align: center; }
+        p { text-align: center; font-size: 0.8rem; opacity: 0.6; margin-bottom: 25px; }
+        
+        .section-label { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: var(--gold); margin-top: 20px; display: block; letter-spacing: 1px; }
+        input, select, button { width: 100%; padding: 14px; margin: 10px 0; border-radius: 12px; border: 1px solid var(--border); background: rgba(0,0,0,0.3); color: white; outline: none; box-sizing: border-box; }
+        
+        .btn-auto { background: linear-gradient(45deg, #4facfe, #00f2fe); color: #0f172a; font-weight: 600; cursor: pointer; border: none; }
+        .btn-special { background: transparent; border: 1px solid var(--primary); color: var(--primary); font-weight: 600; cursor: pointer; }
+        .btn-special:hover { background: var(--primary); color: #000; }
+        
         .back-link { display: block; text-align: center; color: var(--primary); text-decoration: none; font-size: 0.8rem; margin-top: 15px; }
+        hr { border: 0; border-top: 1px solid var(--border); margin: 25px 0; }
     </style>
 </head>
 <body>
 
 <div class="card">
-    <h2>New Service/Event</h2>
-    <input type="text" id="eventName" placeholder="Event Name (e.g. Sunday Service)">
-    <input type="date" id="eventDate">
-    <select id="eventCategory">
-        <option value="Sunday Service">Sunday Service</option>
-        <option value="Mid-Week">Mid-Week Service</option>
+    <h2>Event Manager</h2>
+    <p>ShepherdNet Ghana Automation</p>
+
+    <span class="section-label">System Automation</span>
+    <button id="btnAutoGenerate" class="btn-auto">Auto-Generate 2026 Schedule</button>
+    <small style="font-size: 0.65rem; opacity: 0.5; display: block; text-align: center;">This will set all Sunday, Wednesday, Friday, Dawn, and Monthly events for 2026.</small>
+
+    <hr>
+
+    <span class="section-label">Create Special Event</span>
+    <input type="text" id="specialEventName" placeholder="Event Name (e.g. Youth Camp)">
+    <input type="date" id="specialEventDate">
+    <select id="specialCategory">
         <option value="Special Event">Special Event</option>
+        <option value="Conference">Conference</option>
+        <option value="Vigil">Vigil</option>
     </select>
-    <button id="saveEvent">Create Event</button>
+    <button id="btnCreateSpecial" class="btn-special">Add Special Event</button>
+
     <a href="index.html" class="back-link">← Back to Registry</a>
 </div>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
-    import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, getDocs, query, where } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
 
     const firebaseConfig = { 
         apiKey: "AIzaSyCBv60eRCO0e4dFBMKGKnIATouxTuk1Bcc",
@@ -45,23 +63,79 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app, "fobrealdbase");
 
-    document.getElementById('saveEvent').onclick = async () => {
-        const name = document.getElementById('eventName').value;
-        const date = document.getElementById('eventDate').value;
-        const category = document.getElementById('eventCategory').value;
+    // --- 1. SPECIAL EVENT CREATION ---
+    document.getElementById('btnCreateSpecial').onclick = async () => {
+        const name = document.getElementById('specialEventName').value;
+        const date = document.getElementById('specialEventDate').value;
+        const cat = document.getElementById('specialCategory').value;
 
-        if(!name || !date) return alert("Please fill all fields");
+        if(!name || !date) return alert("Fill Name and Select Date");
 
         try {
             await addDoc(collection(db, "events"), {
                 name: name,
                 date: date,
-                category: category,
+                category: cat,
                 timestamp: new Date()
             });
-            alert("Event Created! Check the Registry for confirmation.");
-            window.location.href = "index.html";
+            alert("Special Event Created!");
+            window.location.reload();
         } catch (e) { alert(e.message); }
+    };
+
+    // --- 2. AUTO GENERATION LOGIC ---
+    document.getElementById('btnAutoGenerate').onclick = async () => {
+        if(!confirm("Generate all recurring events for 2026? This may take a moment.")) return;
+        
+        const btn = document.getElementById('btnAutoGenerate');
+        btn.innerText = "Processing... Please Wait";
+        btn.disabled = true;
+
+        const start = new Date(2026, 0, 2); // Jan 2, 2026
+        const end = new Date(2026, 11, 31); // Dec 31, 2026
+        
+        let currentDate = new Date(start);
+        const eventsBatch = [];
+
+        while (currentDate <= end) {
+            const day = currentDate.getDay(); // 0=Sun, 1=Mon...
+            const dateStr = currentDate.toISOString().split('T')[0];
+            
+            // A. DAWN PRAYERS (Every Day)
+            eventsBatch.push({ name: "Dawn Prayers", date: dateStr, category: "Daily" });
+
+            // B. WEEKLY EVENTS
+            if (day === 0) eventsBatch.push({ name: "Sunday Service", date: dateStr, category: "Sunday Service" });
+            if (day === 3) eventsBatch.push({ name: "Wednesday Brake Fuel Prayers", date: dateStr, category: "Mid-Week" });
+            if (day === 5) eventsBatch.push({ name: "Friday Freeflow", date: dateStr, category: "Mid-Week" });
+
+            // C. PRAYER SECRETS CONFERENCE (Last Saturday of the Month)
+            if (day === 6) {
+                let nextWeek = new Date(currentDate);
+                nextWeek.setDate(currentDate.getDate() + 7);
+                if (nextWeek.getMonth() !== currentDate.getMonth()) {
+                    eventsBatch.push({ name: "Prayer Secrets Conference", date: dateStr, category: "Conference" });
+                }
+            }
+
+            currentDate.setDate(currentDate.getDate() + 1);
+        }
+
+        try {
+            // Adding in small chunks to avoid Firebase timeouts
+            for (const ev of eventsBatch) {
+                await addDoc(collection(db, "events"), {
+                    ...ev,
+                    timestamp: new Date()
+                });
+            }
+            alert(`Success! ${eventsBatch.length} events generated for 2026.`);
+            window.location.href = "index.html";
+        } catch (e) { 
+            alert("Error: " + e.message); 
+            btn.innerText = "Auto-Generate 2026 Schedule";
+            btn.disabled = false;
+        }
     };
 </script>
 </body>
