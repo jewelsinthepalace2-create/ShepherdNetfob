@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Registry | ShepherdNet</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        :root { 
+            --primary: #4facfe; --bg: #0f172a; --glass: rgba(255, 255, 255, 0.05); 
+            --border: rgba(255, 255, 255, 0.1); --text: #ffffff; --text-dim: rgba(255, 255, 255, 0.5);
+            --green: #00ff88;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: var(--bg); color: var(--text); font-family: 'Poppins', sans-serif; min-height: 100vh; padding: 20px; }
+
+        .container { max-width: 600px; margin: 0 auto; padding-bottom: 100px; }
+        
+        /* Header Section */
+        header { margin-bottom: 30px; text-align: left; }
+        h1 { font-size: 1.5rem; font-weight: 600; }
+        #roleInfo { font-size: 0.8rem; color: var(--primary); opacity: 0.8; }
+
+        /* Member Card */
+        .member-card {
+            background: var(--glass);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            padding: 20px;
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: 0.3s ease;
+        }
+        .member-card:hover { border-color: var(--primary); transform: translateY(-2px); }
+
+        .name-box { font-weight: 600; font-size: 1.05rem; display: flex; align-items: center; gap: 8px; }
+        .sub-text { font-size: 0.75rem; color: var(--text-dim); margin-top: 4px; }
+        
+        /* Attendance Dots */
+        .streak-container { display: flex; gap: 8px; margin-top: 12px; }
+        .dot {
+            width: 14px; height: 14px; border-radius: 50%;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid var(--border);
+            cursor: pointer; transition: 0.3s;
+        }
+        .dot.present { 
+            background: var(--green); 
+            box-shadow: 0 0 10px rgba(0, 255, 136, 0.4); 
+            border: none; 
+        }
+
+        /* Floating Action Button */
+        .fab {
+            position: fixed; bottom: 30px; right: 30px;
+            width: 60px; height: 60px; background: var(--primary);
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            color: #0f172a; font-size: 24px; text-decoration: none; font-weight: bold;
+            box-shadow: 0 10px 20px rgba(79, 172, 254, 0.3);
+        }
+
+        .loading-spinner { text-align: center; padding: 50px; color: var(--text-dim); }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1 id="headerTitle">Registry</h1>
+        <p id="roleInfo">Authenticating...</p>
+    </header>
+
+    <div id="memberList">
+        <div class="loading-spinner">Fetching souls...</div>
+    </div>
+</div>
+
+<a href="add-member.html" class="fab">+</a>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
+    import { getFirestore, collection, query, where, getDocs, getDoc, doc, orderBy, limit, setDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+
+    const firebaseConfig = { 
+        apiKey: "AIzaSyCBv60eRCO0e4dFBMKGKnIATouxTuk1Bcc",
+        authDomain: "fob-database-139d1.firebaseapp.com",
+        projectId: "fob-database-139d1",
+        storageBucket: "fob-database-139d1.firebasestorage.app",
+        appId: "1:375165731354:web:b5fa57dcb2d71ee0d8c7a3"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app, "fobrealdbase");
+
+    let latestEvents = [];
+    const nameCache = {};
+
+    // 1. Get the 5 most recent events to build the dots
+    async function fetchLatestEvents() {
+        const q = query(collection(db, "events"), orderBy("date", "desc"), limit(5));
+        const snap = await getDocs(q);
+        latestEvents = snap.docs.map(d => ({ id: d.id, ...d.data() })).reverse();
+    }
+
+    // 2. Logic to find the Name of the Pastor/Shepherd who added the member
+    async function getAddedByName(pastorId, shepherdId) {
+        let targetId = (shepherdId && shepherdId !== "direct_pastor_entry" && shepherdId !== "master_admin_entry") 
+                       ? shepherdId : pastorId;
+        
+        if (!targetId) return "Registry";
+        if (nameCache[targetId]) return nameCache[targetId];
+
+        const collections = ["master_admin", "pastors", "shepherds"];
+        for (const coll of collections) {
+            const userSnap = await getDoc(doc(db, coll, targetId));
+            if (userSnap.exists()) {
+                const label = coll === "shepherds" ? "Shep." : coll === "pastors" ? "Past." : "Admin";
+                nameCache[targetId] = `${label}: ${userSnap.data().full_name}`;
+                return nameCache[targetId];
+            }
+        }
+        return "Unknown User";
+    }
+
+    // 3. Toggle Green Dot (Attendance)
+    window.toggleAttendance = async (dot, memberId, eventId) => {
+        const attId = `${memberId}_${eventId}`;
+        const attRef = doc(db, "attendance", attId);
+
+        if (dot.classList.contains('present')) {
+            await deleteDoc(attRef);
+            dot.classList.remove('present');
+        } else {
+            await setDoc(attRef, { status: 'present', timestamp: new Date() });
+            dot.classList.add('present');
+        }
+    };
+
+    // 4. Render the Members
+    async function loadRegistry(userQuery, roleLabel) {
+        const listDiv = document.getElementById('memberList');
+        const snaps = await getDocs(userQuery);
+        listDiv.innerHTML = "";
+
+        if (snaps.empty) {
+            listDiv.innerHTML = "<p style='text-align:center; opacity:0.5'>No members found.</p>";
+            return;
+        }
+
+        for (const mDoc of snaps.docs) {
+            const m = mDoc.data();
+            const addedBy = await getAddedByName(m.pastorId, m.shepherdId);
+            
+            // Generate Attendance Dots
+            let dotsHtml = `<div class="streak-container">`;
+            for (const ev of latestEvents) {
+                const attSnap = await getDoc(doc(db, "attendance", `${mDoc.id}_${ev.id}`));
+                dotsHtml += `<div class="dot ${attSnap.exists() ? 'present' : ''}" 
+                                  title="${ev.name}" 
+                                  onclick="toggleAttendance(this, '${mDoc.id}', '${ev.id}')"></div>`;
+            }
+            dotsHtml += `</div>`;
+
+            listDiv.innerHTML += `
+                <div class="member-card">
+                    <div>
+                        <div class="name-box">${m.first_name} ${m.last_name}</div>
+                        <div class="sub-text">${addedBy}</div>
+                        ${dotsHtml}
+                    </div>
+                    <div style="opacity:0.2; font-size:1.5rem">›</div>
+                </div>`;
+        }
+    }
+
+    onAuthStateChanged(auth, async (user) => {
+        if (!user) { window.location.href = "login.html"; return; }
+        
+        await fetchLatestEvents();
+
+        // Role Detection
+        const adminSnap = await getDoc(doc(db, "master_admin", user.uid));
+        const pastorSnap = await getDoc(doc(db, "pastors", user.uid));
+        const shepherdSnap = await getDoc(doc(db, "shepherds", user.uid));
+
+        if (adminSnap.exists()) {
+            document.getElementById('roleInfo').innerText = "Logged in as Master Admin";
+            loadRegistry(query(collection(db, "members"), orderBy("last_name")), "Admin");
+        } else if (pastorSnap.exists()) {
+            document.getElementById('roleInfo').innerText = `Pastor: ${pastorSnap.data().full_name}`;
+            loadRegistry(query(collection(db, "members"), where("pastorId", "==", user.uid)), "Pastor");
+        } else if (shepherdSnap.exists()) {
+            document.getElementById('roleInfo').innerText = `Shepherd: ${shepherdSnap.data().full_name}`;
+            loadRegistry(query(collection(db, "members"), where("shepherdId", "==", user.uid)), "Shepherd");
+        }
+    });
+</script>
+</body>
+</html>
