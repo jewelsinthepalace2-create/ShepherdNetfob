@@ -132,9 +132,13 @@
     appId: "1:375165731354:web:b5fa57dcb2d71ee0d8c7a3" 
   };
   
+  // 1. Initialize Main App (Admin Session)
   const app = initializeApp(firebaseConfig);
-  const auth = getAuth(app);
   const db = initializeFirestore(app, { experimentalForceLongPolling: true }, "fobrealdbase");
+
+  // 2. Initialize Secondary App (For creating users without logging out admin)
+  const secondaryApp = initializeApp(firebaseConfig, "Secondary");
+  const secondaryAuth = getAuth(secondaryApp);
 
   const ghanaPhoneRegex = /^(?:\+233|0)[235][0-9]{8}$/;
 
@@ -142,11 +146,10 @@
     e.preventDefault();
     
     const contact = document.getElementById('contact').value;
-    const contactError = document.getElementById('contactError');
     const btn = document.getElementById('submitBtn');
 
     if (!ghanaPhoneRegex.test(contact)) {
-      contactError.style.display = 'block';
+      document.getElementById('contactError').style.display = 'block';
       return;
     }
 
@@ -158,12 +161,12 @@
     const collectionName = document.getElementById('role').value; 
     const roleValue = collectionName.slice(0, -1); 
 
-    const ghanaTimeStr = new Date().toLocaleString("en-GB", { timeZone: "Africa/Accra" });
-
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      // Create user using the SECONDARY auth instance
+      const userCredential = await createUserWithEmailAndPassword(secondaryAuth, email, password);
       const newUser = userCredential.user;
 
+      // Write data using the MAIN db instance (where Admin is logged in)
       await setDoc(doc(db, collectionName, newUser.uid), {
         full_name: document.getElementById('fullName').value,
         gender: document.getElementById('gender').value,
@@ -174,17 +177,20 @@
         course: document.getElementById('course').value,
         level: document.getElementById('level').value,
         role: roleValue,
-        created_at: serverTimestamp(),
-        registration_date_local: ghanaTimeStr
+        created_at: serverTimestamp()
       });
 
-      alert(`Account successfully created for ${document.getElementById('fullName').value}.\nAdmin session will now close.`);
+      // Log out the new user from the secondary app only
+      await signOut(secondaryAuth);
 
-      await signOut(auth);
-      window.location.href = "../index.html"; 
+      alert(`Success! ${document.getElementById('fullName').value} has been registered. You are still logged in as Admin.`);
+      
+      document.getElementById('signupForm').reset();
+      btn.disabled = false;
+      btn.innerText = "Create User Account";
 
     } catch (error) {
-      alert("Error: " + error.message);
+      alert("Registration Error: " + error.message);
       btn.disabled = false;
       btn.innerText = "Create User Account";
     }
