@@ -211,8 +211,21 @@
         });
     }
 
-    // Initialize
-    loadGlobalDashboard();
+    // Add this import to your top import list
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+    const auth = getAuth(app);
+
+    // This is the "Gatekeeper" that fixes the permission error
+    onAuthStateChanged(auth, (user) => {
+        if (user) {
+            console.log("Authenticated as:", user.uid);
+            loadGlobalDashboard(); // Only run once we have a user
+        } else {
+            console.error("No active session. Redirecting to login...");
+            window.location.href = "login.html"; 
+        }
+    });
 </script>
 </body>
 </html>
