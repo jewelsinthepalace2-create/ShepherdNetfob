@@ -83,15 +83,14 @@
     const db = getFirestore(app, "fobrealdbase");
 
     async function loadGlobalDashboard() {
-    try {
-        console.log("Fetching unified network data...");
-        // 1. Fetch all leader types and members
-        const [pSnap, mAdminSnap, mSnap, aSnap] = await Promise.all([
-            getDocs(collection(db, "pastors")),
-            getDocs(collection(db, "master_admin")),
-            getDocs(collection(db, "members")),
-            getDocs(collection(db, "attendance"))
-        ]);
+   try {
+    console.log("Fetching unified network data...");
+    const [pSnap, mAdminSnap, mSnap, aSnap] = await Promise.all([
+        getDocs(collection(db, "pastors")).catch(e => { console.error("Pastors Read Failed", e); return {docs:[]}; }),
+        getDocs(collection(db, "master_admin")).catch(e => { console.error("Admin Read Failed", e); return {docs:[]}; }),
+        getDocs(collection(db, "members")).catch(e => { console.error("Members Read Failed", e); return {docs:[]}; }),
+        getDocs(collection(db, "attendance")).catch(e => { console.error("Attendance Read Failed", e); return {docs:[]}; })
+    ]);
 
         // 2. Create a unified "Leader Cache" (Mapping Doc ID -> Name)
         // This combines everyone who can be a 'pastorId'
@@ -155,9 +154,10 @@
         renderAuditTable(leaderAuditData.sort((a, b) => b.attendance - a.attendance));
         renderAttendanceBar(leaderAuditData);
 
-    } catch (error) {
-        console.error("Master Analytics Error:", error);
-    }
+  } catch (error) {
+    console.error("Master Analytics Error:", error);
+    // Visual feedback for the user
+    document.getElementById('auditBody').innerHTML = `<tr><td colspan="6" style="color:var(--red); text-align:center;">Permission Denied: Ensure you are logged in as Master Admin.</td></tr>`;
 }
 
     function renderAuditTable(data) {
