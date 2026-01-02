@@ -70,7 +70,7 @@
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getFirestore, collection, getDocs, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
     const firebaseConfig = { 
         apiKey: "AIzaSyCBv60eRCO0e4dFBMKGKnIATouxTuk1Bcc", 
@@ -83,76 +83,83 @@
     const db = getFirestore(app, "fobrealdbase");
 
     async function loadGlobalDashboard() {
-        try {
-            // 1. Fetch Collections
-            const [pSnap, mSnap, aSnap] = await Promise.all([
-                getDocs(collection(db, "pastors")),
-                getDocs(collection(db, "members")),
-                getDocs(collection(db, "attendance"))
-            ]);
+    try {
+        console.log("Fetching unified network data...");
+        // 1. Fetch all leader types and members
+        const [pSnap, mAdminSnap, mSnap, aSnap] = await Promise.all([
+            getDocs(collection(db, "pastors")),
+            getDocs(collection(db, "master_admin")),
+            getDocs(collection(db, "members")),
+            getDocs(collection(db, "attendance"))
+        ]);
 
-            // IMPORTANT: Manually inject the Document ID into the object
-            const allPastors = pSnap.docs.map(d => ({ 
-                id: d.id, 
-                ...d.data() 
-            }));
+        // 2. Create a unified "Leader Cache" (Mapping Doc ID -> Name)
+        // This combines everyone who can be a 'pastorId'
+        const leaderRegistry = {};
+        
+        pSnap.docs.forEach(d => {
+            leaderRegistry[d.id] = { 
+                name: d.data().full_name, 
+                chapel: d.data().chapel_name || "Main" 
+            };
+        });
+
+        mAdminSnap.docs.forEach(d => {
+            leaderRegistry[d.id] = { 
+                name: d.data().full_name + " (Admin)", 
+                chapel: "Headquarters" 
+            };
+        });
+
+        // 3. Map Members and capture their Document ID
+        const allMembers = mSnap.docs.map(d => ({ 
+            id: d.id, // This is the Document ID
+            ...d.data() 
+        }));
+
+        const allAttendance = aSnap.docs.map(d => d.data());
+
+        // 4. Group members by the pastorId field
+        const leaderAuditData = Object.keys(leaderRegistry).map(leaderId => {
+            const leaderInfo = leaderRegistry[leaderId];
             
-            const allMembers = mSnap.docs.map(d => ({ 
-                id: d.id, 
-                ...d.data() 
-            }));
+            // LINK: members.pastorId (field) == leaderId (Document ID)
+            const chapelMembers = allMembers.filter(m => m.pastorId === leaderId);
+            const mCount = chapelMembers.length;
 
-            const allAttendance = aSnap.docs.map(d => ({
-                id: d.id, // This is the composite ID (memberID_eventID)
-                ...d.data()
-            }));
+            if (mCount === 0) return null; // Skip leaders with 0 members to keep table clean
 
-            // 2. Global Calculations
-            const total = allMembers.length;
-            const established = allMembers.filter(m => m.status === "Established Member").length;
-            const newConverts = total - established;
+            // LINK: attendance.memberId (field) == member.id (Document ID)
+            const presentRecords = allAttendance.filter(att => 
+                chapelMembers.some(m => m.id === att.memberId) && 
+                att.status?.toLowerCase() === "present"
+            );
 
-            renderPieChart(established, newConverts);
+            // Metrics
+            const estCount = chapelMembers.filter(m => m.status === "Established Member").length;
+            const convRate = mCount > 0 ? Math.round((estCount / mCount) * 100) : 0;
+            const attPercent = mCount > 0 ? Math.min(Math.round((presentRecords.length / (mCount * 5)) * 100), 100) : 0;
 
-            // 3. Leader Audit Logic
-            const leaderData = allPastors.map(p => {
-                // Now m.id exists because we injected d.id above
-                const chapelMembers = allMembers.filter(m => m.pastorId === p.id);
-                const mCount = chapelMembers.length;
+            return {
+                name: leaderInfo.name,
+                chapel: leaderInfo.chapel,
+                members: mCount,
+                attendance: attPercent,
+                conversion: convRate,
+                status: attPercent > 70 ? 'High' : attPercent > 40 ? 'Mid' : 'Low'
+            };
+        }).filter(item => item !== null); // Remove empty leaders
 
-                // Match attendance records to these specific members
-                const presentRecords = allAttendance.filter(a => 
-                    chapelMembers.some(m => m.id === a.memberId) && 
-                    (a.status?.toLowerCase() === "present")
-                );
+        // 5. Update UI
+        updateGlobalCharts(allMembers);
+        renderAuditTable(leaderAuditData.sort((a, b) => b.attendance - a.attendance));
+        renderAttendanceBar(leaderAuditData);
 
-                // Attendance Rate calculation (Present records vs total possible)
-                // Assuming we track the last 5 events
-                const attRate = mCount > 0 ? (presentRecords.length / (mCount * 5)) : 0;
-                const attPercent = Math.min(Math.round(attRate * 100), 100);
-
-                const estInChapel = chapelMembers.filter(m => m.status === "Established Member").length;
-                const convRate = mCount > 0 ? Math.round((estInChapel / mCount) * 100) : 0;
-
-                return {
-                    name: p.full_name || "Unknown",
-                    chapel: p.chapel_name || 'Main',
-                    members: mCount,
-                    attendance: attPercent,
-                    conversion: convRate,
-                    status: attPercent > 70 ? 'High' : attPercent > 40 ? 'Mid' : 'Low'
-                };
-            });
-
-            renderAuditTable(leaderData.sort((a, b) => b.attendance - a.attendance));
-            renderAttendanceBar(leaderData);
-
-        } catch (error) {
-            console.error("Dashboard Error:", error);
-        }
+    } catch (error) {
+        console.error("Master Analytics Error:", error);
     }
+}
 
-    // Helper to render the table
     function renderAuditTable(data) {
         const body = document.getElementById('auditBody');
         body.innerHTML = data.map((l, i) => `
@@ -167,19 +174,20 @@
         `).join('');
     }
 
-    // Helper for Pie Chart
-    function renderPieChart(est, newC) {
+    function updateGlobalCharts(members) {
+        const established = members.filter(m => m.status === "Established Member").length;
+        const newConverts = members.length - established;
+
         new Chart(document.getElementById('maturityPie'), {
             type: 'pie',
             data: {
                 labels: ['Established', 'New Converts'],
-                datasets: [{ data: [est, newC], backgroundColor: ['#4facfe', '#ff4b5c'], borderWidth: 0 }]
+                datasets: [{ data: [established, newConverts], backgroundColor: ['#4facfe', '#ff4b5c'], borderWidth: 0 }]
             },
             options: { plugins: { legend: { position: 'bottom', labels: { color: '#fff' } } } }
         });
     }
 
-    // Helper for Bar Chart
     function renderAttendanceBar(data) {
         new Chart(document.getElementById('attendanceBar'), {
             type: 'bar',
@@ -202,6 +210,6 @@
     }
 
     loadGlobalDashboard();
-</script>>
+</script>
 </body>
 </html>
