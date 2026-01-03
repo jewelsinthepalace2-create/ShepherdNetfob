@@ -139,8 +139,8 @@ body.sidebar-open .overlay {
     <aside class="sidebar" id="sidebar">
         <div class="logo">ShepherdNet</div>
         <nav class="nav-group">
-            <a href="#" class="nav-item active"><i class="fa-solid fa-chart-pie"></i> Intelligence</a>
-            <div class="nav-item" id="btnSettings"><i class="fa-solid fa-sliders"></i> Settings</div>
+            <a href="#" class="nav-item active"><i class="fa-solid fa-chart-pie"></i> Leaderboards</a>
+            <div class="nav-item" id="btnSettings"><i class="fa-solid fa-sliders"></i> My Dashboard</div>
         </nav>
         <div class="nav-item" id="btnLogout"><i class="fa-solid fa-right-from-bracket"></i> Logout</div>
     </aside>
@@ -212,30 +212,69 @@ body.sidebar-open .overlay {
             renderTable(filtered);
         };
 
-        async function loadGlobalDashboard() {
-            try {
-                const [pSnap, mAdminSnap, mSnap, aSnap] = await Promise.all([
-                    getDocs(collection(db, "pastors")),
-                    getDocs(collection(db, "master_admin")),
-                    getDocs(collection(db, "members")),
-                    getDocs(collection(db, "attendance"))
-                ]);
+    let currentUserRole = 'shepherd'; // Default fallback
 
-                const leaderRegistry = {};
-                pSnap.docs.forEach(d => leaderRegistry[d.id] = { name: d.data().full_name, chapel: d.data().chapel_name || "Branch" });
-                mAdminSnap.docs.forEach(d => leaderRegistry[d.id] = { name: d.data().full_name + " (Admin)", chapel: d.data().chapel_name || "HQ" });
+async function loadGlobalDashboard() {
+    try {
+        const user = auth.currentUser;
+        
+        const [pDoc, adminDoc] = await Promise.all([
+            getDoc(doc(db, "pastors", user.uid)),
+            getDoc(doc(db, "master_admin", user.uid))
+        ]);
 
-                const allMembers = mSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-                const allAttendance = aSnap.docs.map(d => d.data());
-                const uniqueEventDates = [...new Set(allAttendance.map(a => a.date))].sort();
-                const today = new Date();
+        let viewMode = "shepherd";
+        if (adminDoc.exists()) {
+            viewMode = "admin";
+            currentUserRole = "admin"; 
+        } else if (pDoc.exists()) {
+            viewMode = "pastor";
+            currentUserRole = "pastor";
+        } else {
+            currentUserRole = "shepherd";
+        }
 
-                globalAuditData = Object.keys(leaderRegistry).map(id => {
-    const info = leaderRegistry[id];
-    const members = allMembers.filter(m => m.pastorId === id);
-    
-    // Show empty chapels with 0 metrics instead of hiding them
-    if (members.length === 0) return { ...info, members: 0, attendance: 0, conversion: 0, status: 'Low' };
+        // 2. Fetch Data
+        const [pSnap, mAdminSnap, mSnap, aSnap] = await Promise.all([
+            getDocs(collection(db, "pastors")),
+            getDocs(collection(db, "master_admin")),
+            getDocs(collection(db, "members")),
+            getDocs(collection(db, "attendance"))
+        ]);
+
+        const allMembers = mSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        const allAttendance = aSnap.docs.map(d => d.data());
+        const uniqueEventDates = [...new Set(allAttendance.map(a => a.date))].sort();
+
+        // 3. Filter Leader Registry Based on Role
+        let leaderRegistry = {};
+        
+        if (viewMode === "admin") {
+            // Admin sees all Pastors and Admins
+            pSnap.docs.forEach(d => leaderRegistry[d.id] = { name: d.data().full_name, chapel: d.data().chapel_name || "Branch" });
+            mAdminSnap.docs.forEach(d => leaderRegistry[d.id] = { name: d.data().full_name + " (Admin)", chapel: "HQ" });
+        } else if (viewMode === "pastor") {
+            // Pastor sees ONLY themselves
+            leaderRegistry[user.uid] = { name: userContext.full_name, chapel: userContext.chapel_name };
+            
+            // OPTIONAL: If you have a 'shepherds' collection, you would fetch and add them here
+            // filtered by: where('pastorId', '==', user.uid)
+        } else {
+            // Shepherd sees ONLY themselves
+            // Inherit chapel name from their assigned pastor
+            const myPastor = pSnap.docs.find(p => p.id === userContext?.pastorId);
+            leaderRegistry[user.uid] = { 
+                name: userContext?.full_name || "Shepherd", 
+                chapel: myPastor?.data()?.chapel_name || "Assigned Chapel" 
+            };
+        }
+
+        // 4. Process Metrics (Same calculation logic as before, but on filtered leaderRegistry)
+        globalAuditData = Object.keys(leaderRegistry).map(id => {
+            const info = leaderRegistry[id];
+            const members = allMembers.filter(m => m.pastorId === id); // Or shepherdId logic
+            
+            if (members.length === 0) return { ...info, members: 0, attendance: 0, conversion: 0, status: 'Low' };
 
     let totalPossible = 0;
     let totalPresent = 0;
@@ -279,23 +318,27 @@ body.sidebar-open .overlay {
         ? Math.round((establishedCount / eligibleForConversionCount) * 100) 
         : 0;
     
-    return { 
-        ...info, 
-        members: members.length, 
-        attendance: attRate, 
-        conversion: convRate,
-        status: attRate > 70 ? 'High' : attRate > 40 ? 'Mid' : 'Low'
-    };
-}).sort((a,b) => b.attendance - a.attendance);
+   return { 
+                ...info, 
+                members: members.length, 
+                attendance: attRate, 
+                conversion: convRate,
+                status: attRate > 70 ? 'High' : attRate > 40 ? 'Mid' : 'Low'
+            };
+        });
 
-                document.getElementById('syncText').innerHTML = `<i class="fa-solid fa-shield-check" style="color:#00ff88"></i> Global Audit • Fair Metrics Active`;
-                renderTable(globalAuditData);
-                renderCharts(allMembers, globalAuditData);
-            } catch (err) {
-                console.error(err);
-                document.getElementById('syncText').innerText = "Error loading network data.";
-            }
-        }
+        // 5. Update UI
+        const headerTitle = viewMode === "admin" ? "Global Network Intelligence" : `${leaderRegistry[user.uid].chapel} Statistics`;
+        document.querySelector('header h1').innerText = headerTitle;
+        
+        renderTable(globalAuditData);
+        renderCharts(allMembers.filter(m => leaderRegistry[m.pastorId]), globalAuditData);
+
+    } catch (err) {
+        console.error(err);
+        document.getElementById('syncText').innerText = "Access Denied or Connection Error.";
+    }
+}
 
         function renderTable(data) {
             const body = document.getElementById('auditBody');
@@ -360,6 +403,37 @@ overlay.onclick = () => {
 document.querySelectorAll('.nav-item').forEach(item => {
     item.onclick = () => body.classList.remove('sidebar-open');
 });
+
+        document.getElementById('btnDashboard').onclick = () => {
+    // Maps roles to specific directory paths
+    const routes = {
+        admin: "../admin/index.html",
+        pastor: "../pastor/index.html",
+        shepherd: "../shepherd/index.html"
+    };
+
+    const target = routes[currentUserRole] || "../index.html";
+    
+    // Optional: Visual feedback
+    document.getElementById('syncText').innerHTML = `<i class="fa-solid fa-arrow-right-to-bracket fa-fade"></i> Redirecting to ${currentUserRole} portal...`;
+    
+    setTimeout(() => {
+        window.location.href = target;
+    }, 600);
+};
+
+// Logout Redirection Logic
+document.getElementById('btnLogout').onclick = async () => {
+    if (confirm("Sign out of ShepherdNet Pro?")) {
+        try {
+            await signOut(auth);
+            // Redirects to the root login page
+            window.location.href = "/index.html"; 
+        } catch (err) {
+            console.error("Logout Error:", err);
+        }
+    }
+};
     </script>
 </body>
 </html>
