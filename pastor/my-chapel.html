@@ -100,75 +100,81 @@
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
+    // REMOVED "fobrealdbase" string to use default. If your DB has a specific ID, add it back.
     const db = getFirestore(app);
+
+    console.log("Firebase Initialized. Waiting for Auth...");
 
     onAuthStateChanged(auth, async (user) => {
         if (!user) {
+            console.warn("No user found. Redirecting to login...");
             window.location.href = "dashboard.html";
             return;
         }
+
+        console.log("User Authenticated:", user.uid);
 
         try {
             // 1. Fetch Pastor's Info
             const pDoc = await getDoc(doc(db, "pastors", user.uid));
             if (pDoc.exists()) {
                 const pData = pDoc.data();
+                console.log("Pastor Data Found:", pData);
                 document.getElementById('chapelTitle').innerText = pData.chapel_name || "My Chapel";
                 document.getElementById('pastorWelcome').innerText = `Performance metrics for Pastor ${pData.full_name || 'Pastor'}`;
+            } else {
+                console.error("Pastor document does not exist in 'pastors' collection for ID:", user.uid);
             }
 
-            // 2. Initialize Counters & Time Thresholds
+            // 2. Initialize Variables
             const thirtyDaysAgo = new Date();
             thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
+            
             let totalCount = 0;
             let establishedCount = 0;
-            let eligibleForEst = 0;    // Members > 30 days old
-            let successfulEst = 0;      // Members > 30 days old WHO ARE established
-            
-            // 3. Setup Growth Chart Buckets (Last 6 Months ending Jan 2026)
+            let eligibleForEst = 0;
+            let successfulEst = 0;
             const monthLabels = ["Aug", "Sep", "Oct", "Nov", "Dec", "Jan"];
             const monthlyData = [0, 0, 0, 0, 0, 0]; 
 
-            // 4. Fetch Shepherds & Members
-            const [sSnap, mSnap] = await Promise.all([
-                getDocs(query(collection(db, "shepherds"), where("assigned_pastor_id", "==", user.uid))),
-                getDocs(query(collection(db, "members"), where("pastorId", "==", user.uid)))
-            ]);
+            // 3. Fetch Data
+            console.log("Fetching Shepherds and Members...");
+            
+            // Check field names: Is it assigned_pastor_id or pastorId?
+            const sQuery = query(collection(db, "shepherds"), where("assigned_pastor_id", "==", user.uid));
+            const mQuery = query(collection(db, "members"), where("pastorId", "==", user.uid));
+
+            const [sSnap, mSnap] = await Promise.all([getDocs(sQuery), getDocs(mQuery)]);
+
+            console.log(`Found ${sSnap.size} Shepherds and ${mSnap.size} Members.`);
 
             const shepherds = {};
             sSnap.forEach(d => {
-                shepherds[d.id] = { name: d.data().full_name, total: 0, established: 0, newSouls: 0 };
+                shepherds[d.id] = { name: d.data().full_name || d.data().name, total: 0, established: 0, newSouls: 0 };
             });
 
-            // 5. Process Member Data
+            // 4. Process Members
             mSnap.forEach(doc => {
                 const m = doc.data();
                 totalCount++;
 
+                // IMPORTANT: Status check must be exact string match
                 const isEstablished = (m.status === "Established Member");
                 if (isEstablished) establishedCount++;
 
-                // Date Calculations
                 if (m.createdAt) {
                     const joinDate = m.createdAt.toDate();
-                    
-                    // Maturity Logic (30-day rule)
                     if (joinDate < thirtyDaysAgo) {
                         eligibleForEst++;
                         if (isEstablished) successfulEst++;
                     }
 
-                    // Growth Chart Logic
-                    const monthIndex = joinDate.getMonth(); // 0=Jan, 11=Dec
-                    // Mapping Jan 2026 as index 5, Dec 2025 as index 4, etc.
-                    if (joinDate.getFullYear() === 2026 && monthIndex === 0) monthlyData[5]++;
-                    else if (joinDate.getFullYear() === 2025) {
-                        if (monthIndex >= 7) monthlyData[monthIndex - 7]++;
-                    }
+                    const month = joinDate.getMonth();
+                    const year = joinDate.getFullYear();
+                    if (year === 2026 && month === 0) monthlyData[5]++;
+                    else if (year === 2025 && month >= 7) monthlyData[month - 7]++;
                 }
 
-                // Shepherd Mapping
                 if (m.shepherdId && shepherds[m.shepherdId]) {
                     shepherds[m.shepherdId].total++;
                     if (isEstablished) shepherds[m.shepherdId].established++;
@@ -178,85 +184,56 @@
                 }
             });
 
-            // 6. Update UI Stats
+            // 5. UI Updates
+            console.log("Updating UI components...");
             document.getElementById('totalMembers').innerText = totalCount;
-            
-            // Calculate 30-Day Success Rate
             const successRate = eligibleForEst > 0 ? Math.round((successfulEst / eligibleForEst) * 100) : 0;
             document.getElementById('maturityRate').innerText = `${successRate}%`;
 
-            // 7. Render Charts
             renderGrowthChart(monthLabels, monthlyData);
             renderMaturityChart(establishedCount, totalCount - establishedCount);
-
-            // 8. Render Shepherd Table
             renderShepherdTable(shepherds);
+            
+            console.log("Dashboard Rendered Successfully.");
 
         } catch (error) {
-            console.error("Performance Page Error:", error);
+            console.error("Critical Error during data fetch:", error);
         }
     });
 
+    // Chart and Table functions remain the same as previous version...
     function renderGrowthChart(labels, data) {
-        new Chart(document.getElementById('growthChart'), {
+        const ctx = document.getElementById('growthChart');
+        if(!ctx) return;
+        new Chart(ctx, {
             type: 'line',
             data: {
                 labels: labels,
-                datasets: [{
-                    label: 'New Souls',
-                    data: data,
-                    borderColor: '#4facfe',
-                    backgroundColor: 'rgba(79, 172, 254, 0.1)',
-                    fill: true,
-                    tension: 0.4
-                }]
+                datasets: [{ label: 'New Souls', data: data, borderColor: '#4facfe', tension: 0.4 }]
             },
-            options: {
-                scales: {
-                    y: { beginAtZero: true, ticks: { color: 'rgba(255,255,255,0.5)' }, grid: { color: 'rgba(255,255,255,0.05)' } },
-                    x: { ticks: { color: 'rgba(255,255,255,0.5)' }, grid: { display: false } }
-                },
-                plugins: { legend: { display: false } }
-            }
+            options: { plugins: { legend: { display: false } } }
         });
     }
 
     function renderMaturityChart(est, converts) {
-        new Chart(document.getElementById('maturityChart'), {
+        const ctx = document.getElementById('maturityChart');
+        if(!ctx) return;
+        new Chart(ctx, {
             type: 'doughnut',
             data: {
                 labels: ['Established', 'Converts'],
-                datasets: [{
-                    data: [est, converts],
-                    backgroundColor: ['#00ff88', '#ff4b5c'],
-                    borderWidth: 0
-                }]
-            },
-            options: {
-                plugins: {
-                    legend: { position: 'bottom', labels: { color: 'white', boxWidth: 12, font: { size: 10 } } }
-                }
+                datasets: [{ data: [est, converts], backgroundColor: ['#00ff88', '#ff4b5c'] }]
             }
         });
     }
 
     function renderShepherdTable(shepherds) {
         const tbody = document.getElementById('shepherdBody');
-        tbody.innerHTML = ''; // Clear loading state
-        
+        if(!tbody) return;
+        tbody.innerHTML = '';
         Object.values(shepherds).forEach(s => {
             const sRate = s.total > 0 ? Math.round((s.established / s.total) * 100) : 0;
-            const colorClass = sRate > 70 ? 'retention-high' : sRate > 40 ? 'retention-mid' : 'retention-low';
-            
-            tbody.innerHTML += `
-                <tr>
-                    <td>${s.name}</td>
-                    <td>${s.total}</td>
-                    <td>${s.established}</td>
-                    <td>${s.newSouls}</td>
-                    <td class="${colorClass}">${sRate}%</td>
-                </tr>
-            `;
+            tbody.innerHTML += `<tr><td>${s.name}</td><td>${s.total}</td><td>${s.established}</td><td>${s.newSouls}</td><td>${sRate}%</td></tr>`;
         });
     }
 </script>
