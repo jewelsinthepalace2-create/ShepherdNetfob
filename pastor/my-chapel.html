@@ -17,12 +17,18 @@
         .two-thirds { grid-column: span 2; }
         .stat-label { font-size: 0.75rem; opacity: 0.6; text-transform: uppercase; letter-spacing: 1px; }
         .stat-value { font-size: 2rem; font-weight: 600; color: var(--primary); display: block; }
+        
+        /* Chat Styling */
+        #chatBox { height: 250px; overflow-y: auto; background: rgba(0,0,0,0.2); border-radius: 15px; padding: 15px; margin: 15px 0; display: flex; flex-direction: column; gap: 10px; }
+        .msg { padding: 8px 12px; border-radius: 10px; max-width: 80%; font-size: 0.9rem; line-height: 1.4; }
+        .msg.pastor { align-self: flex-end; background: var(--primary); color: white; }
+        .msg.shepherd { align-self: flex-start; background: var(--glass); border: 1px solid var(--border); }
+        .chat-input-area { display: flex; gap: 10px; }
+        input { flex: 1; background: #1e293b; border: 1px solid var(--border); padding: 12px; border-radius: 10px; color: white; }
+        
         table { width: 100%; border-collapse: collapse; margin-top: 15px; }
         th { text-align: left; font-size: 0.7rem; opacity: 0.5; padding: 10px; border-bottom: 1px solid var(--border); }
         td { padding: 12px 10px; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
-        .status-pill { padding: 4px 12px; border-radius: 20px; font-size: 0.7rem; font-weight: bold; }
-        .online { background: #00ff8822; color: #00ff88; border: 1px solid #00ff88; }
-        .offline { background: #ff4b5c22; color: #ff4b5c; border: 1px solid #ff4b5c; }
     </style>
 </head>
 <body>
@@ -31,12 +37,9 @@
     <div class="header">
         <div>
             <h1 id="chapelTitle">My Chapel</h1>
-            <p id="pastorWelcome" style="opacity:0.6;">Initializing connection...</p>
+            <p id="pastorWelcome">Connecting to ShepherdNet...</p>
         </div>
-        <div style="display: flex; align-items: center; gap: 15px;">
-            <span id="connectionStatus" class="status-pill offline">OFFLINE</span>
-            <a href="dashboard.html" style="color:var(--primary); text-decoration:none;">← Dashboard</a>
-        </div>
+        <a href="dashboard.html" style="color:var(--primary); text-decoration:none;">← Dashboard</a>
     </div>
 
     <div class="grid">
@@ -50,29 +53,33 @@
         </div>
         <div class="card">
             <span class="stat-label">Avg. Attendance</span>
-            <span id="avgAttendance" class="stat-value">--</span>
+            <span id="avgAttendance" class="stat-value">0</span>
         </div>
     </div>
 
     <div class="grid">
         <div class="card two-thirds">
-            <h3 style="margin-top:0">Maturity Distribution</h3>
-            <canvas id="maturityChart" height="150"></canvas>
+            <h3 style="margin:0">Chapel Broadcast</h3>
+            <div id="chatBox"></div>
+            <div class="chat-input-area">
+                <input type="text" id="chatInput" placeholder="Write a message to your Shepherds...">
+                <button id="sendBtn" style="background:var(--primary); border:none; padding:0 20px; border-radius:10px; cursor:pointer; color:white; font-weight:600;">SEND</button>
+            </div>
         </div>
+
         <div class="card">
-            <h3 style="margin-top:0">Quick Actions</h3>
-            <p style="font-size: 0.8rem; opacity: 0.7;">Metrics updated in real-time based on Shepherd reports.</p>
+            <h3 style="margin:0">Quick Actions</h3>
+            <div style="display:flex; flex-direction:column; gap:10px; margin-top:15px;">
+                <button onclick="alert('Feature coming soon')" style="background:var(--primary); border:none; padding:12px; border-radius:10px; color:white; cursor:pointer;">New Shepherd</button>
+                <button onclick="window.location.reload()" style="background:rgba(255,255,255,0.1); border:1px solid var(--border); padding:12px; border-radius:10px; color:white; cursor:pointer;">Refresh Stats</button>
+            </div>
         </div>
+
         <div class="card full-width">
-            <h3 style="margin-top:0">Shepherd Leadership Breakdown</h3>
-            <table>
+            <h3 style="margin-top:0">Shepherd Performance</h3>
+            <table id="shepherdTable">
                 <thead>
-                    <tr>
-                        <th>SHEPHERD NAME</th>
-                        <th>MEMBERS</th>
-                        <th>ESTABLISHED</th>
-                        <th>HEALTH %</th>
-                    </tr>
+                    <tr><th>NAME</th><th>TOTAL</th><th>ESTABLISHED</th><th>HEALTH</th></tr>
                 </thead>
                 <tbody id="shepherdBody"></tbody>
             </table>
@@ -83,7 +90,7 @@
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
-    import { getFirestore, doc, getDoc, collection, query, where, getDocs, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+    import { getFirestore, doc, getDoc, collection, query, where, getDocs, addDoc, serverTimestamp, onSnapshot, orderBy } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
 
     const firebaseConfig = { 
         apiKey: "AIzaSyCBv60eRCO0e4dFBMKGKnIATouxTuk1Bcc",
@@ -95,110 +102,90 @@
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
-    // Standardized back to your specific database ID
     const db = getFirestore(app, "fobrealdbase");
 
-    const statusEl = document.getElementById('connectionStatus');
-
     onAuthStateChanged(auth, async (user) => {
-        if (!user) {
-            window.location.href = "dashboard.html";
-            return;
-        }
-
-        console.log("Authenticated as:", user.uid);
-        document.getElementById('pastorWelcome').innerText = "Fetching live data...";
+        if (!user) { window.location.href = "dashboard.html"; return; }
 
         try {
-            // 1. Verify Connection with a simple fetch
+            // 1. Fetch Pastor Data
             const pDoc = await getDoc(doc(db, "pastors", user.uid));
-            
-            // If we get here, we are online
-            statusEl.innerText = "LIVE";
-            statusEl.className = "status-pill online";
+            const pData = pDoc.data() || {};
+            document.getElementById('chapelTitle').innerText = pData.chapel_name || "My Chapel";
+            document.getElementById('pastorWelcome').innerText = `Welcome, Pastor ${pData.full_name || 'User'}`;
 
-            if (pDoc.exists()) {
-                const data = pDoc.data();
-                document.getElementById('chapelTitle').innerText = data.chapel_name || "My Chapel";
-                document.getElementById('pastorWelcome').innerText = `Performance metrics for Pastor ${data.full_name}`;
-            }
+            // 2. Fetch Members & Shepherds
+            const [sSnap, mSnap, aSnap] = await Promise.all([
+                getDocs(query(collection(db, "shepherds"), where("assigned_pastor_id", "==", user.uid))),
+                getDocs(query(collection(db, "members"), where("pastorId", "==", user.uid))),
+                getDocs(query(collection(db, "attendance"), where("pastorId", "==", user.uid), where("status", "==", "Present")))
+            ]);
 
-            // 2. Fetch Shepherds & Members
-            // Note: Ensure your Firestore fields are exactly 'assigned_pastor_id' and 'pastorId'
-            const sQuery = query(collection(db, "shepherds"), where("assigned_pastor_id", "==", user.uid));
-            const mQuery = query(collection(db, "members"), where("pastorId", "==", user.uid));
+            // Process Attendance (Count unique dates or total "Presents")
+            document.getElementById('avgAttendance').innerText = aSnap.size;
 
-            const [sSnap, mSnap] = await Promise.all([getDocs(sQuery), getDocs(mQuery)]);
-
-            let totalCount = 0;
-            let establishedCount = 0;
+            // Process Shepherds
             const shepherds = {};
-
             sSnap.forEach(d => {
-                shepherds[d.id] = { name: d.data().full_name || "Unnamed", total: 0, established: 0 };
+                shepherds[d.id] = { name: d.data().full_name, total: 0, established: 0 };
             });
 
+            // Process Members
+            let established = 0;
             mSnap.forEach(doc => {
                 const m = doc.data();
-                totalCount++;
-                const isEst = (m.status === "Established Member");
-                if (isEst) establishedCount++;
-
+                if (m.status === "Established Member") established++;
                 if (m.shepherdId && shepherds[m.shepherdId]) {
                     shepherds[m.shepherdId].total++;
-                    if (isEst) shepherds[m.shepherdId].established++;
+                    if (m.status === "Established Member") shepherds[m.shepherdId].established++;
                 }
             });
 
-            // 3. UI Updates
-            document.getElementById('totalMembers').innerText = totalCount;
-            const successRate = totalCount > 0 ? Math.round((establishedCount / totalCount) * 100) : 0;
-            document.getElementById('maturityRate').innerText = `${successRate}%`;
+            document.getElementById('totalMembers').innerText = mSnap.size;
+            document.getElementById('maturityRate').innerText = mSnap.size > 0 ? `${Math.round((established/mSnap.size)*100)}%` : "0%";
 
-            renderMaturityChart(establishedCount, totalCount - establishedCount);
-            renderShepherdTable(shepherds);
+            // Render Table
+            const tbody = document.getElementById('shepherdBody');
+            tbody.innerHTML = '';
+            Object.values(shepherds).forEach(s => {
+                const rate = s.total > 0 ? Math.round((s.established/s.total)*100) : 0;
+                tbody.innerHTML += `<tr><td>${s.name}</td><td>${s.total}</td><td>${s.established}</td><td>${rate}%</td></tr>`;
+            });
 
-        } catch (error) {
-            console.error("Critical Error:", error);
-            document.getElementById('pastorWelcome').innerText = "Connection Error. Please check firewall.";
-            statusEl.innerText = "CONNECTION FAILED";
-            statusEl.className = "status-pill offline";
-        }
+            // 3. REAL-TIME CHAT (BROADCAST)
+            const chatQuery = query(collection(db, "broadcasts"), where("chapel_id", "==", user.uid), orderBy("timestamp", "asc"));
+            
+            onSnapshot(chatQuery, (snapshot) => {
+                const chatBox = document.getElementById('chatBox');
+                chatBox.innerHTML = '';
+                snapshot.forEach(doc => {
+                    const msg = doc.data();
+                    const isPastor = msg.sender_id === user.uid;
+                    chatBox.innerHTML += `
+                        <div class="msg ${isPastor ? 'pastor' : 'shepherd'}">
+                            <small style="display:block; font-size:0.6rem; opacity:0.8;">${msg.sender_name}</small>
+                            ${msg.text}
+                        </div>`;
+                });
+                chatBox.scrollTop = chatBox.scrollHeight;
+            });
+
+            // Send Message Logic
+            document.getElementById('sendBtn').onclick = async () => {
+                const input = document.getElementById('chatInput');
+                if (!input.value) return;
+                await addDoc(collection(db, "broadcasts"), {
+                    chapel_id: user.uid,
+                    sender_id: user.uid,
+                    sender_name: pData.full_name || "Pastor",
+                    text: input.value,
+                    timestamp: serverTimestamp()
+                });
+                input.value = '';
+            };
+
+        } catch (e) { console.error(e); }
     });
-
-    function renderMaturityChart(est, converts) {
-        const ctx = document.getElementById('maturityChart');
-        new Chart(ctx, {
-            type: 'doughnut',
-            data: {
-                labels: ['Established', 'New Converts'],
-                datasets: [{ 
-                    data: [est, converts], 
-                    backgroundColor: ['#00ff88', '#ff4b5c'],
-                    borderWidth: 0
-                }]
-            },
-            options: { 
-                cutout: '70%',
-                plugins: { legend: { position: 'bottom', labels: { color: 'white' } } }
-            }
-        });
-    }
-
-    function renderShepherdTable(shepherds) {
-        const tbody = document.getElementById('shepherdBody');
-        tbody.innerHTML = '';
-        Object.values(shepherds).forEach(s => {
-            const sRate = s.total > 0 ? Math.round((s.established / s.total) * 100) : 0;
-            tbody.innerHTML += `
-                <tr>
-                    <td>${s.name}</td>
-                    <td>${s.total}</td>
-                    <td>${s.established}</td>
-                    <td style="color: ${sRate > 70 ? '#00ff88' : '#ff4b5c'}">${sRate}%</td>
-                </tr>`;
-        });
-    }
 </script>
 </body>
 </html>
