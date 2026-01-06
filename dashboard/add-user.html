@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Add New Staff | ShepherdNet</title>
+  <title>Staff Management | ShepherdNet</title>
   <link rel="icon" type="image/png" href="https://i.ibb.co/60bRQP5Z/Jewels-background-removed.png">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
@@ -15,22 +15,24 @@
         --success: #00ff88; --error: #ff4b5c;
     }
     
-    body { background: var(--bg); color: white; font-family: 'Poppins', sans-serif; display: flex; justify-content: center; padding: 40px 20px; margin: 0; overflow-x: hidden; }
-    .signup-container { width: 100%; max-width: 650px; background: var(--glass); padding: 40px; border-radius: 24px; border: 1px solid var(--border); backdrop-filter: blur(10px); }
-    h2 { color: var(--primary); margin-bottom: 30px; text-align: center; font-weight: 600; letter-spacing: 1px; }
+    body { background: var(--bg); color: white; font-family: 'Poppins', sans-serif; display: flex; flex-direction: column; align-items: center; padding: 40px 20px; margin: 0; }
+    .container { width: 100%; max-width: 800px; }
+    
+    .signup-container, .hierarchy-container { 
+        width: 100%; background: var(--glass); padding: 40px; border-radius: 24px; 
+        border: 1px solid var(--border); backdrop-filter: blur(10px); box-sizing: border-box; margin-bottom: 30px;
+    }
 
+    h2, h3 { color: var(--primary); margin-bottom: 25px; font-weight: 600; letter-spacing: 1px; }
     .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
     .full-width { grid-column: span 2; }
     .hidden { display: none; }
 
-    .form-group { margin-bottom: 5px; }
     label { display: block; font-size: 0.7rem; color: var(--text-dim); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600; }
-    
     input, select { 
         width: 100%; padding: 12px; background: rgba(0,0,0,0.3); 
         border: 1px solid var(--border); border-radius: 10px; 
-        color: white; font-family: inherit; box-sizing: border-box; 
-        transition: 0.3s;
+        color: white; font-family: inherit; box-sizing: border-box; transition: 0.3s;
     }
     input:focus, select:focus { border-color: var(--primary); outline: none; background: rgba(0,0,0,0.4); }
 
@@ -40,146 +42,99 @@
         font-weight: 600; cursor: pointer; margin-top: 30px; transition: 0.3s;
     }
     .btn-register:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(79, 172, 254, 0.3); }
-    .back-link { color: var(--text-dim); text-decoration: none; font-size: 0.85rem; display: flex; align-items: center; gap: 5px; margin-bottom: 20px; }
+    .back-link { color: var(--text-dim); text-decoration: none; font-size: 0.85rem; display: flex; align-items: center; gap: 5px; margin-bottom: 20px; width: 100%; }
 
-    /* --- TOAST NOTIFICATION CSS --- */
-    #toast-container {
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        z-index: 9999;
+    /* --- HIERARCHY STYLES --- */
+    .tree-node { margin-bottom: 20px; }
+    .pastor-row { 
+        background: rgba(79, 172, 254, 0.08); padding: 15px 20px; border-radius: 15px; 
+        border: 1px solid var(--border); border-left: 4px solid var(--primary);
+        display: flex; justify-content: space-between; align-items: center;
     }
-
-    .toast {
-        min-width: 300px;
-        background: #1e293b;
-        color: white;
-        padding: 16px 20px;
-        border-radius: 12px;
-        border-left: 5px solid var(--success);
-        box-shadow: 0 10px 25px rgba(0,0,0,0.3);
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        margin-bottom: 10px;
-        animation: slideIn 0.5s ease forwards, fadeOut 0.5s ease 4.5s forwards;
+    .shepherd-list { margin-left: 30px; margin-top: 10px; border-left: 1px dashed var(--border); padding-left: 20px; }
+    .shepherd-item { 
+        background: rgba(255, 255, 255, 0.03); padding: 10px 15px; border-radius: 10px; 
+        margin-bottom: 8px; font-size: 0.85rem; display: flex; justify-content: space-between; align-items: center;
     }
+    .badge { font-size: 0.6rem; padding: 3px 8px; border-radius: 4px; text-transform: uppercase; font-weight: bold; margin-right: 8px; }
+    .badge-master { background: var(--error); color: white; }
+    .badge-pastor { background: var(--primary); color: #0f172a; }
+    .badge-shepherd { background: var(--success); color: #0f172a; }
+    
+    .delete-btn { color: var(--error); background: none; border: none; cursor: pointer; font-size: 0.8rem; opacity: 0.6; transition: 0.3s; }
+    .delete-btn:hover { opacity: 1; }
 
+    /* --- TOAST --- */
+    #toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; }
+    .toast { min-width: 280px; background: #1e293b; color: white; padding: 16px; border-radius: 12px; border-left: 5px solid var(--success); margin-bottom: 10px; display: flex; justify-content: space-between; animation: slideIn 0.4s ease forwards; }
     .toast.error { border-left-color: var(--error); }
-
-    .toast-content { display: flex; align-items: center; gap: 12px; font-size: 0.9rem; }
-
-    .close-toast {
-        background: none;
-        border: none;
-        color: var(--text-dim);
-        cursor: pointer;
-        font-size: 1.2rem;
-        line-height: 1;
-        padding: 0 0 0 10px;
-    }
-
-    @keyframes slideIn {
-        from { transform: translateX(100%); opacity: 0; }
-        to { transform: translateX(0); opacity: 1; }
-    }
-
-    @keyframes fadeOut {
-        from { opacity: 1; transform: translateY(0); }
-        to { opacity: 0; transform: translateY(-20px); }
-    }
+    @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
   </style>
 </head>
 <body>
 
 <div id="toast-container"></div>
 
-<div class="signup-container">
+<div class="container">
   <a href="https://jewelsinthepalace2-create.github.io/ShepherdNetfob/admin/index.html" class="back-link">← Return to Admin Panel</a>
-  <h2 id="pageTitle">Register New Staff</h2>
+  
+  <div class="signup-container">
+    <h2 id="pageTitle">Register New Staff</h2>
+    <form id="signupForm">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>System Role</label>
+          <select id="role" required>
+            <option value="shepherds">Shepherd</option>
+            <option value="pastors">Pastor</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Full Name</label>
+          <input type="text" id="fullName" placeholder="e.g. Kofi Mensah" required>
+        </div>
+        <div class="form-group full-width hidden" id="chapelFieldGroup">
+          <label>Name of Chapel</label>
+          <input type="text" id="chapelName" placeholder="Enter branch name">
+        </div>
+        <div class="form-group"><label>Gender</label>
+          <select id="gender" required>
+            <option value="Male">Male</option><option value="Female">Female</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Birthday</label><input type="date" id="dob" required></div>
+        <div class="form-group"><label>Contact</label><input type="tel" id="contact" placeholder="024XXXXXXX" required></div>
+        <div class="form-group"><label>Email</label><input type="email" id="email" required></div>
+        <div class="form-group full-width"><label>Current Job</label><input type="text" id="job" placeholder="Occupation"></div>
+        <div class="form-group full-width"><label>Initial Password</label><input type="password" id="password" required minlength="6"></div>
+      </div>
+      <button type="submit" class="btn-register" id="submitBtn">Create User Account</button>
+    </form>
+  </div>
 
-  <form id="signupForm">
-    <div class="form-grid">
-      <div class="form-group">
-        <label>System Role</label>
-        <select id="role" required>
-          <option value="shepherds">Shepherd</option>
-          <option value="pastors">Pastor</option>
-        
-        </select>
-      </div>
-      <div class="form-group">
-        <label>Full Name</label>
-        <input type="text" id="fullName" placeholder="e.g. Kofi Mensah" required>
-      </div>
-
-      <div class="form-group full-width hidden" id="chapelFieldGroup">
-        <label>Name of Chapel</label>
-        <input type="text" id="chapelName" placeholder="Enter branch name">
-      </div>
-
-      <div class="form-group">
-        <label>Gender</label>
-        <select id="gender" required>
-            <option value="" disabled selected>Select Gender</option>
-            <option value="Male">Male</option>
-            <option value="Female">Female</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label>Birthday</label>
-        <input type="date" id="dob" required>
-      </div>
-
-      <div class="form-group">
-        <label>Contact Number</label>
-        <input type="tel" id="contact" placeholder="024XXXXXXX" required>
-      </div>
-      <div class="form-group">
-        <label>Email Address</label>
-        <input type="email" id="email" required>
-      </div>
-
-      <div class="form-group full-width">
-        <label>Current Job / Occupation</label>
-        <input type="text" id="job" placeholder="e.g. Teacher, Software Developer">
-      </div>
-
-      <div class="form-group">
-        <label>Course of Study</label>
-        <input type="text" id="course" placeholder="e.g. BSc Admin">
-      </div>
-      <div class="form-group">
-        <label>Level (e.g. 400, Alumnus)</label>
-        <input type="text" id="level" placeholder="Level">
-      </div>
-
-      <div class="form-group full-width">
-        <label>Initial Password</label>
-        <input type="password" id="password" required minlength="6">
-      </div>
+  <div class="hierarchy-container">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h3 style="margin:0;">Organization Hierarchy</h3>
+        <button id="refreshBtn" style="background:none; border:none; color:var(--primary); cursor:pointer; font-size:0.8rem;">Refresh List</button>
     </div>
-
-    <button type="submit" class="btn-register" id="submitBtn">Create User Account</button>
-  </form>
+    <div id="hierarchyTree">
+        <p style="text-align:center; opacity:0.3;">Loading structure...</p>
+    </div>
+  </div>
 </div>
 
 <script type="module">
   import { initializeApp, deleteApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
   import { getAuth, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-  import { getFirestore, doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+  import { getFirestore, doc, getDoc, setDoc, deleteDoc, getDocs, collection, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-  // --- INITIALIZE EMAILJS ---
-  (function() {
-      emailjs.init("hbLNGNgE4WvbIYFFr");
-  })();
+  (function() { emailjs.init("hbLNGNgE4WvbIYFFr"); })();
 
   const firebaseConfig = { 
     apiKey: "AIzaSyCBv60eRCO0e4dFBMKGKnIATouxTuk1Bcc", 
     authDomain: "fob-database-139d1.firebaseapp.com", 
     projectId: "fob-database-139d1", 
     storageBucket: "fob-database-139d1.firebasestorage.app", 
-    messagingSenderId: "375165731354", 
     appId: "1:375165731354:web:b5fa57dcb2d71ee0d8c7a3" 
   };
   
@@ -190,45 +145,21 @@
   let creatorRole = "master"; 
   let currentCreatorUID = "";
 
-  // --- TOAST HELPER FUNCTION ---
   function showToast(message, type = "success") {
       const container = document.getElementById('toast-container');
       const toast = document.createElement('div');
       toast.className = `toast ${type === "error" ? "error" : ""}`;
-      
-      toast.innerHTML = `
-          <div class="toast-content">
-              <span>${type === "success" ? "✅" : "❌"}</span>
-              <span>${message}</span>
-          </div>
-          <button class="close-toast">&times;</button>
-      `;
-
+      toast.innerHTML = `<span>${message}</span><button style="background:none; border:none; color:white; cursor:pointer;" onclick="this.parentElement.remove()">×</button>`;
       container.appendChild(toast);
-
-      // Close on button click
-      toast.querySelector('.close-toast').addEventListener('click', () => {
-          toast.style.animation = "fadeOut 0.5s ease forwards";
-          setTimeout(() => toast.remove(), 500);
-      });
-
-      // Auto remove after 5 seconds
-      setTimeout(() => {
-          if (toast.parentElement) toast.remove();
-      }, 5000);
+      setTimeout(() => toast.remove(), 4000);
   }
 
   onAuthStateChanged(auth, async (user) => {
     if (user) {
         currentCreatorUID = user.uid;
-        const shepherdCheck = await getDoc(doc(db, "shepherds", user.uid));
-        if (shepherdCheck.exists()) {
-            creatorRole = "shepherd";
-            document.getElementById('role').innerHTML = '<option value="members">Church Member</option>';
-            document.getElementById('pageTitle').innerText = "Register New Member";
-        } else {
-            creatorRole = "pastor";
-        }
+        const pCheck = await getDoc(doc(db, "pastors", user.uid));
+        creatorRole = pCheck.exists() ? "pastor" : "master";
+        loadHierarchy();
     } else {
         window.location.href = "../login.html";
     }
@@ -240,65 +171,96 @@
     roleSelect.value === 'pastors' ? chapelGroup.classList.remove('hidden') : chapelGroup.classList.add('hidden');
   });
 
+  // --- HIERARCHY LOGIC ---
+  async function loadHierarchy() {
+    const container = document.getElementById('hierarchyTree');
+    const pSnap = await getDocs(collection(db, "pastors"));
+    const sSnap = await getDocs(collection(db, "shepherds"));
+    
+    let pastors = [];
+    pSnap.forEach(d => pastors.push({id: d.id, ...d.data()}));
+    let shepherds = [];
+    sSnap.forEach(d => shepherds.push({id: d.id, ...d.data()}));
+
+    let html = "";
+    pastors.forEach(p => {
+        const isMaster = p.full_name.toLowerCase().includes("nii") || p.role === "master";
+        const hisShepherds = shepherds.filter(s => s.pastorId === p.id);
+        
+        html += `
+            <div class="tree-node">
+                <div class="pastor-row">
+                    <div>
+                        <span class="badge ${isMaster ? 'badge-master' : 'badge-pastor'}">${isMaster ? 'Master' : 'Pastor'}</span>
+                        <b>${p.full_name}</b>
+                        <div style="font-size:0.65rem; opacity:0.5; margin-top:3px;">${p.chapel_name || 'Main Campus'}</div>
+                    </div>
+                    ${!isMaster ? `<button class="delete-btn" onclick="deleteUser('pastors', '${p.id}')">Delete</button>` : ''}
+                </div>
+                <div class="shepherd-list">
+                    ${hisShepherds.map(s => `
+                        <div class="shepherd-item">
+                            <span><span class="badge badge-shepherd">Shepherd</span> ${s.full_name}</span>
+                            <button class="delete-btn" onclick="deleteUser('shepherds', '${s.id}')">Delete</button>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    });
+    container.innerHTML = html || "<p style='text-align:center; opacity:0.3;'>No staff found.</p>";
+  }
+
+  window.deleteUser = async (coll, id) => {
+      if(!confirm("Are you sure? This only removes the database record, not the Auth account.")) return;
+      await deleteDoc(doc(db, coll, id));
+      showToast("Account record removed.");
+      loadHierarchy();
+  };
+
+  document.getElementById('refreshBtn').onclick = loadHierarchy;
+
+  // --- REGISTRATION LOGIC ---
   document.getElementById('signupForm').onsubmit = async (e) => {
     e.preventDefault();
     const btn = document.getElementById('submitBtn');
-    btn.disabled = true;
-    btn.innerText = "Processing...";
+    btn.disabled = true; btn.innerText = "Creating...";
 
     const email = document.getElementById('email').value;
     const password = document.getElementById('password').value;
     const fullName = document.getElementById('fullName').value;
     const collectionName = document.getElementById('role').value; 
     const roleString = collectionName.slice(0, -1); 
-    const chapelName = document.getElementById('chapelName').value || "N/A";
 
     const secondaryApp = initializeApp(firebaseConfig, "Secondary");
     const secondaryAuth = getAuth(secondaryApp);
 
     try {
       const userCredential = await createUserWithEmailAndPassword(secondaryAuth, email, password);
-      
       const userData = {
-        full_name: fullName,
-        gender: document.getElementById('gender').value,
-        dob: document.getElementById('dob').value,
-        contact: document.getElementById('contact').value,
-        email: email,
-        job: document.getElementById('job').value,
-        course: document.getElementById('course').value,
-        level: document.getElementById('level').value,
-        role: roleString,
-        created_at: serverTimestamp(),
-        pastorId: (creatorRole === 'pastor' || creatorRole === 'master') ? currentCreatorUID : "N/A",
-        shepherdId: (creatorRole === 'shepherd') ? currentCreatorUID : "N/A"
+        full_name: fullName, gender: document.getElementById('gender').value,
+        dob: document.getElementById('dob').value, contact: document.getElementById('contact').value,
+        email: email, job: document.getElementById('job').value, role: roleString,
+        created_at: serverTimestamp(), pastorId: currentCreatorUID
       };
 
-      if (roleString === 'pastor') userData.chapel_name = chapelName;
+      if (roleString === 'pastor') userData.chapel_name = document.getElementById('chapelName').value;
 
       await setDoc(doc(db, collectionName, userCredential.user.uid), userData);
 
       await emailjs.send("service_vzxws9f", "template_buctifq", {
-          full_name: fullName,
-          role: roleString,
-          email: email,
-          password: password,
-          chapel_name: roleString === 'pastor' ? chapelName : "General"
+          full_name: fullName, role: roleString, email: email, password: password
       });
 
       await signOut(secondaryAuth);
       await deleteApp(secondaryApp);
 
-      showToast(`Success! ${fullName} registered and linked.`);
+      showToast(`Success! ${fullName} created.`);
       document.getElementById('signupForm').reset();
-      chapelGroup.classList.add('hidden');
+      loadHierarchy();
 
-    } catch (error) {
-      showToast(error.message, "error");
-    } finally {
-      btn.disabled = false;
-      btn.innerText = "Create User Account";
-    }
+    } catch (error) { showToast(error.message, "error"); }
+    finally { btn.disabled = false; btn.innerText = "Create User Account"; }
   };
 </script>
 </body>
