@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Invitee Mandate | ShepherdNet</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        :root { --primary: #4facfe; --bg: #0f172a; --glass: rgba(255, 255, 255, 0.05); --border: rgba(255, 255, 255, 0.1); --green: #00ff88; --red: #ff4b5c; }
+        body { background: var(--bg); color: white; font-family: 'Poppins', sans-serif; padding: 20px; }
+        .container { max-width: 600px; margin: 0 auto; }
+        .card { background: var(--glass); padding: 20px; border-radius: 20px; border: 1px solid var(--border); margin-bottom: 20px; }
+        .input-group { margin-bottom: 15px; }
+        input, select, textarea { width: 100%; padding: 12px; border-radius: 10px; background: #1e293b; color: white; border: 1px solid var(--border); box-sizing: border-box; }
+        .invitee-item { background: var(--glass); border: 1px solid var(--border); border-radius: 15px; padding: 15px; margin-bottom: 15px; }
+        .flex-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .counter-box { display: flex; align-items: center; gap: 10px; background: rgba(0,0,0,0.2); padding: 5px 15px; border-radius: 8px; }
+        .btn-sm { background: var(--primary); border: none; color: white; padding: 5px 10px; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        .status-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+        .btn-status { padding: 10px; border-radius: 8px; border: 1px solid var(--border); cursor: pointer; background: rgba(255,255,255,0.05); color: white; font-size: 0.8rem; }
+        .btn-status.honoured { background: var(--green); color: #000; }
+        .btn-status.declined { background: var(--red); color: white; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Saturday Mandate</h1>
+    <p style="opacity:0.6; margin-bottom:20px;">Register and track your 10 confirmed invitees.</p>
+
+    <div class="card">
+        <h3>New Invitee</h3>
+        <div class="input-group"><input type="text" id="invName" placeholder="Full Name"></div>
+        <div class="input-group"><input type="text" id="invHostel" placeholder="Hostel/Location"></div>
+        <div class="input-group"><input type="text" id="invPhone" placeholder="Phone Number"></div>
+        <button onclick="addNewInvitee()" style="width:100%; padding:12px; background:var(--primary); border:none; border-radius:10px; color:white; font-weight:600; cursor:pointer;">+ Register Soul</button>
+    </div>
+
+    <div id="inviteeList">
+        <p style="text-align:center; opacity:0.5;">Loading your mandate list...</p>
+    </div>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
+    import { getFirestore, collection, addDoc, getDocs, query, where, doc, updateDoc, serverTimestamp, getDoc } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
+
+    const firebaseConfig = { 
+        apiKey: "AIzaSyCBv60eRCO0e4dFBMKGKnIATouxTuk1Bcc",
+        authDomain: "fob-database-139d1.firebaseapp.com",
+        projectId: "fob-database-139d1",
+        storageBucket: "fob-database-139d1.firebasestorage.app",
+        appId: "1:375165731354:web:b5fa57dcb2d71ee0d8c7a3"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app, "fobrealdbase");
+    const auth = getAuth(app);
+    let currentUser = null;
+
+    onAuthStateChanged(auth, (user) => {
+        if (user) { currentUser = user; loadInvitees(); }
+        else { window.location.href = "login.html"; }
+    });
+
+    // Helper: Calculate last Monday at 12:00 AM Ghana Time
+    function getLastMonday() {
+        const now = new Date();
+        const day = now.getDay(); // 0 is Sunday, 1 is Monday
+        const diff = (day === 0 ? 6 : day - 1); 
+        const monday = new Date(now);
+        monday.setDate(now.getDate() - diff);
+        monday.setHours(0, 0, 0, 0);
+        return monday;
+    }
+
+    window.addNewInvitee = async () => {
+        const name = document.getElementById('invName').value;
+        const hostel = document.getElementById('invHostel').value;
+        const phone = document.getElementById('invPhone').value;
+
+        if(!name || !phone) return alert("Name and Phone required");
+
+        await addDoc(collection(db, "invitees"), {
+            fullName: name,
+            hostel: hostel,
+            phone: phone,
+            pastorId: currentUser.uid,
+            calls: 0,
+            visits: 0,
+            status: 'unmarked',
+            challenges: '',
+            lastUpdated: serverTimestamp()
+        });
+        location.reload();
+    };
+
+    async function loadInvitees() {
+        const listDiv = document.getElementById('inviteeList');
+        const q = query(collection(db, "invitees"), where("pastorId", "==", currentUser.uid));
+        const snap = await getDocs(q);
+        const lastMonday = getLastMonday();
+
+        let html = "";
+        snap.forEach(d => {
+            const inv = d.data();
+            const id = d.id;
+            
+            // RESET LOGIC: If lastUpdated is before Monday, we treat status and counters as fresh for the UI
+            const isFresh = inv.lastUpdated?.toDate() > lastMonday;
+            const currentStatus = isFresh ? inv.status : 'unmarked';
+            const currentCalls = isFresh ? inv.calls : 0;
+            const currentVisits = isFresh ? inv.visits : 0;
+            const currentChallenges = isFresh ? inv.challenges : '';
+
+            html += `
+                <div class="invitee-item">
+                    <div class="flex-row">
+                        <div>
+                            <span style="font-weight:600; color:var(--primary);">${inv.fullName}</span><br>
+                            <small style="opacity:0.6;">${inv.hostel} | ${inv.phone}</small>
+                        </div>
+                        <div class="counter-box">
+                            <small>📞</small>
+                            <button class="btn-sm" onclick="updateCounter('${id}', 'calls', -1)">-</button>
+                            <span id="call-${id}">${currentCalls}</span>
+                            <button class="btn-sm" onclick="updateCounter('${id}', 'calls', 1)">+</button>
+                        </div>
+                    </div>
+
+                    <div class="input-group">
+                        <textarea id="challen-${id}" placeholder="Current challenges..." onchange="updateText('${id}')">${currentChallenges}</textarea>
+                    </div>
+
+                    <div class="status-btns">
+                        <button id="hon-${id}" class="btn-status ${currentStatus === 'honoured' ? 'honoured' : ''}" 
+                            onclick="updateStatus('${id}', 'honoured')">Honoured Invitation</button>
+                        <button id="dec-${id}" class="btn-status ${currentStatus === 'declined' ? 'declined' : ''}" 
+                            onclick="updateStatus('${id}', 'declined')">Did Not Come</button>
+                    </div>
+                </div>`;
+        });
+        listDiv.innerHTML = html;
+    }
+
+    window.updateCounter = async (id, field, change) => {
+        const docRef = doc(db, "invitees", id);
+        const snap = await getDoc(docRef);
+        let val = (snap.data()[field] || 0) + change;
+        if(val < 0) val = 0;
+        
+        await updateDoc(docRef, { [field]: val, lastUpdated: serverTimestamp() });
+        document.getElementById(`${field === 'calls' ? 'call' : 'visit'}-${id}`).innerText = val;
+    };
+
+    window.updateStatus = async (id, newStatus) => {
+        const docRef = doc(db, "invitees", id);
+        await updateDoc(docRef, { status: newStatus, lastUpdated: serverTimestamp() });
+        
+        // Log to Follow-ups for Nii to see
+        await addDoc(collection(db, "follow_ups"), {
+            inviteeId: id,
+            pastorId: currentUser.uid,
+            action: `Set status to ${newStatus}`,
+            timestamp: serverTimestamp()
+        });
+        
+        loadInvitees();
+    };
+
+    window.updateText = async (id) => {
+        const text = document.getElementById(`challen-${id}`).value;
+        await updateDoc(doc(db, "invitees", id), { challenges: text, lastUpdated: serverTimestamp() });
+    };
+</script>
+</body>
+</html>
