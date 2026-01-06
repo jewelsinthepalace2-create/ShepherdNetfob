@@ -126,7 +126,7 @@
 
     onAuthStateChanged(auth, user => {
         if (user) { loggedInUserUID = user.uid; loadHierarchy(); }
-        else { window.location.href = "../login.html"; }
+        else { window.location.href = "/index.html"; }
     });
 
     window.toggleForm = (show) => { document.getElementById('formOverlay').style.display = show ? 'flex' : 'none'; };
@@ -137,7 +137,7 @@
     async function loadHierarchy() {
         const container = document.getElementById('hierarchyTree');
         const [mSnap, pSnap, sSnap] = await Promise.all([
-            getDocs(collection(db, "master_admins")),
+            getDocs(collection(db, "master_admin")),
             getDocs(collection(db, "pastors")),
             getDocs(collection(db, "shepherds"))
         ]);
@@ -150,7 +150,7 @@
 
         // 1. Render Masters
         masters.forEach(m => {
-            treeHtml += `<div class="row row-master"><div><span class="badge badge-master">Master Admin</span><b>${m.full_name}</b></div><button class="delete-btn" onclick="deleteUser('master_admins', '${m.id}')">Delete</button></div>`;
+            treeHtml += `<div class="row row-master"><div><span class="badge badge-master">Master Admin</span><b>${m.full_name}</b></div><button class="delete-btn" onclick="deleteUser('master_admin', '${m.id}')">Delete</button></div>`;
         });
 
         // 2. Recursive function to find children (Pastors or Shepherds)
