@@ -19,7 +19,8 @@
     .container { width: 100%; max-width: 900px; padding-bottom: 100px; }
     
     .header-flex { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid var(--border); padding-bottom: 20px; }
-    .search-box { width: 100%; padding: 12px 20px; background: var(--glass); border: 1px solid var(--border); border-radius: 12px; color: white; margin-bottom: 20px; outline: none; }
+    .search-box { width: 100%; padding: 12px 20px; background: var(--glass); border: 1px solid var(--border); border-radius: 12px; color: white; margin-bottom: 20px; outline: none; transition: 0.3s; }
+    .search-box:focus { border-color: var(--primary); box-shadow: 0 0 15px rgba(79, 172, 254, 0.2); }
 
     /* --- HIERARCHY LIST --- */
     .hierarchy-card { background: var(--glass); border: 1px solid var(--border); border-radius: 24px; padding: 30px; backdrop-filter: blur(10px); }
@@ -32,6 +33,7 @@
         transition: 0.2s; background: rgba(255,255,255,0.02); margin-top: 8px;
         cursor: pointer;
     }
+    .row:hover { background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.2); }
     
     .row-master { border-left: 6px solid var(--gold); background: rgba(255, 215, 0, 0.05); }
     .row-pastor { border-left: 4px solid var(--primary); }
@@ -51,8 +53,8 @@
     .close-modal { position: absolute; top: 20px; right: 20px; font-size: 1.5rem; cursor: pointer; color: var(--text-dim); }
 
     .btn-add { background: var(--primary); color: #0f172a; padding: 12px 24px; border-radius: 12px; font-weight: 600; border: none; cursor: pointer; }
-    .delete-btn { color: var(--error); background: none; border: none; cursor: pointer; font-size: 0.7rem; opacity: 0.4; }
-    .delete-btn:hover { opacity: 1; }
+    .delete-btn { color: var(--error); background: none; border: none; cursor: pointer; font-size: 0.7rem; opacity: 0.4; transition: 0.2s; }
+    .delete-btn:hover { opacity: 1; transform: scale(1.1); }
 
     .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
     .full { grid-column: span 2; }
@@ -65,23 +67,23 @@
 <div class="container">
     <div class="header-flex">
         <div>
-            <h1 style="margin:0; font-size: 1.5rem;">Network <span style="color: var(--primary);">Management</span></h1>
-            <p style="opacity: 0.5; font-size: 0.8rem;" id="adminInfo">Syncing profiles...</p>
+            <h1 style="margin:0; font-size: 1.5rem;">Network <span style="color: var(--primary);">Intelligence</span></h1>
+            <p style="opacity: 0.5; font-size: 0.8rem;" id="adminInfo">Locating admin profile...</p>
         </div>
         <button class="btn-add" onclick="toggleForm(true)">+ Register Staff</button>
     </div>
 
-    <input type="text" class="search-box" id="treeSearch" placeholder="Find staff member..." onkeyup="filterTree()">
+    <input type="text" class="search-box" id="treeSearch" placeholder="Search by name, role or email..." onkeyup="filterTree()">
 
     <div class="hierarchy-card" id="hierarchyTree">
-        <p style="text-align:center; opacity:0.3; padding: 40px;">Analyzing church structure...</p>
+        <p style="text-align:center; opacity:0.3; padding: 40px;">Initializing tree structure...</p>
     </div>
 </div>
 
 <div id="formOverlay">
     <div class="modal-content">
         <span class="close-modal" onclick="toggleForm(false)">&times;</span>
-        <h2 style="margin-top:0; color: var(--primary);">New Deployment</h2>
+        <h2 style="margin-top:0; color: var(--primary);">Personnel Deployment</h2>
         <form id="signupForm">
             <div class="form-grid">
                 <div class="full">
@@ -125,12 +127,24 @@
     let loggedInUserUID = "";
     let autoChapel = "undefined";
 
+    // FETCH CHAPEL FROM PASTOR OR MASTER ADMIN
+    async function getMyChapel(uid) {
+        // Try Pastors
+        const pDoc = await getDoc(doc(db, "pastors", uid));
+        if (pDoc.exists() && pDoc.data().chapel_name) return pDoc.data().chapel_name;
+        
+        // Try Master Admin
+        const mDoc = await getDoc(doc(db, "master_admin", uid));
+        if (mDoc.exists() && mDoc.data().chapel_name) return mDoc.data().chapel_name;
+        
+        return "undefined";
+    }
+
     onAuthStateChanged(auth, async (user) => {
         if (user) { 
             loggedInUserUID = user.uid; 
-            const pDoc = await getDoc(doc(db, "pastors", user.uid));
-            if(pDoc.exists()) autoChapel = pDoc.data().chapel_name || "undefined";
-            document.getElementById('adminInfo').innerText = `Chapel Origin: ${autoChapel}`;
+            autoChapel = await getMyChapel(user.uid);
+            document.getElementById('adminInfo').innerText = `Active Chapel: ${autoChapel}`;
             loadHierarchy(); 
         } else { window.location.href = "/index.html"; }
     });
@@ -163,7 +177,6 @@
 
             let html = `<div class="node-group collapsed" id="group-${parentId}">`;
 
-            // Render Sub-Pastors
             subPastors.forEach(p => {
                 html += `
                     <div class="row row-pastor" onclick="toggleNode('${p.id}')">
@@ -172,7 +185,6 @@
                     </div>${buildNode(p.id)}`;
             });
 
-            // Render Sub-Shepherds
             subShepherds.forEach(s => {
                 html += `
                     <div class="row row-shepherd">
@@ -181,22 +193,19 @@
                     </div>`;
             });
 
-            html += `</div>`;
-            return html;
+            return html + `</div>`;
         }
 
         let treeHtml = "";
-
-        // Start with Master Admins (Root Level)
         masters.forEach(m => {
             treeHtml += `
                 <div class="row row-master" onclick="toggleNode('${m.id}')">
-                    <div><span class="toggle-icon" id="icon-${m.id}">▶</span><span class="badge badge-master">Master Admin</span><b>${m.full_name}</b></div>
+                    <div><span class="toggle-icon" id="icon-${m.id}">▶</span><span class="badge badge-master">Master Admin</span><b>${m.full_name}</b> <small style="opacity:0.4; margin-left:10px;">${m.chapel_name || ''}</small></div>
                     <button class="delete-btn" onclick="event.stopPropagation(); deleteUser('master_admin', '${m.id}')">Delete</button>
                 </div>${buildNode(m.id)}`;
         });
 
-        // Top-Level Pastors (Only those who DON'T report to a Master or another Pastor)
+        // Top-Level logic (only orphans)
         const topPastors = pastors.filter(p => !p.pastorId || 
             (!masters.some(m => m.id === p.pastorId) && !pastors.some(parent => parent.id === p.pastorId)));
 
@@ -208,7 +217,7 @@
                 </div>${buildNode(tp.id)}`;
         });
 
-        container.innerHTML = treeHtml || "<p style='text-align:center; opacity:0.3; padding: 40px;'>No data found.</p>";
+        container.innerHTML = treeHtml || "<p style='text-align:center; opacity:0.3; padding: 40px;'>No data available.</p>";
     }
 
     window.filterTree = () => {
@@ -227,7 +236,7 @@
     };
 
     window.deleteUser = async (coll, id) => {
-        if (confirm("Delete this profile?")) {
+        if (confirm("Permanently delete this account?")) {
             await deleteDoc(doc(db, coll, id));
             loadHierarchy();
         }
@@ -253,7 +262,7 @@
                 email: email,
                 role: col.slice(0, -1),
                 pastorId: loggedInUserUID,
-                chapel_name: autoChapel,
+                chapel_name: autoChapel, // Automatically assigned from master or pastor
                 created_at: serverTimestamp()
             });
             await emailjs.send("service_vzxws9f", "template_buctifq", {
@@ -263,7 +272,6 @@
             await signOut(secondaryAuth);
             await deleteApp(secondaryApp);
             toggleForm(false); loadHierarchy(); document.getElementById('signupForm').reset();
-            alert("Deployment successful.");
         } catch (err) { alert(err.message); }
         finally { btn.disabled = false; btn.innerText = "Deploy to Network"; }
     };
