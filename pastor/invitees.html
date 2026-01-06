@@ -11,33 +11,94 @@
         .container { max-width: 600px; margin: 0 auto; }
         .card { background: var(--glass); padding: 20px; border-radius: 20px; border: 1px solid var(--border); margin-bottom: 20px; }
         .input-group { margin-bottom: 15px; }
-        input, select, textarea { width: 100%; padding: 12px; border-radius: 10px; background: #1e293b; color: white; border: 1px solid var(--border); box-sizing: border-box; }
+        input, select, textarea { width: 100%; padding: 12px; border-radius: 10px; background: #1e293b; color: white; border: 1px solid var(--border); box-sizing: border-box; font-family: inherit; font-size: 0.9rem; }
         .invitee-item { background: var(--glass); border: 1px solid var(--border); border-radius: 15px; padding: 15px; margin-bottom: 15px; }
-        .flex-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .flex-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; gap: 10px; }
         .counter-box { display: flex; align-items: center; gap: 10px; background: rgba(0,0,0,0.2); padding: 5px 15px; border-radius: 8px; }
         .btn-sm { background: var(--primary); border: none; color: white; padding: 5px 10px; border-radius: 5px; cursor: pointer; font-weight: bold; }
         .status-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
         .btn-status { padding: 10px; border-radius: 8px; border: 1px solid var(--border); cursor: pointer; background: rgba(255,255,255,0.05); color: white; font-size: 0.8rem; }
-        .btn-status.honoured { background: var(--green); color: #000; }
-        .btn-status.declined { background: var(--red); color: white; }
+        .btn-status.honoured { background: var(--green); color: #000; font-weight: bold; border: none; }
+        .btn-status.declined { background: var(--red); color: white; border: none; }
+        .section-label { font-size: 0.65rem; color: var(--primary); letter-spacing: 1px; margin: 15px 0 5px 0; text-transform: uppercase; font-weight: 600; }
+        
+        /* Modal Styles */
+        #promoModal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15, 23, 42, 0.98); z-index:1000; overflow-y:auto; padding:20px; box-sizing:border-box; }
+        .modal-content { max-width:500px; margin:20px auto; background: #1e293b; border: 1px solid var(--primary); padding: 25px; border-radius: 20px; box-shadow: 0 0 30px rgba(79, 172, 254, 0.2); }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>Invitee Mandate</h1>
-    <p style="opacity:0.6; margin-bottom:20px;">Register and track your confirmed invitees.</p>
+    <div class="flex-row" style="margin-bottom: 20px;">
+        <div>
+            <h1>Invitee Mandate</h1>
+            <p id="userStatus" style="opacity:0.6; font-size: 0.8rem;">Checking role...</p>
+        </div>
+        <a href="index.html" style="color: var(--primary); text-decoration: none; font-size: 0.8rem;">Dashboard</a>
+    </div>
 
     <div class="card">
-        <h3>New Invitee</h3>
-        <div class="input-group"><input type="text" id="invName" placeholder="Full Name"></div>
-        <div class="input-group"><input type="text" id="invHostel" placeholder="Hostel/Location"></div>
-        <div class="input-group"><input type="text" id="invPhone" placeholder="Phone Number"></div>
-        <button onclick="addNewInvitee()" style="width:100%; padding:12px; background:var(--primary); border:none; border-radius:10px; color:white; font-weight:600; cursor:pointer;">+ Register Soul</button>
+        <h3 style="margin-bottom: 15px;">Target a New Soul</h3>
+        <input type="text" id="invName" placeholder="Full Name" style="margin-bottom: 10px;">
+        <div class="flex-row">
+            <input type="text" id="invHostel" placeholder="Hostel/Residence">
+            <input type="tel" id="invPhone" placeholder="Phone Number">
+        </div>
+        <button onclick="addNewInvitee()" style="width:100%; padding:14px; background:var(--primary); border:none; border-radius:10px; color:white; font-weight:600; cursor:pointer; margin-top: 10px;">+ Register for Sunday</button>
     </div>
 
     <div id="inviteeList">
-        <p style="text-align:center; opacity:0.5;">Loading your mandate list...</p>
+        <p style="text-align:center; opacity:0.5; padding: 40px;">Loading mandate list...</p>
+    </div>
+</div>
+
+<div id="promoModal">
+    <div class="modal-content">
+        <h2 style="color:var(--primary); text-align:center; margin-bottom: 5px;">Soul Growth: Promotion</h2>
+        <p style="font-size:0.75rem; opacity:0.7; text-align:center; margin-bottom: 20px;">Complete this form to move the soul to the Members Database.</p>
+        
+        <input type="hidden" id="promoId">
+        
+        <div class="section-label">Identity (Match Database)</div>
+        <div class="flex-row">
+            <input type="text" id="promoFirstname" placeholder="First Name">
+            <input type="text" id="promoSurname" placeholder="Surname (Last Name)">
+        </div>
+        
+        <div class="flex-row" style="margin-top:5px;">
+            <select id="promoGender">
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+            </select>
+            <div style="flex: 1.5;">
+                <label style="font-size: 0.6rem; color: #888;">Date of Birth</label>
+                <input type="date" id="promoBirthday">
+            </div>
+        </div>
+
+        <div class="section-label">Campus Information</div>
+        <div class="flex-row">
+            <select id="promoLevel">
+                <option value="Level 100">Level 100</option>
+                <option value="Level 200">Level 200</option>
+                <option value="Level 300">Level 300</option>
+                <option value="Level 400">Level 400</option>
+                <option value="Alumnus">Alumnus</option>
+                <option value="Non-Student">Non-Student</option>
+            </select>
+            <input type="text" id="promoCourse" placeholder="Course (e.g. BSc Chemistry)">
+        </div>
+        <input type="text" id="promoHostel" placeholder="Hostel/Residential Address" style="margin-top: 10px;">
+
+        <div class="section-label">Parental/Guardian Contact</div>
+        <input type="text" id="promoEmergencyName" placeholder="Guardian Full Name" style="margin-bottom:10px;">
+        <input type="tel" id="promoEmergencyPhone" placeholder="Guardian Phone (0XX...)">
+
+        <div style="display:flex; gap:10px; margin-top:25px;">
+            <button onclick="closePromo()" style="flex:1; padding:15px; background:rgba(255,255,255,0.05); color:white; border-radius:10px; border:none; cursor:pointer;">Cancel</button>
+            <button id="promoSaveBtn" onclick="finalSubmitPromotion()" style="flex:2; padding:15px; background:var(--green); color:#0f172a; font-weight:bold; border-radius:10px; border:none; cursor:pointer;">Finalize Membership</button>
+        </div>
     </div>
 </div>
 
@@ -64,41 +125,33 @@
     onAuthStateChanged(auth, async (user) => {
         if (user) { 
             currentUser = user; 
-            await identifyUserRole(user.uid); // Wait for role check
+            await identifyUserRole(user.uid);
             loadInvitees(); 
-        } else { 
-            window.location.href = "login.html"; 
-        }
+        } else { window.location.href = "login.html"; }
     });
 
     async function identifyUserRole(uid) {
-        // Check if user is a Pastor
         const pSnap = await getDoc(doc(db, "pastors", uid));
         if (pSnap.exists()) {
-            userRole = 'pastor';
-            myPastorId = uid;
+            userRole = 'pastor'; myPastorId = uid;
+            document.getElementById('userStatus').innerText = "Reporting as Pastor";
             return;
         }
-
-        // Check if user is a Shepherd
         const sSnap = await getDoc(doc(db, "shepherds", uid));
         if (sSnap.exists()) {
-            userRole = 'shepherd';
-            myPastorId = sSnap.data().pastorId;
+            userRole = 'shepherd'; myPastorId = sSnap.data().assigned_pastor_id;
+            document.getElementById('userStatus').innerText = "Reporting as Shepherd";
             return;
         }
-        
-        userRole = 'master_admin';
+        userRole = 'admin';
+        document.getElementById('userStatus').innerText = "Admin Oversight";
     }
 
-    // THIS WAS MISSING: The function that resets data on Monday
     function getLastMonday() {
         const now = new Date();
-        const day = now.getDay(); 
-        const diff = (day === 0 ? 6 : day - 1); 
-        const monday = new Date(now);
-        monday.setDate(now.getDate() - diff);
-        monday.setHours(0, 0, 0, 0);
+        const diff = now.getDay() === 0 ? 6 : now.getDay() - 1;
+        const monday = new Date(now.setDate(now.getDate() - diff));
+        monday.setHours(0,0,0,0);
         return monday;
     }
 
@@ -106,51 +159,37 @@
         const name = document.getElementById('invName').value;
         const hostel = document.getElementById('invHostel').value;
         const phone = document.getElementById('invPhone').value;
-
-        if(!name || !phone) return alert("Name and Phone required");
+        if(!name || !phone) return alert("Missing Info");
 
         await addDoc(collection(db, "invitees"), {
-            fullName: name,
-            hostel: hostel,
-            phone: phone,
-            pastorId: myPastorId, 
-            shepherdId: currentUser.uid,
-            addedBy: currentUser.uid,
-            calls: 0,
-            visits: 0,
-            status: 'unmarked',
-            challenges: '',
+            fullName: name, hostel: hostel, phone: phone,
+            pastorId: myPastorId, shepherdId: currentUser.uid,
+            calls: 0, visits: 0, status: 'unmarked',
             lastUpdated: serverTimestamp()
         });
         location.reload();
     };
 
-async function loadInvitees() {
+    async function loadInvitees() {
         const listDiv = document.getElementById('inviteeList');
-        let q;
-
-        if (userRole === 'pastor') {
-            q = query(collection(db, "invitees"), where("pastorId", "==", currentUser.uid));
-        } else if (userRole === 'shepherd') {
-            q = query(collection(db, "invitees"), where("shepherdId", "==", currentUser.uid));
-        } else {
-            q = collection(db, "invitees");
-        }
+        let q = query(collection(db, "invitees"), where("shepherdId", "==", currentUser.uid));
+        if (userRole === 'pastor') q = query(collection(db, "invitees"), where("pastorId", "==", currentUser.uid));
 
         const snap = await getDocs(q);
         const lastMonday = getLastMonday();
-
         let html = "";
+
         snap.forEach(d => {
             const inv = d.data();
-            const id = d.id;
-            const firstName = inv.fullName.split(' ')[0]; // Get just the first name for friendly text
+            if(inv.status === 'graduated') return;
             
+            const id = d.id;
+            const firstName = inv.fullName.split(' ')[0];
             const isFresh = inv.lastUpdated?.toDate() > lastMonday;
+            
             const currentStatus = isFresh ? inv.status : 'unmarked';
-            const currentCalls = isFresh ? inv.calls : 0;
-            const currentVisits = isFresh ? inv.visits : 0;
-            const currentChallenges = isFresh ? (inv.challenges || '') : '';
+            const calls = isFresh ? inv.calls : 0;
+            const visits = isFresh ? inv.visits : 0;
 
             html += `
                 <div class="invitee-item">
@@ -159,75 +198,109 @@ async function loadInvitees() {
                             <span style="font-weight:600; color:var(--primary); font-size: 1.1rem;">${inv.fullName}</span><br>
                             <small style="opacity:0.6;">📍 ${inv.hostel} | 📱 ${inv.phone}</small>
                         </div>
+                        <button class="btn-sm" onclick="promoteToMember('${id}')" style="background:none; border:1px solid var(--primary); font-size:0.7rem;">PROMOTE 🎓</button>
                     </div>
 
                     <div style="background: rgba(255,255,255,0.03); padding: 12px; border-radius: 12px; margin: 10px 0;">
-                        <div class="flex-row" style="margin-bottom: 15px;">
-                            <span style="font-size: 0.85rem;">How many times did you <b>call ${firstName}</b>?</span>
+                        <div class="flex-row">
+                            <span style="font-size: 0.8rem;">How many times did you <b>call ${firstName}</b>?</span>
                             <div class="counter-box">
                                 <button class="btn-sm" onclick="updateCounter('${id}', 'calls', -1)">-</button>
-                                <span id="call-${id}" style="min-width: 20px; text-align: center;">${currentCalls}</span>
+                                <span id="call-${id}">${calls}</span>
                                 <button class="btn-sm" onclick="updateCounter('${id}', 'calls', 1)">+</button>
                             </div>
                         </div>
-
-                        <div class="flex-row">
-                            <span style="font-size: 0.85rem;">How many times did you <b>visit ${firstName}</b>?</span>
+                        <div class="flex-row" style="margin-top:10px;">
+                            <span style="font-size: 0.8rem;">How many times did you <b>visit ${firstName}</b>?</span>
                             <div class="counter-box">
                                 <button class="btn-sm" onclick="updateCounter('${id}', 'visits', -1)">-</button>
-                                <span id="visit-${id}" style="min-width: 20px; text-align: center;">${currentVisits}</span>
+                                <span id="visit-${id}">${visits}</span>
                                 <button class="btn-sm" onclick="updateCounter('${id}', 'visits', 1)">+</button>
                             </div>
                         </div>
                     </div>
 
-                    <div class="input-group">
-                        <small style="opacity: 0.6; display: block; margin-bottom: 5px;">Any challenges or follow-up notes for ${firstName}?</small>
-                        <textarea id="challen-${id}" placeholder="e.g. Not responding to calls,etc..." onchange="updateText('${id}')">${currentChallenges}</textarea>
-                    </div>
-
                     <div class="status-btns">
-                        <button id="hon-${id}" class="btn-status ${currentStatus === 'honoured' ? 'honoured' : ''}" 
+                        <button class="btn-status ${currentStatus === 'honoured' ? 'honoured' : ''}" 
                             onclick="updateStatus('${id}', 'honoured')">Honoured Invitation</button>
-                        <button id="dec-${id}" class="btn-status ${currentStatus === 'declined' ? 'declined' : ''}" 
+                        <button class="btn-status ${currentStatus === 'declined' ? 'declined' : ''}" 
                             onclick="updateStatus('${id}', 'declined')">Did Not Come</button>
                     </div>
                 </div>`;
         });
-        listDiv.innerHTML = html || "<p style='text-align:center; opacity:0.5;'>No invitees registered yet.</p>";
+        listDiv.innerHTML = html || "<p style='text-align:center; opacity:0.5; padding: 20px;'>No active invitees found.</p>";
     }
 
-    // UPDATED COUNTER: Now handles both 'calls' and 'visits'
     window.updateCounter = async (id, field, change) => {
         const docRef = doc(db, "invitees", id);
         const snap = await getDoc(docRef);
         let val = (snap.data()[field] || 0) + change;
         if(val < 0) val = 0;
-        
         await updateDoc(docRef, { [field]: val, lastUpdated: serverTimestamp() });
-        
-        // Update the UI immediately
-        const elementId = field === 'calls' ? `call-${id}` : `visit-${id}`;
-        document.getElementById(elementId).innerText = val;
+        document.getElementById(`${field === 'calls' ? 'call' : 'visit'}-${id}`).innerText = val;
     };
 
     window.updateStatus = async (id, newStatus) => {
-        const docRef = doc(db, "invitees", id);
-        await updateDoc(docRef, { status: newStatus, lastUpdated: serverTimestamp() });
-        
-        await addDoc(collection(db, "follow_ups"), {
-            inviteeId: id,
-            pastorId: myPastorId,
-            shepherdId: currentUser.uid,
-            action: `Status: ${newStatus}`,
-            timestamp: serverTimestamp()
-        });
+        await updateDoc(doc(db, "invitees", id), { status: newStatus, lastUpdated: serverTimestamp() });
         loadInvitees();
     };
 
-    window.updateText = async (id) => {
-        const text = document.getElementById(`challen-${id}`).value;
-        await updateDoc(doc(db, "invitees", id), { challenges: text, lastUpdated: serverTimestamp() });
+    // PROMOTION ENGINE
+    window.promoteToMember = async (inviteeId) => {
+        const invSnap = await getDoc(doc(db, "invitees", inviteeId));
+        const data = invSnap.data();
+        const names = data.fullName.split(' ');
+        
+        document.getElementById('promoId').value = inviteeId;
+        document.getElementById('promoFirstname').value = names[0];
+        document.getElementById('promoSurname').value = names.slice(1).join(' ');
+        document.getElementById('promoHostel').value = data.hostel || "";
+        document.getElementById('promoModal').style.display = 'block';
+    };
+
+    window.closePromo = () => document.getElementById('promoModal').style.display = 'none';
+
+    window.finalSubmitPromotion = async () => {
+        const btn = document.getElementById('promoSaveBtn');
+        const inviteeId = document.getElementById('promoId').value;
+        const invSnap = await getDoc(doc(db, "invitees", inviteeId));
+        const invData = invSnap.data();
+
+        btn.disabled = true; btn.innerText = "Syncing with Database...";
+
+        const dob = document.getElementById('promoBirthday').value;
+        
+        // Mapped EXACTLY to your Member Form fields
+        const memberData = {
+            last_name: document.getElementById('promoSurname').value,
+            first_name: document.getElementById('promoFirstname').value,
+            other_names: "", 
+            gender: document.getElementById('promoGender').value,
+            dob: dob,
+            dob_day_month: dob ? dob.substring(5) : null,
+            phone: invData.phone,
+            hostel: document.getElementById('promoHostel').value,
+            course: document.getElementById('promoCourse').value,
+            level: document.getElementById('promoLevel').value,
+            status: "New Convert",
+            emergency_name: document.getElementById('promoEmergencyName').value,
+            emergency_phone: document.getElementById('promoEmergencyPhone').value,
+            photo_url: null,
+            recorded_by_id: currentUser.uid,
+            pastorId: myPastorId,
+            shepherdId: currentUser.uid,
+            timestamp: new Date().toISOString()
+        };
+
+        try {
+            await addDoc(collection(db, "members"), memberData);
+            await updateDoc(doc(db, "invitees", inviteeId), { status: 'graduated', lastUpdated: serverTimestamp() });
+            alert("Glory to God! Member added successfully.");
+            location.reload();
+        } catch (e) {
+            alert("Error: " + e.message);
+            btn.disabled = false; btn.innerText = "Try Again";
+        }
     };
 </script>
 </body>
