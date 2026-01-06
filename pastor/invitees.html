@@ -25,8 +25,8 @@
 <body>
 
 <div class="container">
-    <h1>Saturday Mandate</h1>
-    <p style="opacity:0.6; margin-bottom:20px;">Register and track your 10 confirmed invitees.</p>
+    <h1>Invitee Mandate</h1>
+    <p style="opacity:0.6; margin-bottom:20px;">Register and track your confirmed invitees.</p>
 
     <div class="card">
         <h3>New Invitee</h3>
@@ -58,24 +58,36 @@
     const db = getFirestore(app, "fobrealdbase");
     const auth = getAuth(app);
     let currentUser = null;
+    let userRole = null;
+    let myPastorId = null;
 
     onAuthStateChanged(auth, (user) => {
         if (user) { currentUser = user; loadInvitees(); }
-        else { window.location.href = "login.html"; }
+        else { window.location.href = "/index.html"; }
     });
+    async function identifyUserRole(uid) {
+        // Check if user is a Pastor
+        const pSnap = await getDoc(doc(db, "pastors", uid));
+        if (pSnap.exists()) {
+            userRole = 'pastor';
+            myPastorId = uid; // I am the pastor
+            return;
+        }
 
-    // Helper: Calculate last Monday at 12:00 AM Ghana Time
-    function getLastMonday() {
-        const now = new Date();
-        const day = now.getDay(); // 0 is Sunday, 1 is Monday
-        const diff = (day === 0 ? 6 : day - 1); 
-        const monday = new Date(now);
-        monday.setDate(now.getDate() - diff);
-        monday.setHours(0, 0, 0, 0);
-        return monday;
+        // Check if user is a Shepherd
+        const sSnap = await getDoc(doc(db, "shepherds", uid));
+        if (sSnap.exists()) {
+            userRole = 'shepherd';
+            myPastorId = sSnap.data().pastorId; // Link to my pastor
+            return;
+        }
+        
+        // Default to master/admin if not found in either
+        userRole = 'master_admin';
     }
 
-    window.addNewInvitee = async () => {
+    // Helper: Calculate last Monday at 12:00 AM Ghana Time
+window.addNewInvitee = async () => {
         const name = document.getElementById('invName').value;
         const hostel = document.getElementById('invHostel').value;
         const phone = document.getElementById('invPhone').value;
@@ -86,7 +98,9 @@
             fullName: name,
             hostel: hostel,
             phone: phone,
-            pastorId: currentUser.uid,
+            pastorId: myPastorId, // Critical for Pastor's view
+            shepherdId: currentUser.uid, // Critical for Shepherd's credit
+            addedBy: currentUser.uid,
             calls: 0,
             visits: 0,
             status: 'unmarked',
@@ -98,7 +112,20 @@
 
     async function loadInvitees() {
         const listDiv = document.getElementById('inviteeList');
-        const q = query(collection(db, "invitees"), where("pastorId", "==", currentUser.uid));
+        let q;
+
+        // QUERY LOGIC
+        if (userRole === 'pastor') {
+            // Pastor sees everyone in their chapel
+            q = query(collection(db, "invitees"), where("pastorId", "==", currentUser.uid));
+        } else if (userRole === 'shepherd') {
+            // Shepherd only sees their own direct invitees
+            q = query(collection(db, "invitees"), where("shepherdId", "==", currentUser.uid));
+        } else {
+            // Master Admin sees all
+            q = collection(db, "invitees");
+        }
+
         const snap = await getDocs(q);
         const lastMonday = getLastMonday();
 
