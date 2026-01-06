@@ -19,7 +19,6 @@
     .container { width: 100%; max-width: 900px; padding-bottom: 100px; }
     
     .header-flex { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid var(--border); padding-bottom: 20px; }
-    
     .search-box { width: 100%; padding: 12px 20px; background: var(--glass); border: 1px solid var(--border); border-radius: 12px; color: white; margin-bottom: 20px; outline: none; }
 
     /* --- HIERARCHY LIST --- */
@@ -34,11 +33,11 @@
         cursor: pointer;
     }
     
-    .row-master { border-left: 6px solid var(--gold); background: rgba(255, 215, 0, 0.05); cursor: default; }
+    .row-master { border-left: 6px solid var(--gold); background: rgba(255, 215, 0, 0.05); }
     .row-pastor { border-left: 4px solid var(--primary); }
     .row-shepherd { border-left: 4px solid var(--success); font-size: 0.9rem; cursor: default; }
 
-    .toggle-icon { font-size: 0.7rem; margin-right: 10px; transition: 0.3s; display: inline-block; }
+    .toggle-icon { font-size: 0.7rem; margin-right: 10px; transition: 0.3s; display: inline-block; color: var(--text-dim); }
     .rotated { transform: rotate(90deg); }
 
     .badge { font-size: 0.55rem; padding: 2px 6px; border-radius: 4px; text-transform: uppercase; font-weight: bold; margin-right: 10px; }
@@ -66,27 +65,27 @@
 <div class="container">
     <div class="header-flex">
         <div>
-            <h1 style="margin:0; font-size: 1.5rem;">Network <span style="color: var(--primary);">Intelligence</span></h1>
-            <p style="opacity: 0.5; font-size: 0.8rem;" id="adminInfo">Verifying Admin Status...</p>
+            <h1 style="margin:0; font-size: 1.5rem;">Network <span style="color: var(--primary);">Management</span></h1>
+            <p style="opacity: 0.5; font-size: 0.8rem;" id="adminInfo">Syncing profiles...</p>
         </div>
         <button class="btn-add" onclick="toggleForm(true)">+ Register Staff</button>
     </div>
 
-    <input type="text" class="search-box" id="treeSearch" placeholder="Search by name, role or chapel..." onkeyup="filterTree()">
+    <input type="text" class="search-box" id="treeSearch" placeholder="Find staff member..." onkeyup="filterTree()">
 
     <div class="hierarchy-card" id="hierarchyTree">
-        <p style="text-align:center; opacity:0.3; padding: 40px;">Initializing Network...</p>
+        <p style="text-align:center; opacity:0.3; padding: 40px;">Analyzing church structure...</p>
     </div>
 </div>
 
 <div id="formOverlay">
     <div class="modal-content">
         <span class="close-modal" onclick="toggleForm(false)">&times;</span>
-        <h2 style="margin-top:0; color: var(--primary);">Personnel Deployment</h2>
+        <h2 style="margin-top:0; color: var(--primary);">New Deployment</h2>
         <form id="signupForm">
             <div class="form-grid">
                 <div class="full">
-                    <label>Role</label>
+                    <label>RANK</label>
                     <select id="role" required>
                         <option value="shepherds">Shepherd</option>
                         <option value="pastors">Pastor</option>
@@ -97,9 +96,9 @@
                 <div><label>DATE OF BIRTH</label><input type="date" id="dob" required></div>
                 <div class="full"><input type="tel" id="contact" placeholder="Phone Number" required></div>
                 <div class="full"><input type="email" id="email" placeholder="Email Address" required></div>
-                <div class="full"><input type="password" id="password" placeholder="Set Initial Password" required minlength="6"></div>
+                <div class="full"><input type="password" id="password" placeholder="System Password" required minlength="6"></div>
             </div>
-            <button type="submit" class="btn-add" style="width:100%; margin-top:20px;" id="submitBtn">Confirm Registration</button>
+            <button type="submit" class="btn-add" style="width:100%; margin-top:20px;" id="submitBtn">Deploy to Network</button>
         </form>
     </div>
 </div>
@@ -129,14 +128,11 @@
     onAuthStateChanged(auth, async (user) => {
         if (user) { 
             loggedInUserUID = user.uid; 
-            // Try fetching from pastors first, then master_admin
             const pDoc = await getDoc(doc(db, "pastors", user.uid));
             if(pDoc.exists()) autoChapel = pDoc.data().chapel_name || "undefined";
-            
-            document.getElementById('adminInfo').innerText = `Your Assigned Chapel: ${autoChapel}`;
+            document.getElementById('adminInfo').innerText = `Chapel Origin: ${autoChapel}`;
             loadHierarchy(); 
-        }
-        else { window.location.href = "/index.html"; }
+        } else { window.location.href = "/index.html"; }
     });
 
     window.toggleForm = (show) => { document.getElementById('formOverlay').style.display = show ? 'flex' : 'none'; };
@@ -159,19 +155,15 @@
         const pastors = pSnap.docs.map(d => ({id: d.id, ...d.data()}));
         const shepherds = sSnap.docs.map(d => ({id: d.id, ...d.data()}));
 
-        let treeHtml = "";
-
-        masters.forEach(m => {
-            treeHtml += `<div class="row row-master"><div><span class="badge badge-master">Master Admin</span><b>${m.full_name}</b></div><button class="delete-btn" onclick="deleteUser('master_admin', '${m.id}')">Delete</button></div>`;
-        });
-
         function buildNode(parentId) {
-            let html = `<div class="node-group collapsed" id="group-${parentId}">`;
             const subPastors = pastors.filter(p => p.pastorId === parentId);
             const subShepherds = shepherds.filter(s => s.pastorId === parentId);
 
-            if(subPastors.length === 0 && subShepherds.length === 0) return "";
+            if (subPastors.length === 0 && subShepherds.length === 0) return "";
 
+            let html = `<div class="node-group collapsed" id="group-${parentId}">`;
+
+            // Render Sub-Pastors
             subPastors.forEach(p => {
                 html += `
                     <div class="row row-pastor" onclick="toggleNode('${p.id}')">
@@ -180,6 +172,7 @@
                     </div>${buildNode(p.id)}`;
             });
 
+            // Render Sub-Shepherds
             subShepherds.forEach(s => {
                 html += `
                     <div class="row row-shepherd">
@@ -187,11 +180,25 @@
                         <button class="delete-btn" onclick="event.stopPropagation(); deleteUser('shepherds', '${s.id}')">Delete</button>
                     </div>`;
             });
-            return html + `</div>`;
+
+            html += `</div>`;
+            return html;
         }
 
-        const masterUIDs = masters.map(m => m.id);
-        const topPastors = pastors.filter(p => !p.pastorId || masterUIDs.includes(p.pastorId));
+        let treeHtml = "";
+
+        // Start with Master Admins (Root Level)
+        masters.forEach(m => {
+            treeHtml += `
+                <div class="row row-master" onclick="toggleNode('${m.id}')">
+                    <div><span class="toggle-icon" id="icon-${m.id}">▶</span><span class="badge badge-master">Master Admin</span><b>${m.full_name}</b></div>
+                    <button class="delete-btn" onclick="event.stopPropagation(); deleteUser('master_admin', '${m.id}')">Delete</button>
+                </div>${buildNode(m.id)}`;
+        });
+
+        // Top-Level Pastors (Only those who DON'T report to a Master or another Pastor)
+        const topPastors = pastors.filter(p => !p.pastorId || 
+            (!masters.some(m => m.id === p.pastorId) && !pastors.some(parent => parent.id === p.pastorId)));
 
         topPastors.forEach(tp => {
             treeHtml += `
@@ -201,25 +208,26 @@
                 </div>${buildNode(tp.id)}`;
         });
 
-        container.innerHTML = treeHtml || "<p style='text-align:center; opacity:0.3; padding: 40px;'>No Network Data Found.</p>";
+        container.innerHTML = treeHtml || "<p style='text-align:center; opacity:0.3; padding: 40px;'>No data found.</p>";
     }
 
     window.filterTree = () => {
-        const input = document.getElementById('treeSearch').value.toLowerCase();
-        const rows = document.querySelectorAll('.row');
-        rows.forEach(row => {
-            const text = row.innerText.toLowerCase();
-            row.style.display = text.includes(input) ? "flex" : "none";
-            // Auto expand if searching
-            if(input.length > 1) {
-                const group = row.nextElementSibling;
-                if(group && group.classList.contains('node-group')) group.classList.remove('collapsed');
+        const q = document.getElementById('treeSearch').value.toLowerCase();
+        document.querySelectorAll('.row').forEach(row => {
+            const match = row.innerText.toLowerCase().includes(q);
+            row.style.display = match ? "flex" : "none";
+            if(q.length > 1 && match) {
+                let parent = row.parentElement;
+                while(parent && parent.classList.contains('node-group')) {
+                    parent.classList.remove('collapsed');
+                    parent = parent.parentElement;
+                }
             }
         });
     };
 
     window.deleteUser = async (coll, id) => {
-        if (confirm("Permanently remove this account?")) {
+        if (confirm("Delete this profile?")) {
             await deleteDoc(doc(db, coll, id));
             loadHierarchy();
         }
@@ -228,19 +236,15 @@
     document.getElementById('signupForm').onsubmit = async (e) => {
         e.preventDefault();
         const btn = document.getElementById('submitBtn');
-        btn.disabled = true; btn.innerText = "Registering...";
-        
+        btn.disabled = true; btn.innerText = "Deploying...";
         const email = document.getElementById('email').value;
         const password = document.getElementById('password').value;
         const col = document.getElementById('role').value;
-
         const secondaryApp = initializeApp(firebaseConfig, "Secondary");
         const secondaryAuth = getAuth(secondaryApp);
 
         try {
             const cred = await createUserWithEmailAndPassword(secondaryAuth, email, password);
-            
-            // Explicitly recording every field including DOB and Gender
             await setDoc(doc(db, col, cred.user.uid), {
                 full_name: document.getElementById('fullName').value,
                 gender: document.getElementById('gender').value,
@@ -252,18 +256,16 @@
                 chapel_name: autoChapel,
                 created_at: serverTimestamp()
             });
-
             await emailjs.send("service_vzxws9f", "template_buctifq", {
                 full_name: document.getElementById('fullName').value,
                 role: col.slice(0, -1), email: email, password: password
             });
-
             await signOut(secondaryAuth);
             await deleteApp(secondaryApp);
             toggleForm(false); loadHierarchy(); document.getElementById('signupForm').reset();
-            alert("Registration Successful!");
+            alert("Deployment successful.");
         } catch (err) { alert(err.message); }
-        finally { btn.disabled = false; btn.innerText = "Confirm Registration"; }
+        finally { btn.disabled = false; btn.innerText = "Deploy to Network"; }
     };
 </script>
 </body>
