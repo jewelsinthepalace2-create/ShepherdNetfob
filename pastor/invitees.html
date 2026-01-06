@@ -125,7 +125,7 @@
         location.reload();
     };
 
-    async function loadInvitees() {
+async function loadInvitees() {
         const listDiv = document.getElementById('inviteeList');
         let q;
 
@@ -144,29 +144,48 @@
         snap.forEach(d => {
             const inv = d.data();
             const id = d.id;
+            const firstName = inv.fullName.split(' ')[0]; // Get just the first name for friendly text
             
             const isFresh = inv.lastUpdated?.toDate() > lastMonday;
             const currentStatus = isFresh ? inv.status : 'unmarked';
             const currentCalls = isFresh ? inv.calls : 0;
+            const currentVisits = isFresh ? inv.visits : 0;
             const currentChallenges = isFresh ? (inv.challenges || '') : '';
 
             html += `
                 <div class="invitee-item">
                     <div class="flex-row">
-                        <div>
-                            <span style="font-weight:600; color:var(--primary);">${inv.fullName}</span><br>
-                            <small style="opacity:0.6;">${inv.hostel} | ${inv.phone}</small>
-                        </div>
-                        <div class="counter-box">
-                            <small>📞</small>
-                            <button class="btn-sm" onclick="updateCounter('${id}', 'calls', -1)">-</button>
-                            <span id="call-${id}">${currentCalls}</span>
-                            <button class="btn-sm" onclick="updateCounter('${id}', 'calls', 1)">+</button>
+                        <div style="flex: 1;">
+                            <span style="font-weight:600; color:var(--primary); font-size: 1.1rem;">${inv.fullName}</span><br>
+                            <small style="opacity:0.6;">📍 ${inv.hostel} | 📱 ${inv.phone}</small>
                         </div>
                     </div>
+
+                    <div style="background: rgba(255,255,255,0.03); padding: 12px; border-radius: 12px; margin: 10px 0;">
+                        <div class="flex-row" style="margin-bottom: 15px;">
+                            <span style="font-size: 0.85rem;">How many times did you <b>call ${firstName}</b>?</span>
+                            <div class="counter-box">
+                                <button class="btn-sm" onclick="updateCounter('${id}', 'calls', -1)">-</button>
+                                <span id="call-${id}" style="min-width: 20px; text-align: center;">${currentCalls}</span>
+                                <button class="btn-sm" onclick="updateCounter('${id}', 'calls', 1)">+</button>
+                            </div>
+                        </div>
+
+                        <div class="flex-row">
+                            <span style="font-size: 0.85rem;">How many times did you <b>visit ${firstName}</b>?</span>
+                            <div class="counter-box">
+                                <button class="btn-sm" onclick="updateCounter('${id}', 'visits', -1)">-</button>
+                                <span id="visit-${id}" style="min-width: 20px; text-align: center;">${currentVisits}</span>
+                                <button class="btn-sm" onclick="updateCounter('${id}', 'visits', 1)">+</button>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="input-group">
-                        <textarea id="challen-${id}" placeholder="Current challenges..." onchange="updateText('${id}')">${currentChallenges}</textarea>
+                        <small style="opacity: 0.6; display: block; margin-bottom: 5px;">Any challenges or follow-up notes for ${firstName}?</small>
+                        <textarea id="challen-${id}" placeholder="e.g. Travelled, phone off, busy with exams..." onchange="updateText('${id}')">${currentChallenges}</textarea>
                     </div>
+
                     <div class="status-btns">
                         <button id="hon-${id}" class="btn-status ${currentStatus === 'honoured' ? 'honoured' : ''}" 
                             onclick="updateStatus('${id}', 'honoured')">Honoured Invitation</button>
@@ -178,13 +197,18 @@
         listDiv.innerHTML = html || "<p style='text-align:center; opacity:0.5;'>No invitees registered yet.</p>";
     }
 
+    // UPDATED COUNTER: Now handles both 'calls' and 'visits'
     window.updateCounter = async (id, field, change) => {
         const docRef = doc(db, "invitees", id);
         const snap = await getDoc(docRef);
         let val = (snap.data()[field] || 0) + change;
         if(val < 0) val = 0;
+        
         await updateDoc(docRef, { [field]: val, lastUpdated: serverTimestamp() });
-        document.getElementById(`call-${id}`).innerText = val;
+        
+        // Update the UI immediately
+        const elementId = field === 'calls' ? `call-${id}` : `visit-${id}`;
+        document.getElementById(elementId).innerText = val;
     };
 
     window.updateStatus = async (id, newStatus) => {
