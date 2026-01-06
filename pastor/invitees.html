@@ -61,16 +61,22 @@
     let userRole = null;
     let myPastorId = null;
 
-    onAuthStateChanged(auth, (user) => {
-        if (user) { currentUser = user; loadInvitees(); }
-        else { window.location.href = "/index.html"; }
+    onAuthStateChanged(auth, async (user) => {
+        if (user) { 
+            currentUser = user; 
+            await identifyUserRole(user.uid); // Wait for role check
+            loadInvitees(); 
+        } else { 
+            window.location.href = "login.html"; 
+        }
     });
+
     async function identifyUserRole(uid) {
         // Check if user is a Pastor
         const pSnap = await getDoc(doc(db, "pastors", uid));
         if (pSnap.exists()) {
             userRole = 'pastor';
-            myPastorId = uid; // I am the pastor
+            myPastorId = uid;
             return;
         }
 
@@ -78,16 +84,25 @@
         const sSnap = await getDoc(doc(db, "shepherds", uid));
         if (sSnap.exists()) {
             userRole = 'shepherd';
-            myPastorId = sSnap.data().pastorId; // Link to my pastor
+            myPastorId = sSnap.data().pastorId;
             return;
         }
         
-        // Default to master/admin if not found in either
         userRole = 'master_admin';
     }
 
-    // Helper: Calculate last Monday at 12:00 AM Ghana Time
-window.addNewInvitee = async () => {
+    // THIS WAS MISSING: The function that resets data on Monday
+    function getLastMonday() {
+        const now = new Date();
+        const day = now.getDay(); 
+        const diff = (day === 0 ? 6 : day - 1); 
+        const monday = new Date(now);
+        monday.setDate(now.getDate() - diff);
+        monday.setHours(0, 0, 0, 0);
+        return monday;
+    }
+
+    window.addNewInvitee = async () => {
         const name = document.getElementById('invName').value;
         const hostel = document.getElementById('invHostel').value;
         const phone = document.getElementById('invPhone').value;
@@ -98,8 +113,8 @@ window.addNewInvitee = async () => {
             fullName: name,
             hostel: hostel,
             phone: phone,
-            pastorId: myPastorId, // Critical for Pastor's view
-            shepherdId: currentUser.uid, // Critical for Shepherd's credit
+            pastorId: myPastorId, 
+            shepherdId: currentUser.uid,
             addedBy: currentUser.uid,
             calls: 0,
             visits: 0,
@@ -114,15 +129,11 @@ window.addNewInvitee = async () => {
         const listDiv = document.getElementById('inviteeList');
         let q;
 
-        // QUERY LOGIC
         if (userRole === 'pastor') {
-            // Pastor sees everyone in their chapel
             q = query(collection(db, "invitees"), where("pastorId", "==", currentUser.uid));
         } else if (userRole === 'shepherd') {
-            // Shepherd only sees their own direct invitees
             q = query(collection(db, "invitees"), where("shepherdId", "==", currentUser.uid));
         } else {
-            // Master Admin sees all
             q = collection(db, "invitees");
         }
 
@@ -134,12 +145,10 @@ window.addNewInvitee = async () => {
             const inv = d.data();
             const id = d.id;
             
-            // RESET LOGIC: If lastUpdated is before Monday, we treat status and counters as fresh for the UI
             const isFresh = inv.lastUpdated?.toDate() > lastMonday;
             const currentStatus = isFresh ? inv.status : 'unmarked';
             const currentCalls = isFresh ? inv.calls : 0;
-            const currentVisits = isFresh ? inv.visits : 0;
-            const currentChallenges = isFresh ? inv.challenges : '';
+            const currentChallenges = isFresh ? (inv.challenges || '') : '';
 
             html += `
                 <div class="invitee-item">
@@ -155,11 +164,9 @@ window.addNewInvitee = async () => {
                             <button class="btn-sm" onclick="updateCounter('${id}', 'calls', 1)">+</button>
                         </div>
                     </div>
-
                     <div class="input-group">
                         <textarea id="challen-${id}" placeholder="Current challenges..." onchange="updateText('${id}')">${currentChallenges}</textarea>
                     </div>
-
                     <div class="status-btns">
                         <button id="hon-${id}" class="btn-status ${currentStatus === 'honoured' ? 'honoured' : ''}" 
                             onclick="updateStatus('${id}', 'honoured')">Honoured Invitation</button>
@@ -168,7 +175,7 @@ window.addNewInvitee = async () => {
                     </div>
                 </div>`;
         });
-        listDiv.innerHTML = html;
+        listDiv.innerHTML = html || "<p style='text-align:center; opacity:0.5;'>No invitees registered yet.</p>";
     }
 
     window.updateCounter = async (id, field, change) => {
@@ -176,23 +183,185 @@ window.addNewInvitee = async () => {
         const snap = await getDoc(docRef);
         let val = (snap.data()[field] || 0) + change;
         if(val < 0) val = 0;
-        
         await updateDoc(docRef, { [field]: val, lastUpdated: serverTimestamp() });
-        document.getElementById(`${field === 'calls' ? 'call' : 'visit'}-${id}`).innerText = val;
+        document.getElementById(`call-${id}`).innerText = val;
     };
 
     window.updateStatus = async (id, newStatus) => {
         const docRef = doc(db, "invitees", id);
         await updateDoc(docRef, { status: newStatus, lastUpdated: serverTimestamp() });
         
-        // Log to Follow-ups for Nii to see
         await addDoc(collection(db, "follow_ups"), {
             inviteeId: id,
-            pastorId: currentUser.uid,
-            action: `Set status to ${newStatus}`,
+            pastorId: myPastorId,
+            shepherdId: currentUser.uid,
+            action: `Status: ${newStatus}`,
             timestamp: serverTimestamp()
         });
+        loadInvitees();
+    };
+
+    window.updateText = async (id) => {
+        const text = document.getElementById(`challen-${id}`).value;
+        await updateDoc(doc(db, "invitees", id), { challenges: text, lastUpdated: serverTimestamp() });
+    };
+</script><script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
+    import { getFirestore, collection, addDoc, getDocs, query, where, doc, updateDoc, serverTimestamp, getDoc } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
+
+    const firebaseConfig = { 
+        apiKey: "AIzaSyCBv60eRCO0e4dFBMKGKnIATouxTuk1Bcc",
+        authDomain: "fob-database-139d1.firebaseapp.com",
+        projectId: "fob-database-139d1",
+        storageBucket: "fob-database-139d1.firebasestorage.app",
+        appId: "1:375165731354:web:b5fa57dcb2d71ee0d8c7a3"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app, "fobrealdbase");
+    const auth = getAuth(app);
+    let currentUser = null;
+    let userRole = null;
+    let myPastorId = null;
+
+    onAuthStateChanged(auth, async (user) => {
+        if (user) { 
+            currentUser = user; 
+            await identifyUserRole(user.uid); // Wait for role check
+            loadInvitees(); 
+        } else { 
+            window.location.href = "login.html"; 
+        }
+    });
+
+    async function identifyUserRole(uid) {
+        // Check if user is a Pastor
+        const pSnap = await getDoc(doc(db, "pastors", uid));
+        if (pSnap.exists()) {
+            userRole = 'pastor';
+            myPastorId = uid;
+            return;
+        }
+
+        // Check if user is a Shepherd
+        const sSnap = await getDoc(doc(db, "shepherds", uid));
+        if (sSnap.exists()) {
+            userRole = 'shepherd';
+            myPastorId = sSnap.data().pastorId;
+            return;
+        }
         
+        userRole = 'master_admin';
+    }
+
+    // THIS WAS MISSING: The function that resets data on Monday
+    function getLastMonday() {
+        const now = new Date();
+        const day = now.getDay(); 
+        const diff = (day === 0 ? 6 : day - 1); 
+        const monday = new Date(now);
+        monday.setDate(now.getDate() - diff);
+        monday.setHours(0, 0, 0, 0);
+        return monday;
+    }
+
+    window.addNewInvitee = async () => {
+        const name = document.getElementById('invName').value;
+        const hostel = document.getElementById('invHostel').value;
+        const phone = document.getElementById('invPhone').value;
+
+        if(!name || !phone) return alert("Name and Phone required");
+
+        await addDoc(collection(db, "invitees"), {
+            fullName: name,
+            hostel: hostel,
+            phone: phone,
+            pastorId: myPastorId, 
+            shepherdId: currentUser.uid,
+            addedBy: currentUser.uid,
+            calls: 0,
+            visits: 0,
+            status: 'unmarked',
+            challenges: '',
+            lastUpdated: serverTimestamp()
+        });
+        location.reload();
+    };
+
+    async function loadInvitees() {
+        const listDiv = document.getElementById('inviteeList');
+        let q;
+
+        if (userRole === 'pastor') {
+            q = query(collection(db, "invitees"), where("pastorId", "==", currentUser.uid));
+        } else if (userRole === 'shepherd') {
+            q = query(collection(db, "invitees"), where("shepherdId", "==", currentUser.uid));
+        } else {
+            q = collection(db, "invitees");
+        }
+
+        const snap = await getDocs(q);
+        const lastMonday = getLastMonday();
+
+        let html = "";
+        snap.forEach(d => {
+            const inv = d.data();
+            const id = d.id;
+            
+            const isFresh = inv.lastUpdated?.toDate() > lastMonday;
+            const currentStatus = isFresh ? inv.status : 'unmarked';
+            const currentCalls = isFresh ? inv.calls : 0;
+            const currentChallenges = isFresh ? (inv.challenges || '') : '';
+
+            html += `
+                <div class="invitee-item">
+                    <div class="flex-row">
+                        <div>
+                            <span style="font-weight:600; color:var(--primary);">${inv.fullName}</span><br>
+                            <small style="opacity:0.6;">${inv.hostel} | ${inv.phone}</small>
+                        </div>
+                        <div class="counter-box">
+                            <small>📞</small>
+                            <button class="btn-sm" onclick="updateCounter('${id}', 'calls', -1)">-</button>
+                            <span id="call-${id}">${currentCalls}</span>
+                            <button class="btn-sm" onclick="updateCounter('${id}', 'calls', 1)">+</button>
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <textarea id="challen-${id}" placeholder="Current challenges..." onchange="updateText('${id}')">${currentChallenges}</textarea>
+                    </div>
+                    <div class="status-btns">
+                        <button id="hon-${id}" class="btn-status ${currentStatus === 'honoured' ? 'honoured' : ''}" 
+                            onclick="updateStatus('${id}', 'honoured')">Honoured Invitation</button>
+                        <button id="dec-${id}" class="btn-status ${currentStatus === 'declined' ? 'declined' : ''}" 
+                            onclick="updateStatus('${id}', 'declined')">Did Not Come</button>
+                    </div>
+                </div>`;
+        });
+        listDiv.innerHTML = html || "<p style='text-align:center; opacity:0.5;'>No invitees registered yet.</p>";
+    }
+
+    window.updateCounter = async (id, field, change) => {
+        const docRef = doc(db, "invitees", id);
+        const snap = await getDoc(docRef);
+        let val = (snap.data()[field] || 0) + change;
+        if(val < 0) val = 0;
+        await updateDoc(docRef, { [field]: val, lastUpdated: serverTimestamp() });
+        document.getElementById(`call-${id}`).innerText = val;
+    };
+
+    window.updateStatus = async (id, newStatus) => {
+        const docRef = doc(db, "invitees", id);
+        await updateDoc(docRef, { status: newStatus, lastUpdated: serverTimestamp() });
+        
+        await addDoc(collection(db, "follow_ups"), {
+            inviteeId: id,
+            pastorId: myPastorId,
+            shepherdId: currentUser.uid,
+            action: `Status: ${newStatus}`,
+            timestamp: serverTimestamp()
+        });
         loadInvitees();
     };
 
