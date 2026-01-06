@@ -77,6 +77,7 @@
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
     import { getFirestore, collection, getDocs, query, orderBy, limit, doc, getDoc, where } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
 
     const firebaseConfig = { 
         apiKey: "AIzaSyCBv60eRCO0e4dFBMKGKnIATouxTuk1Bcc",
@@ -88,9 +89,20 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app, "fobrealdbase");
-
+    const auth = getAuth(app);
     const pastorFilter = document.getElementById('pastorFilter');
     const feedContainer = document.getElementById('feedContainer');
+
+    onAuthStateChanged(auth, (user) => {
+    if (user) {
+        console.log("Authenticated user found:", user.uid);
+        initFilters();
+        loadFeed();
+    } else {
+        console.log("No user found, redirecting...");
+        window.location.href = "/index.html";
+    }
+});
 
     // 1. Load Pastors into the Dropdown
     async function initFilters() {
