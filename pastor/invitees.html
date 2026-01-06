@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Invitee Mandate | ShepherdNet</title>
+    <link rel="icon" type="image/png" href="https://i.ibb.co/60bRQP5Z/Jewels-background-removed.png">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
@@ -22,7 +23,6 @@
         .btn-status.declined { background: var(--red); color: white; border: none; }
         .section-label { font-size: 0.65rem; color: var(--primary); letter-spacing: 1px; margin: 15px 0 5px 0; text-transform: uppercase; font-weight: 600; }
         
-        /* Modal Styles */
         #promoModal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15, 23, 42, 0.98); z-index:1000; overflow-y:auto; padding:20px; box-sizing:border-box; }
         .modal-content { max-width:500px; margin:20px auto; background: #1e293b; border: 1px solid var(--primary); padding: 25px; border-radius: 20px; box-shadow: 0 0 30px rgba(79, 172, 254, 0.2); }
     </style>
@@ -35,7 +35,7 @@
             <h1>Invitee Mandate</h1>
             <p id="userStatus" style="opacity:0.6; font-size: 0.8rem;">Checking role...</p>
         </div>
-        <a href="index.html" style="color: var(--primary); text-decoration: none; font-size: 0.8rem;">Dashboard</a>
+        <a id="dynamicDashLink" href="#" style="color: var(--primary); text-decoration: none; font-size: 0.8rem; border: 1px solid var(--primary); padding: 5px 12px; border-radius: 8px;">Dashboard</a>
     </div>
 
     <div class="card">
@@ -133,20 +133,27 @@
     });
 
     async function identifyUserRole(uid) {
+        const dashLink = document.getElementById('dynamicDashLink');
+        
         const pSnap = await getDoc(doc(db, "pastors", uid));
-        if (pSnap.exists()) {
-            userRole = 'pastor'; myPastorId = uid;
-            document.getElementById('userStatus').innerText = "Reporting as Pastor";
-            return;
-        }
         const sSnap = await getDoc(doc(db, "shepherds", uid));
-        if (sSnap.exists()) {
-            userRole = 'shepherd'; myPastorId = sSnap.data().assigned_pastor_id;
+        const aSnap = await getDoc(doc(db, "master_admin", uid));
+
+        if (pSnap.exists()) {
+            userRole = 'pastor'; 
+            myPastorId = uid;
+            dashLink.href = "index.html"; 
+            document.getElementById('userStatus').innerText = "Reporting as Pastor";
+        } else if (sSnap.exists()) {
+            userRole = 'shepherd'; 
+            myPastorId = sSnap.data().assigned_pastor_id;
+            dashLink.href = "../shepherd/index.html";
             document.getElementById('userStatus').innerText = "Reporting as Shepherd";
-            return;
+        } else if (aSnap.exists()) {
+            userRole = 'master_admin';
+            dashLink.href = "../admin/index.html";
+            document.getElementById('userStatus').innerText = "Admin Oversight";
         }
-        userRole = 'admin';
-        document.getElementById('userStatus').innerText = "Admin Oversight";
     }
 
     function getLastMonday() {
@@ -247,7 +254,6 @@
         loadInvitees();
     };
 
-    // PROMOTION ENGINE
     window.promoteToMember = async (inviteeId) => {
         const invSnap = await getDoc(doc(db, "invitees", inviteeId));
         const data = invSnap.data();
@@ -269,10 +275,8 @@
         const invData = invSnap.data();
 
         btn.disabled = true; btn.innerText = "Syncing with Database...";
-
         const dob = document.getElementById('promoBirthday').value;
         
-        // Mapped EXACTLY to your Member Form fields
         const memberData = {
             last_name: document.getElementById('promoSurname').value,
             first_name: document.getElementById('promoFirstname').value,
