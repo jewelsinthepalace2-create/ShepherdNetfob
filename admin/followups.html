@@ -1,108 +1,74 @@
-<!DOCTYPE html><html lang="en"><head>    <meta charset="UTF-8">    <title>Global Intelligence | ShepherdNet</title>    <meta name="viewport" content="width=device-width, initial-scale=1.0">    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">    <style>
-        :root { --primary: #4facfe; --bg: #0f172a; --glass: rgba(255, 255, 255, 0.05); --border: rgba(255, 255, 255, 0.1); --red: #ff4b5c; --green: #00ff88; --gold: #ffd700; }
+<!DOCTYPE html><html lang="en"><head>
+    <meta charset="UTF-8">
+    <title>Global Intelligence | ShepherdNet</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        :root { --primary: #4facfe; --bg: #0f172a; --glass: rgba(255, 255, 255, 0.05); --border: rgba(255, 255, 255, 0.1); --red: #ff4b5c; --green: #00ff88; }
         body { background: var(--bg); color: white; font-family: 'Poppins', sans-serif; padding: 20px; margin: 0; }
         .container { max-width: 1000px; margin: 0 auto; padding-bottom: 50px; }
-        header { margin-bottom: 30px; }
-        .back-link { color: var(--primary); text-decoration: none; font-size: 0.9rem; margin-bottom: 10px; display: inline-block; }
+        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
         
-        /* --- FILTERS & KEYS --- */
-        .filter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; background: var(--glass); padding: 20px; border-radius: 20px; border: 1px solid var(--border); margin-bottom: 20px; }
-        select { background: #1e293b; color: white; border: 1px solid var(--border); padding: 10px; border-radius: 10px; width: 100%; outline: none; cursor: pointer; }
-        
-        .intelligence-key { background: rgba(79, 172, 254, 0.05); border: 1px solid var(--primary); padding: 20px; border-radius: 20px; margin-bottom: 30px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; font-size: 0.8rem; }
-        .key-item b { color: var(--primary); display: block; margin-bottom: 5px; text-transform: uppercase; }
-
         /* --- ANALYTICS --- */
         .analytics-card { background: var(--glass); border: 1px solid var(--border); border-radius: 24px; padding: 25px; margin-bottom: 30px; }
-        .graph-container { display: flex; align-items: flex-end; gap: 10px; height: 150px; margin-top: 20px; }
-        .bar-group { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 5px; }
-        .bar { width: 100%; border-radius: 8px 8px 0 0; transition: height 0.5s ease; position: relative; }
-        .bar-present { background: var(--primary); }
-        .bar-absent { background: rgba(255,255,255,0.1); }
-        .bar-label { font-size: 0.65rem; opacity: 0.6; margin-top: 5px; }
+        .graph-container { display: flex; align-items: flex-end; gap: 20px; height: 180px; margin-top: 20px; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
+        .bar-group { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 10px; position: relative; }
+        .bar { width: 60px; border-radius: 8px 8px 0 0; transition: height 0.8s cubic-bezier(0.17, 0.67, 0.83, 0.67); position: relative; min-height: 5px; }
+        .bar-expected { background: rgba(255,255,255,0.1); }
+        .bar-present { background: var(--primary); box-shadow: 0 0 20px rgba(79, 172, 254, 0.4); }
+        .bar-label { font-size: 0.7rem; font-weight: 600; }
 
-        /* --- TABLES --- */
-        .missing-list { background: var(--glass); border: 1px solid var(--border); border-radius: 20px; padding: 20px; margin-bottom: 30px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 0.85rem; }
-        th { text-align: left; opacity: 0.5; padding: 10px; font-weight: 400; border-bottom: 1px solid var(--border); }
-        td { padding: 12px 10px; border-bottom: 1px solid rgba(255,255,255,0.02); }
-        .badge-missing { color: var(--red); background: rgba(255,75,92,0.1); padding: 2px 8px; border-radius: 5px; font-size: 0.7rem; }
-
-        .feed-card { background: var(--glass); border: 1px solid var(--border); border-radius: 20px; padding: 20px; margin-bottom: 15px; position: relative; border-left: 4px solid var(--primary); }
-        .note-text { font-style: italic; color: #cbd5e1; font-size: 0.9rem; margin: 10px 0; background: rgba(255,255,255,0.03); padding: 12px; border-radius: 10px; }
-        .loading-spinner { text-align: center; padding: 50px; }
-    </style></head><body>
+        /* --- MISSING LIST --- */
+        .missing-list { background: var(--glass); border: 1px solid var(--border); border-radius: 20px; padding: 20px; }
+        .table-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+        th { text-align: left; opacity: 0.5; padding: 12px; border-bottom: 1px solid var(--border); }
+        td { padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.02); }
+        
+        .btn-sort { background: var(--primary); color: #0f172a; border: none; padding: 8px 15px; border-radius: 8px; font-size: 0.75rem; cursor: pointer; font-weight: 600; }
+        .badge { padding: 3px 8px; border-radius: 5px; font-size: 0.65rem; font-weight: 600; }
+        .badge-invitee { background: rgba(0, 255, 136, 0.1); color: var(--green); }
+        .badge-member { background: rgba(79, 172, 254, 0.1); color: var(--primary); }
+    </style>
+</head><body>
 
 <div class="container">
     <header>
-        <a href="index.html" class="back-link">← Back to Dashboard</a>
-        <h1>Global Intelligence</h1>
-        <p style="opacity: 0.6;">Retention & Attendance Analytics</p>
+        <div>
+            <h1>Network Intelligence</h1>
+            <p id="eventStatus" style="opacity:0.6; font-size: 0.8rem;">Detecting active events...</p>
+        </div>
+        <a href="index.html" style="color: var(--primary); text-decoration: none; font-size: 0.85rem;">← Exit Dashboard</a>
     </header>
 
-    <div class="intelligence-key">
-        <div class="key-item">
-            <b>The Retention Metric</b>
-            Implication: Shows the conversion rate of Saturday Invitees to Sunday Members. If Invitees are missing, follow-up intensity must increase within 24 hours.
-        </div>
-        <div class="key-item">
-            <b>Expected vs Present</b>
-            Implication: Identifying the gap helps Pastors see "Leakage." People in the "Missing" list are at high risk of falling out of the network.
-        </div>
-    </div>
-
-    <div class="filter-grid">
-        <div>
-            <label style="font-size: 0.7rem; opacity: 0.6;">CHAPEL / PASTOR</label>
-            <select id="pastorFilter"><option value="all">All Chapels</option></select>
-        </div>
-        <div>
-            <label style="font-size: 0.7rem; opacity: 0.6;">TIME RANGE</label>
-            <select id="timeFilter">
-                <option value="7">Last 7 Days (Weekly)</option>
-                <option value="30">Last 30 Days (Monthly)</option>
-            </select>
-        </div>
-        <div>
-            <label style="font-size: 0.7rem; opacity: 0.6;">CATEGORY</label>
-            <select id="typeFilter">
-                <option value="all">All People</option>
-                <option value="member">Members</option>
-                <option value="invitee">Invitees</option>
-            </select>
-        </div>
-    </div>
-
     <div class="analytics-card">
-        <h3 style="font-size: 0.9rem;">Attendance Visualization</h3>
-        <div class="graph-container" id="graphArea"></div>
+        <h3 style="font-size: 0.9rem;">Target vs. Actual Performance</h3>
+        <div class="graph-container" id="graphArea">
+            </div>
     </div>
 
     <div class="missing-list">
-        <h3 style="font-size: 0.9rem; color: var(--red);">Expected but Not Present</h3>
+        <div class="table-header">
+            <h3 style="margin:0; font-size: 0.9rem;">Missing Personnel (Expected Today)</h3>
+            <button class="btn-sort" onclick="sortMissingByInviter()">Sort by Inviter</button>
+        </div>
         <table>
             <thead>
                 <tr>
                     <th>NAME</th>
-                    <th>CATEGORY</th>
+                    <th>RANK</th>
                     <th>INVITED BY / SHEPHERD</th>
-                    <th>STATUS</th>
+                    <th>CONTACT</th>
                 </tr>
             </thead>
-            <tbody id="missingTableBody">
-                </tbody>
+            <tbody id="missingTableBody"></tbody>
         </table>
-    </div>
-
-    <div id="intelligenceFeed">
-        <div class="loading-spinner">Analyzing Database...</div>
     </div>
 </div>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
-    import { getFirestore, collection, getDocs, query, where } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
-    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
+    import { getFirestore, collection, getDocs, query, where, orderBy, limit } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
 
     const firebaseConfig = { 
         apiKey: "AIzaSyCBv60eRCO0e4dFBMKGKnIATouxTuk1Bcc",
@@ -114,108 +80,118 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app, "fobrealdbase");
-    const auth = getAuth(app);
 
-    const pastorFilter = document.getElementById('pastorFilter');
-    const timeFilter = document.getElementById('timeFilter');
-    const typeFilter = document.getElementById('typeFilter');
-    const missingTable = document.getElementById('missingTableBody');
-    const feed = document.getElementById('intelligenceFeed');
-
-    onAuthStateChanged(auth, user => { if(user) init(); });
+    let currentMissing = [];
 
     async function init() {
-        const snap = await getDocs(collection(db, "pastors"));
-        snap.forEach(d => {
-            const opt = document.createElement('option');
-            opt.value = d.id;
-            opt.textContent = d.data().full_name;
-            pastorFilter.appendChild(opt);
-        });
-        updateView();
+        // 1. Get Most Recent Event (Excluding Dawn Prayers)
+        const eventSnap = await getDocs(query(
+            collection(db, "events"), 
+            where("title", "!=", "Dawn Prayers"),
+            orderBy("title"), // Required for inequality filter in Firestore
+            limit(20) 
+        ));
+
+        // Filter for most recent valid date manually since orderBy title is required above
+        const latestEvent = eventSnap.docs
+            .map(d => d.data())
+            .sort((a, b) => b.date.toDate() - a.date.toDate())[0];
+
+        if(latestEvent) {
+            document.getElementById('eventStatus').innerText = `Analyzing: ${latestEvent.title} (${latestEvent.date.toDate().toLocaleDateString()})`;
+            fetchData(latestEvent.date.toDate());
+        }
     }
 
-    async function updateView() {
-        const days = parseInt(timeFilter.value);
-        const cutoff = new Date();
-        cutoff.setDate(cutoff.getDate() - days);
+    async function fetchData(eventDate) {
+        const startOfDay = new Date(eventDate);
+        startOfDay.setHours(0,0,0,0);
+        
+        const endOfDay = new Date(eventDate);
+        endOfDay.setHours(23,59,59,999);
 
-        const [attSnap, memSnap, invSnap] = await Promise.all([
-            getDocs(query(collection(db, "attendance"), where("timestamp", ">=", cutoff))),
+        const [attSnap, memSnap, invSnap, pastorsSnap] = await Promise.all([
+            getDocs(query(collection(db, "attendance"), where("timestamp", ">=", startOfDay), where("timestamp", "<=", endOfDay))),
             getDocs(collection(db, "members")),
-            getDocs(collection(db, "invitees"))
+            getDocs(collection(db, "invitees")),
+            getDocs(collection(db, "pastors"))
         ]);
 
-        processIntelligence(attSnap, memSnap, invSnap);
-    }
+        const pastorsMap = {};
+        pastorsSnap.forEach(d => pastorsMap[d.id] = d.data().full_name);
 
-    function processIntelligence(attSnap, memSnap, invSnap) {
-        const pFilter = pastorFilter.value;
-        const cFilter = typeFilter.value;
-
-        // Build Master List of Expected People
-        const allPeople = [];
-        memSnap.forEach(d => allPeople.push({ id: d.id, ...d.data(), type: 'member' }));
-        invSnap.forEach(d => allPeople.push({ id: d.id, ...d.data(), type: 'invitee' }));
-
-        // Map Attendance
         const attendedIds = new Set();
-        const attNotes = [];
-        attSnap.forEach(doc => {
-            const [mId] = doc.id.split('_');
-            attendedIds.add(mId);
-            if(doc.data().note) attNotes.push({ mId, ...doc.data() });
+        attSnap.forEach(doc => attendedIds.add(doc.id.split('_')[0]));
+
+        // Process Members
+        const expected = [];
+        memSnap.forEach(d => {
+            const data = d.data();
+            expected.push({
+                id: d.id,
+                name: data.full_name || "Unknown Member",
+                type: 'member',
+                inviter: data.shepherd_name || pastorsMap[data.pastorId] || "Admin",
+                contact: data.contact || "N/A",
+                present: attendedIds.has(d.id)
+            });
         });
 
-        // Filter relevant people
-        const relevantPeople = allPeople.filter(p => {
-            const pastorMatch = pFilter === 'all' || p.pastorId === pFilter;
-            const typeMatch = cFilter === 'all' || p.type === cFilter;
-            return pastorMatch && typeMatch;
+        // Process Invitees (Handling the undefined undefined issue)
+        invSnap.forEach(d => {
+            const data = d.data();
+            expected.push({
+                id: d.id,
+                name: data.full_name || `${data.first_name || ''} ${data.last_name || ''}`.trim() || "New Invitee",
+                type: 'invitee',
+                inviter: data.invited_by || pastorsMap[data.pastorId] || "N/A",
+                contact: data.contact || "N/A",
+                present: attendedIds.has(d.id)
+            });
         });
 
-        const presentPeople = relevantPeople.filter(p => attendedIds.has(p.id));
-        const missingPeople = relevantPeople.filter(p => !attendedIds.has(p.id));
+        const presentCount = expected.filter(p => p.present).length;
+        const totalExpected = expected.length;
 
-        // Render Missing Table
-        missingTable.innerHTML = missingPeople.map(p => `
-            <tr>
-                <td><b>${p.full_name || (p.first_name + ' ' + p.last_name)}</b></td>
-                <td><span style="opacity:0.6">${p.type.toUpperCase()}</span></td>
-                <td>${p.invited_by || p.shepherd_name || 'System'}</td>
-                <td><span class="badge-missing">Absent</span></td>
-            </tr>
-        `).join('') || '<tr><td colspan="4" style="text-align:center">All expected people are present.</td></tr>';
-
-        // Render Graph
-        renderGraph(presentPeople.length, relevantPeople.length);
-
-        // Render Feed
-        feed.innerHTML = attNotes.map(n => {
-            const p = allPeople.find(x => x.id === n.mId);
-            if(!p) return '';
-            return `
-                <div class="feed-card">
-                    <div style="font-weight:600">${p.full_name || p.first_name}</div>
-                    <div class="note-text">"${n.note}"</div>
-                    <div style="font-size:0.7rem; opacity:0.5">${n.timestamp?.toDate().toLocaleDateString()}</div>
-                </div>`;
-        }).join('');
+        renderGraph(presentCount, totalExpected);
+        
+        currentMissing = expected.filter(p => !p.present);
+        renderTable(currentMissing);
     }
 
     function renderGraph(present, total) {
-        const percent = total > 0 ? (present / total) * 100 : 0;
-        document.getElementById('graphArea').innerHTML = `
+        const graph = document.getElementById('graphArea');
+        const percentage = total > 0 ? (present / total) * 100 : 0;
+        
+        graph.innerHTML = `
             <div class="bar-group">
-                <div class="bar bar-absent" style="height: 100%"></div>
-                <div class="bar-label">Expected (${total})</div>
+                <div class="bar bar-expected" style="height: 100%"></div>
+                <span class="bar-label">TARGET: ${total}</span>
             </div>
             <div class="bar-group">
-                <div class="bar bar-present" style="height: ${percent}%"></div>
-                <div class="bar-label">Present (${present})</div>
-            </div>`;
+                <div class="bar bar-present" style="height: ${percentage}%"></div>
+                <span class="bar-label" style="color:var(--primary)">ACTUAL: ${present}</span>
+            </div>
+        `;
     }
 
-    [pastorFilter, timeFilter, typeFilter].forEach(el => el.onchange = updateView);
+    function renderTable(data) {
+        const body = document.getElementById('missingTableBody');
+        body.innerHTML = data.map(p => `
+            <tr>
+                <td><b>${p.name}</b></td>
+                <td><span class="badge badge-${p.type}">${p.type.toUpperCase()}</span></td>
+                <td>${p.inviter}</td>
+                <td style="opacity:0.6">${p.contact}</td>
+            </tr>
+        `).join('') || '<tr><td colspan="4" style="text-align:center">Victory! Everyone is present.</td></tr>';
+    }
+
+    window.sortMissingByInviter = () => {
+        currentMissing.sort((a, b) => a.inviter.localeCompare(b.inviter));
+        renderTable(currentMissing);
+    };
+
+    init();
 </script>
 </body></html>
