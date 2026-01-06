@@ -42,52 +42,19 @@
     .btn-register:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(79, 172, 254, 0.3); }
     .back-link { color: var(--text-dim); text-decoration: none; font-size: 0.85rem; display: flex; align-items: center; gap: 5px; margin-bottom: 20px; }
 
-    /* --- TOAST NOTIFICATION CSS --- */
-    #toast-container {
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        z-index: 9999;
-    }
-
+    #toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; }
     .toast {
-        min-width: 300px;
-        background: #1e293b;
-        color: white;
-        padding: 16px 20px;
-        border-radius: 12px;
-        border-left: 5px solid var(--success);
-        box-shadow: 0 10px 25px rgba(0,0,0,0.3);
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        margin-bottom: 10px;
+        min-width: 300px; background: #1e293b; color: white; padding: 16px 20px; border-radius: 12px;
+        border-left: 5px solid var(--success); box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+        display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;
         animation: slideIn 0.5s ease forwards, fadeOut 0.5s ease 4.5s forwards;
     }
-
     .toast.error { border-left-color: var(--error); }
-
     .toast-content { display: flex; align-items: center; gap: 12px; font-size: 0.9rem; }
+    .close-toast { background: none; border: none; color: var(--text-dim); cursor: pointer; font-size: 1.2rem; }
 
-    .close-toast {
-        background: none;
-        border: none;
-        color: var(--text-dim);
-        cursor: pointer;
-        font-size: 1.2rem;
-        line-height: 1;
-        padding: 0 0 0 10px;
-    }
-
-    @keyframes slideIn {
-        from { transform: translateX(100%); opacity: 0; }
-        to { transform: translateX(0); opacity: 1; }
-    }
-
-    @keyframes fadeOut {
-        from { opacity: 1; transform: translateY(0); }
-        to { opacity: 0; transform: translateY(-20px); }
-    }
+    @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+    @keyframes fadeOut { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(-20px); } }
   </style>
 </head>
 <body>
@@ -95,8 +62,8 @@
 <div id="toast-container"></div>
 
 <div class="signup-container">
-  <a href="https://jewelsinthepalace2-create.github.io/ShepherdNetfob/pastor/index.html" class="back-link">← Return to Pastor Dashboard</a>
-  <h2 id="pageTitle">Register New Shepherd</h2>
+  <a href="#" onclick="history.back();" class="back-link">← Return to Dashboard</a>
+  <h2 id="pageTitle">Register Personnel</h2>
 
   <form id="signupForm">
     <div class="form-grid">
@@ -104,16 +71,12 @@
         <label>System Role</label>
         <select id="role" required>
           <option value="shepherds">Shepherd</option>
+          <option value="pastors">Pastor</option>
         </select>
       </div>
       <div class="form-group">
         <label>Full Name</label>
         <input type="text" id="fullName" placeholder="e.g. Kofi Mensah" required>
-      </div>
-
-      <div class="form-group full-width hidden" id="chapelFieldGroup">
-        <label>Name of Chapel</label>
-        <input type="text" id="chapelName" placeholder="Enter branch name">
       </div>
 
       <div class="form-group">
@@ -158,7 +121,7 @@
       </div>
     </div>
 
-    <button type="submit" class="btn-register" id="submitBtn">Create User Account</button>
+    <button type="submit" class="btn-register" id="submitBtn">Deploy to Network</button>
   </form>
 </div>
 
@@ -167,17 +130,13 @@
   import { getAuth, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
   import { getFirestore, doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-  // --- INITIALIZE EMAILJS ---
-  (function() {
-      emailjs.init("hbLNGNgE4WvbIYFFr");
-  })();
+  (function() { emailjs.init("hbLNGNgE4WvbIYFFr"); })();
 
   const firebaseConfig = { 
     apiKey: "AIzaSyCBv60eRCO0e4dFBMKGKnIATouxTuk1Bcc", 
     authDomain: "fob-database-139d1.firebaseapp.com", 
     projectId: "fob-database-139d1", 
     storageBucket: "fob-database-139d1.firebasestorage.app", 
-    messagingSenderId: "375165731354", 
     appId: "1:375165731354:web:b5fa57dcb2d71ee0d8c7a3" 
   };
   
@@ -185,79 +144,61 @@
   const auth = getAuth(app);
   const db = getFirestore(app, "fobrealdbase");
 
-  let creatorRole = "master"; 
-  let currentCreatorUID = "";
+  let loggedInUserUID = "";
+  let autoChapel = "undefined";
 
-  // --- TOAST HELPER FUNCTION ---
+  // --- TOAST HELPER ---
   function showToast(message, type = "success") {
       const container = document.getElementById('toast-container');
       const toast = document.createElement('div');
       toast.className = `toast ${type === "error" ? "error" : ""}`;
-      
-      toast.innerHTML = `
-          <div class="toast-content">
-              <span>${type === "success" ? "✅" : "❌"}</span>
-              <span>${message}</span>
-          </div>
-          <button class="close-toast">&times;</button>
-      `;
-
+      toast.innerHTML = `<div class="toast-content"><span>${type === "success" ? "✅" : "❌"}</span><span>${message}</span></div><button class="close-toast">&times;</button>`;
       container.appendChild(toast);
+      toast.querySelector('.close-toast').addEventListener('click', () => toast.remove());
+      setTimeout(() => { if (toast.parentElement) toast.remove(); }, 5000);
+  }
 
-      // Close on button click
-      toast.querySelector('.close-toast').addEventListener('click', () => {
-          toast.style.animation = "fadeOut 0.5s ease forwards";
-          setTimeout(() => toast.remove(), 500);
-      });
-
-      // Auto remove after 5 seconds
-      setTimeout(() => {
-          if (toast.parentElement) toast.remove();
-      }, 5000);
+  // --- FETCH CREATOR'S CHAPEL ---
+  async function fetchMyChapel(uid) {
+      const pDoc = await getDoc(doc(db, "pastors", uid));
+      if (pDoc.exists() && pDoc.data().chapel_name) return pDoc.data().chapel_name;
+      
+      const mDoc = await getDoc(doc(db, "master_admin", uid));
+      if (mDoc.exists() && mDoc.data().chapel_name) return mDoc.data().chapel_name;
+      
+      return "undefined";
   }
 
   onAuthStateChanged(auth, async (user) => {
     if (user) {
-        currentCreatorUID = user.uid;
-        const shepherdCheck = await getDoc(doc(db, "shepherds", user.uid));
-        if (shepherdCheck.exists()) {
-            creatorRole = "shepherd";
-            document.getElementById('role').innerHTML = '<option value="members">Church Member</option>';
-            document.getElementById('pageTitle').innerText = "Register New Member";
-        } else {
-            creatorRole = "pastor";
-        }
+        loggedInUserUID = user.uid;
+        autoChapel = await fetchMyChapel(user.uid);
+        console.log("Logged in as:", user.uid, "Chapel:", autoChapel);
     } else {
         window.location.href = "../login.html";
     }
-  });
-
-  const roleSelect = document.getElementById('role');
-  const chapelGroup = document.getElementById('chapelFieldGroup');
-  roleSelect.addEventListener('change', () => {
-    roleSelect.value === 'pastors' ? chapelGroup.classList.remove('hidden') : chapelGroup.classList.add('hidden');
   });
 
   document.getElementById('signupForm').onsubmit = async (e) => {
     e.preventDefault();
     const btn = document.getElementById('submitBtn');
     btn.disabled = true;
-    btn.innerText = "Processing...";
+    btn.innerText = "Deploying...";
 
     const email = document.getElementById('email').value;
     const password = document.getElementById('password').value;
     const fullName = document.getElementById('fullName').value;
     const collectionName = document.getElementById('role').value; 
     const roleString = collectionName.slice(0, -1); 
-    const chapelName = document.getElementById('chapelName').value || "N/A";
 
     const secondaryApp = initializeApp(firebaseConfig, "Secondary");
     const secondaryAuth = getAuth(secondaryApp);
 
     try {
-      const userCredential = await createUserWithEmailAndPassword(secondaryAuth, email, password);
+      const cred = await createUserWithEmailAndPassword(secondaryAuth, email, password);
       
-      const userData = {
+      // Explicitly recording every field including DOB, Gender, and Inherited Chapel
+      await setDoc(doc(db, collectionName, cred.user.uid), {
         full_name: fullName,
         gender: document.getElementById('gender').value,
         dob: document.getElementById('dob').value,
@@ -267,35 +208,30 @@
         course: document.getElementById('course').value,
         level: document.getElementById('level').value,
         role: roleString,
-        created_at: serverTimestamp(),
-        pastorId: (creatorRole === 'pastor' || creatorRole === 'master') ? currentCreatorUID : "N/A",
-        shepherdId: (creatorRole === 'shepherd') ? currentCreatorUID : "N/A"
-      };
-
-      if (roleString === 'pastor') userData.chapel_name = chapelName;
-
-      await setDoc(doc(db, collectionName, userCredential.user.uid), userData);
+        pastorId: loggedInUserUID,
+        chapel_name: autoChapel, // Automatically assigned from creator
+        created_at: serverTimestamp()
+      });
 
       await emailjs.send("service_vzxws9f", "template_buctifq", {
           full_name: fullName,
           role: roleString,
           email: email,
           password: password,
-          chapel_name: roleString === 'pastor' ? chapelName : "General"
+          chapel_name: autoChapel
       });
 
       await signOut(secondaryAuth);
       await deleteApp(secondaryApp);
 
-      showToast(`Success! ${fullName} registered and linked.`);
+      showToast(`Success! ${fullName} deployed to ${autoChapel}.`);
       document.getElementById('signupForm').reset();
-      chapelGroup.classList.add('hidden');
 
     } catch (error) {
       showToast(error.message, "error");
     } finally {
       btn.disabled = false;
-      btn.innerText = "Create User Account";
+      btn.innerText = "Deploy to Network";
     }
   };
 </script>
