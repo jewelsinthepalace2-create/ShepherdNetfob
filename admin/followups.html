@@ -1,6 +1,6 @@
 <!DOCTYPE html><html lang="en"><head>
     <meta charset="UTF-8">
-    <title>Global Intelligence | ShepherdNet</title>
+    <title>Network Intelligence | ShepherdNet</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
@@ -9,48 +9,48 @@
         .container { max-width: 1000px; margin: 0 auto; padding-bottom: 50px; }
         header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
         
-        /* --- ANALYTICS --- */
         .analytics-card { background: var(--glass); border: 1px solid var(--border); border-radius: 24px; padding: 25px; margin-bottom: 30px; }
-        .graph-container { display: flex; align-items: flex-end; gap: 20px; height: 180px; margin-top: 20px; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
-        .bar-group { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 10px; position: relative; }
-        .bar { width: 60px; border-radius: 8px 8px 0 0; transition: height 0.8s cubic-bezier(0.17, 0.67, 0.83, 0.67); position: relative; min-height: 5px; }
+        .graph-container { display: flex; align-items: flex-end; gap: 20px; height: 180px; margin-top: 20px; border-bottom: 1px solid var(--border); padding-bottom: 10px; justify-content: center; }
+        .bar-group { width: 100px; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+        .bar { width: 60px; border-radius: 8px 8px 0 0; transition: height 1s ease; position: relative; min-height: 5px; }
         .bar-expected { background: rgba(255,255,255,0.1); }
         .bar-present { background: var(--primary); box-shadow: 0 0 20px rgba(79, 172, 254, 0.4); }
-        .bar-label { font-size: 0.7rem; font-weight: 600; }
+        .bar-label { font-size: 0.7rem; font-weight: 600; text-align: center; }
 
-        /* --- MISSING LIST --- */
-        .missing-list { background: var(--glass); border: 1px solid var(--border); border-radius: 20px; padding: 20px; }
+        .list-section { background: var(--glass); border: 1px solid var(--border); border-radius: 20px; padding: 20px; }
         .table-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
         table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
         th { text-align: left; opacity: 0.5; padding: 12px; border-bottom: 1px solid var(--border); }
         td { padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.02); }
         
         .btn-sort { background: var(--primary); color: #0f172a; border: none; padding: 8px 15px; border-radius: 8px; font-size: 0.75rem; cursor: pointer; font-weight: 600; }
-        .badge { padding: 3px 8px; border-radius: 5px; font-size: 0.65rem; font-weight: 600; }
+        .badge { padding: 4px 8px; border-radius: 5px; font-size: 0.65rem; font-weight: 600; }
         .badge-invitee { background: rgba(0, 255, 136, 0.1); color: var(--green); }
         .badge-member { background: rgba(79, 172, 254, 0.1); color: var(--primary); }
+        .status-tag { padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: 600; }
+        .status-present { background: rgba(0, 255, 136, 0.2); color: var(--green); border: 1px solid var(--green); }
+        .status-absent { background: rgba(255, 75, 92, 0.2); color: var(--red); border: 1px solid var(--red); }
     </style>
 </head><body>
 
 <div class="container">
     <header>
         <div>
-            <h1>Network Intelligence</h1>
-            <p id="eventStatus" style="opacity:0.6; font-size: 0.8rem;">Detecting active events...</p>
+            <h1>Global Intelligence</h1>
+            <p id="eventStatus" style="opacity:0.6; font-size: 0.8rem;">Syncing database...</p>
         </div>
-        <a href="index.html" style="color: var(--primary); text-decoration: none; font-size: 0.85rem;">← Exit Dashboard</a>
+        <a href="index.html" style="color: var(--primary); text-decoration: none; font-size: 0.85rem;">← Exit</a>
     </header>
 
     <div class="analytics-card">
-        <h3 style="font-size: 0.9rem;">Target vs. Actual Performance</h3>
-        <div class="graph-container" id="graphArea">
-            </div>
+        <h3 style="font-size: 0.9rem;">Service Attendance Dynamics</h3>
+        <div class="graph-container" id="graphArea"></div>
     </div>
 
-    <div class="missing-list">
+    <div class="list-section">
         <div class="table-header">
-            <h3 style="margin:0; font-size: 0.9rem;">Missing Personnel (Expected Today)</h3>
-            <button class="btn-sort" onclick="sortMissingByInviter()">Sort by Inviter</button>
+            <h3 style="margin:0; font-size: 0.9rem;">Personnel Registry (Expected Today)</h3>
+            <button class="btn-sort" onclick="sortDataByInviter()">Sort by Inviter/Shepherd</button>
         </div>
         <table>
             <thead>
@@ -58,10 +58,12 @@
                     <th>NAME</th>
                     <th>RANK</th>
                     <th>INVITED BY / SHEPHERD</th>
-                    <th>CONTACT</th>
+                    <th>STATUS</th>
                 </tr>
             </thead>
-            <tbody id="missingTableBody"></tbody>
+            <tbody id="registryBody">
+                <tr><td colspan="4" style="text-align:center; padding:30px; opacity:0.5;">Waiting for Permission & Data...</td></tr>
+            </tbody>
         </table>
     </div>
 </div>
@@ -81,37 +83,37 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app, "fobrealdbase");
 
-    let currentMissing = [];
+    let masterList = [];
 
     async function init() {
-        // 1. Get Most Recent Event (Excluding Dawn Prayers)
-        const eventSnap = await getDocs(query(
-            collection(db, "events"), 
-            where("title", "!=", "Dawn Prayers"),
-            orderBy("title"), // Required for inequality filter in Firestore
-            limit(20) 
-        ));
+        try {
+            // Simplified Query to avoid Indexing errors for now
+            const eventSnap = await getDocs(query(collection(db, "events"), limit(10)));
+            
+            // Filter locally to avoid "Missing Permission" until you click the Firebase link
+            const latestEvent = eventSnap.docs
+                .map(d => d.data())
+                .filter(e => e.title !== "Dawn Prayers")
+                .sort((a, b) => b.date.toDate() - a.date.toDate())[0];
 
-        // Filter for most recent valid date manually since orderBy title is required above
-        const latestEvent = eventSnap.docs
-            .map(d => d.data())
-            .sort((a, b) => b.date.toDate() - a.date.toDate())[0];
-
-        if(latestEvent) {
-            document.getElementById('eventStatus').innerText = `Analyzing: ${latestEvent.title} (${latestEvent.date.toDate().toLocaleDateString()})`;
-            fetchData(latestEvent.date.toDate());
+            if(latestEvent) {
+                document.getElementById('eventStatus').innerText = `Current Event: ${latestEvent.title} (${latestEvent.date.toDate().toLocaleDateString()})`;
+                await fetchData(latestEvent.date.toDate());
+            } else {
+                document.getElementById('eventStatus').innerText = "No Event Found.";
+            }
+        } catch (e) {
+            console.error("Critical Error:", e);
+            document.getElementById('registryBody').innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--red);">Check Index Link in Console or Rules.</td></tr>`;
         }
     }
 
     async function fetchData(eventDate) {
-        const startOfDay = new Date(eventDate);
-        startOfDay.setHours(0,0,0,0);
-        
-        const endOfDay = new Date(eventDate);
-        endOfDay.setHours(23,59,59,999);
+        const start = new Date(eventDate); start.setHours(0,0,0,0);
+        const end = new Date(eventDate); end.setHours(23,59,59,999);
 
         const [attSnap, memSnap, invSnap, pastorsSnap] = await Promise.all([
-            getDocs(query(collection(db, "attendance"), where("timestamp", ">=", startOfDay), where("timestamp", "<=", endOfDay))),
+            getDocs(query(collection(db, "attendance"), where("timestamp", ">=", start), where("timestamp", "<=", end))),
             getDocs(collection(db, "members")),
             getDocs(collection(db, "invitees")),
             getDocs(collection(db, "pastors"))
@@ -123,73 +125,67 @@
         const attendedIds = new Set();
         attSnap.forEach(doc => attendedIds.add(doc.id.split('_')[0]));
 
-        // Process Members
-        const expected = [];
+        masterList = [];
+
+        // Build Full Expected List
         memSnap.forEach(d => {
             const data = d.data();
-            expected.push({
-                id: d.id,
+            masterList.push({
                 name: data.full_name || "Unknown Member",
                 type: 'member',
-                inviter: data.shepherd_name || pastorsMap[data.pastorId] || "Admin",
-                contact: data.contact || "N/A",
+                inviter: data.shepherd_name || pastorsMap[data.pastorId] || "Station Pastor",
                 present: attendedIds.has(d.id)
             });
         });
 
-        // Process Invitees (Handling the undefined undefined issue)
         invSnap.forEach(d => {
             const data = d.data();
-            expected.push({
-                id: d.id,
+            masterList.push({
                 name: data.full_name || `${data.first_name || ''} ${data.last_name || ''}`.trim() || "New Invitee",
                 type: 'invitee',
                 inviter: data.invited_by || pastorsMap[data.pastorId] || "N/A",
-                contact: data.contact || "N/A",
                 present: attendedIds.has(d.id)
             });
         });
 
-        const presentCount = expected.filter(p => p.present).length;
-        const totalExpected = expected.length;
-
-        renderGraph(presentCount, totalExpected);
-        
-        currentMissing = expected.filter(p => !p.present);
-        renderTable(currentMissing);
+        render();
     }
 
-    function renderGraph(present, total) {
-        const graph = document.getElementById('graphArea');
-        const percentage = total > 0 ? (present / total) * 100 : 0;
-        
-        graph.innerHTML = `
+    function render() {
+        const present = masterList.filter(p => p.present).length;
+        const total = masterList.length;
+        const percent = total > 0 ? (present / total) * 100 : 0;
+
+        // Graph
+        document.getElementById('graphArea').innerHTML = `
             <div class="bar-group">
                 <div class="bar bar-expected" style="height: 100%"></div>
                 <span class="bar-label">TARGET: ${total}</span>
             </div>
             <div class="bar-group">
-                <div class="bar bar-present" style="height: ${percentage}%"></div>
-                <span class="bar-label" style="color:var(--primary)">ACTUAL: ${present}</span>
+                <div class="bar bar-present" style="height: ${percent}%"></div>
+                <span class="bar-label" style="color:var(--primary)">PRESENT: ${present}</span>
             </div>
         `;
-    }
 
-    function renderTable(data) {
-        const body = document.getElementById('missingTableBody');
-        body.innerHTML = data.map(p => `
+        // Table
+        document.getElementById('registryBody').innerHTML = masterList.map(p => `
             <tr>
                 <td><b>${p.name}</b></td>
                 <td><span class="badge badge-${p.type}">${p.type.toUpperCase()}</span></td>
                 <td>${p.inviter}</td>
-                <td style="opacity:0.6">${p.contact}</td>
+                <td>
+                    <span class="status-tag ${p.present ? 'status-present' : 'status-absent'}">
+                        ${p.present ? 'PRESENT' : 'ABSENT'}
+                    </span>
+                </td>
             </tr>
-        `).join('') || '<tr><td colspan="4" style="text-align:center">Victory! Everyone is present.</td></tr>';
+        `).join('');
     }
 
-    window.sortMissingByInviter = () => {
-        currentMissing.sort((a, b) => a.inviter.localeCompare(b.inviter));
-        renderTable(currentMissing);
+    window.sortDataByInviter = () => {
+        masterList.sort((a, b) => a.inviter.localeCompare(b.inviter));
+        render();
     };
 
     init();
