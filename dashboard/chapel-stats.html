@@ -308,120 +308,128 @@
 
         // --- 2. DATA LOGIC ---
 async function loadGlobalDashboard() {
-    try {
-        const [pSnap, mAdminSnap, mSnap, aSnap] = await Promise.all([
-            getDocs(collection(db, "pastors")),
-            getDocs(collection(db, "master_admin")),
-            getDocs(collection(db, "members")),
-            getDocs(collection(db, "attendance"))
-        ]);
+            try {
+                // 1. FETCH DATA
+                const [pSnap, mAdminSnap, mSnap, aSnap] = await Promise.all([
+                    getDocs(collection(db, "pastors")),
+                    getDocs(collection(db, "master_admin")),
+                    getDocs(collection(db, "members")),
+                    getDocs(collection(db, "attendance"))
+                ]);
 
-        const leaderRegistry = {};
-        pSnap.forEach(d => {
-            leaderRegistry[d.id] = { name: d.data().full_name, chapel: d.data().chapel_name || "Branch" };
-        });
-        mAdminSnap.forEach(d => {
-            leaderRegistry[d.id] = { name: d.data().full_name + " (Admin)", chapel: d.data().chapel_name || "HQ" };
-        });
+                // 2. MAP LEADERS
+                const leaderRegistry = {};
+                pSnap.forEach(d => {
+                    leaderRegistry[d.id] = { name: d.data().full_name, chapel: d.data().chapel_name || "Branch" };
+                });
+                mAdminSnap.forEach(d => {
+                    leaderRegistry[d.id] = { name: d.data().full_name + " (Admin)", chapel: d.data().chapel_name || "HQ" };
+                });
 
-        const allMembers = [];
-        mSnap.forEach(d => allMembers.push({ id: d.id, ...d.data() }));
+                // 3. GET CURRENT MEMBERS
+                const allMembers = [];
+                mSnap.forEach(d => allMembers.push({ id: d.id, ...d.data() }));
 
-        // --- BULLETPROOF DATE PARSER STARTS HERE ---
-        const allAttendance = [];
-        aSnap.forEach(d => {
-            const data = d.data();
-            let rawDate = null;
+                // 4. PARSE ATTENDANCE DATES
+                const allAttendance = [];
+                aSnap.forEach(d => {
+                    const data = d.data();
+                    let rawDate = null;
 
-            // 1. Check if it's a Firestore Timestamp Object
-            if (data.timestamp && typeof data.timestamp.toDate === 'function') {
-                rawDate = data.timestamp.toDate();
-            } 
-            // 2. Check if it's a String (The format you showed me: 2026-01-01T...)
-            else if (typeof data.timestamp === 'string') {
-                rawDate = new Date(data.timestamp);
+                    // Bulletproof Date Parsing
+                    if (data.timestamp && typeof data.timestamp.toDate === 'function') {
+                        rawDate = data.timestamp.toDate();
+                    } else if (typeof data.timestamp === 'string') {
+                        rawDate = new Date(data.timestamp);
+                    } else if (data.date) {
+                        rawDate = new Date(data.date);
+                    }
+
+                    // Standardize to YYYY-MM-DD
+                    const dateStr = rawDate ? rawDate.toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+                    allAttendance.push({ ...data, derivedDate: dateStr });
+                });
+
+                // Global list of all Unique Sundays/Event Days in history
+                const uniqueEventDates = [...new Set(allAttendance.map(a => a.derivedDate))].sort();
+                const today = new Date();
+
+                // 5. CALCULATE STATS (CAPPED AT 100%)
+                globalAuditData = Object.keys(leaderRegistry).map(id => {
+                    const info = leaderRegistry[id];
+                    const members = allMembers.filter(m => m.pastorId === id);
+                    
+                    if (members.length === 0) return { ...info, members: 0, attendance: 0, conversion: 0, status: 'Low' };
+
+                    let totalPossible = 0;
+                    let totalDaysPresent = 0; // Tracks unique days, not total check-ins
+                    let eligibleConv = 0;
+                    let established = 0;
+
+                    members.forEach(m => {
+                        // Normalize Join Date
+                        let joinDate = new Date("2024-01-01");
+                        if (m.registration_date) {
+                            if(typeof m.registration_date.toDate === 'function') joinDate = m.registration_date.toDate();
+                            else if(typeof m.registration_date === 'string') joinDate = new Date(m.registration_date);
+                            else if(m.registration_date.seconds) joinDate = new Date(m.registration_date.seconds * 1000);
+                        }
+                        const joinDateStr = joinDate.toISOString().split('T')[0];
+                        
+                        // Denominator: How many distinct calendar dates have passed since they joined?
+                        const eligibleEvents = uniqueEventDates.filter(d => d >= joinDateStr);
+                        totalPossible += eligibleEvents.length;
+                        
+                        // Numerator: COUNT UNIQUE DAYS PRESENT
+                        // 1. Get all check-ins for this member
+                        const memberCheckIns = allAttendance.filter(att => 
+                            att.memberId === m.id && 
+                            att.status && att.status.toLowerCase() === "present" && 
+                            att.derivedDate >= joinDateStr
+                        );
+
+                        // 2. Extract just the date strings (e.g. "2026-01-10")
+                        const checkInDates = memberCheckIns.map(r => r.derivedDate);
+
+                        // 3. Use Set to count UNIQUE days only.
+                        // (3 check-ins on Jan 10th becomes size = 1)
+                        const uniqueDays = new Set(checkInDates).size;
+                        
+                        totalDaysPresent += uniqueDays;
+
+                        // Conversion Logic
+                        const daysInChurch = (today - joinDate) / (1000 * 60 * 60 * 24);
+                        if (daysInChurch > 30) {
+                            eligibleConv++;
+                            if (m.status === "Established Member") established++;
+                        }
+                    });
+
+                    // Calculate Average (Weighted Aggregate)
+                    const attRate = totalPossible > 0 ? Math.round((totalDaysPresent / totalPossible) * 100) : 0;
+                    const convRate = eligibleConv > 0 ? Math.round((established / eligibleConv) * 100) : 0;
+                    
+                    return { 
+                        ...info, 
+                        members: members.length, 
+                        attendance: attRate, 
+                        conversion: convRate,
+                        status: attRate > 70 ? 'High' : (attRate > 40 ? 'Mid' : 'Low')
+                    };
+                });
+
+                // Sort by highest attendance rate
+                globalAuditData.sort((a,b) => b.attendance - a.attendance);
+
+                document.getElementById('syncText').innerHTML = `<i class="fa-solid fa-shield-check" style="color:#00ff88"></i> Global Audit • Sync Complete`;
+                renderTable(globalAuditData);
+                renderCharts(allMembers, globalAuditData);
+
+            } catch (err) {
+                console.error("Dashboard Error:", err);
+                document.getElementById('syncText').innerText = "Data Sync Error. Check console.";
             }
-            // 3. Check for 'date' field fallback
-            else if (data.date) {
-                rawDate = new Date(data.date);
-            }
-
-            // Convert whatever we found into YYYY-MM-DD
-            // If rawDate is invalid, default to today so it doesn't break the math
-            const dateStr = rawDate ? rawDate.toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
-            
-            allAttendance.push({ ...data, derivedDate: dateStr });
-        });
-        // --- PARSER ENDS HERE ---
-
-        const uniqueEventDates = [...new Set(allAttendance.map(a => a.derivedDate))].sort();
-        const today = new Date();
-
-        globalAuditData = Object.keys(leaderRegistry).map(id => {
-            const info = leaderRegistry[id];
-            const members = allMembers.filter(m => m.pastorId === id);
-            
-            if (members.length === 0) return { ...info, members: 0, attendance: 0, conversion: 0, status: 'Low' };
-
-            let totalPossible = 0;
-            let totalPresent = 0;
-            let eligibleConv = 0;
-            let established = 0;
-
-            members.forEach(m => {
-                // Normalize Member Join Date
-                let joinDate = new Date("2024-01-01");
-                if (m.registration_date) {
-                    if(typeof m.registration_date.toDate === 'function') joinDate = m.registration_date.toDate();
-                    else if(typeof m.registration_date === 'string') joinDate = new Date(m.registration_date);
-                    else if(m.registration_date.seconds) joinDate = new Date(m.registration_date.seconds * 1000);
-                }
-
-                const joinDateStr = joinDate.toISOString().split('T')[0];
-                
-                // Count events that happened AFTER member joined
-                const eligibleEvents = uniqueEventDates.filter(d => d >= joinDateStr);
-                totalPossible += eligibleEvents.length;
-                
-                // Check if they were present
-                const presentCount = allAttendance.filter(att => 
-                    att.memberId === m.id && 
-                    att.status && att.status.toLowerCase() === "present" && 
-                    att.derivedDate >= joinDateStr
-                ).length;
-                
-                totalPresent += presentCount;
-
-                const daysInChurch = (today - joinDate) / (1000 * 60 * 60 * 24);
-                if (daysInChurch > 30) {
-                    eligibleConv++;
-                    if (m.status === "Established Member") established++;
-                }
-            });
-
-            const attRate = totalPossible > 0 ? Math.round((totalPresent / totalPossible) * 100) : 0;
-            const convRate = eligibleConv > 0 ? Math.round((established / eligibleConv) * 100) : 0;
-            
-            return { 
-                ...info, 
-                members: members.length, 
-                attendance: attRate, 
-                conversion: convRate,
-                status: attRate > 70 ? 'High' : (attRate > 40 ? 'Mid' : 'Low')
-            };
-        });
-
-        globalAuditData.sort((a,b) => b.attendance - a.attendance);
-
-        document.getElementById('syncText').innerHTML = `<i class="fa-solid fa-shield-check" style="color:#00ff88"></i> Global Audit • Sync Complete`;
-        renderTable(globalAuditData);
-        renderCharts(allMembers, globalAuditData);
-
-    } catch (err) {
-        console.error("Dashboard Error:", err);
-        document.getElementById('syncText').innerText = "Data Sync Error. Check console.";
-    }
-}
+        }
 
         function renderTable(data) {
             const body = document.getElementById('auditBody');
