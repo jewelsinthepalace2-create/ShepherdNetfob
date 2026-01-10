@@ -273,7 +273,6 @@
         let pieChartInstance = null;
         let barChartInstance = null;
 
-        // UI SETUP
         const menuBtn = document.getElementById('menuBtn');
         const overlay = document.getElementById('overlay');
         const body = document.body;
@@ -294,7 +293,6 @@
             });
         }
 
-        // --- DATE PARSER ---
         function parseDate(field) {
             if (!field) return null;
             let dateObj = null;
@@ -310,7 +308,7 @@
 
         async function loadGlobalDashboard() {
             try {
-                console.log("--- STARTING LINKED SYNC ---");
+                console.log("--- STARTING HIERARCHICAL SYNC ---");
 
                 // 1. FETCH ALL COLLECTIONS
                 const [pSnap, mAdminSnap, mSnap, aSnap, eSnap] = await Promise.all([
@@ -321,8 +319,7 @@
                     getDocs(collection(db, "events"))
                 ]);
 
-                // 2. BUILD EVENT LOOKUP MAP (The Critical Fix)
-                // We create a dictionary: { "EventID_123": "2026-01-10" }
+                // 2. BUILD EVENT LOOKUP MAP
                 const eventDateMap = {};
                 const masterEventDates = [];
                 const todayStr = new Date().toISOString().split('T')[0];
@@ -331,65 +328,98 @@
                     const data = d.data();
                     const validDate = parseDate(data.date) || parseDate(data.timestamp);
                     if (validDate) {
-                        eventDateMap[d.id] = validDate; // Store ID -> Date link
-                        if (validDate <= todayStr) {
-                            masterEventDates.push(validDate);
-                        }
+                        eventDateMap[d.id] = validDate; 
+                        if (validDate <= todayStr) masterEventDates.push(validDate);
                     }
                 });
                 masterEventDates.sort();
-                console.log(`Loaded ${Object.keys(eventDateMap).length} Events for lookup.`);
 
-                // 3. PARSE ATTENDANCE (Now using the Map)
+                // 3. PARSE ATTENDANCE
                 const allAttendance = [];
                 aSnap.forEach(d => {
                     const data = d.data();
-                    
-                    // A. Try to find date inside the attendance record (Legacy support)
                     let recordDate = parseDate(data.timestamp) || parseDate(data.date);
-                    
-                    // B. If not found, LOOK IT UP using eventId (The Fix)
                     if (!recordDate && data.eventId && eventDateMap[data.eventId]) {
                         recordDate = eventDateMap[data.eventId];
                     }
-
-                    if (recordDate) {
-                        allAttendance.push({ ...data, derivedDate: recordDate });
-                    }
+                    if (recordDate) allAttendance.push({ ...data, derivedDate: recordDate });
                 });
-                console.log(`Successfully linked ${allAttendance.length} attendance records to dates.`);
 
-                // 4. MAP LEADERS & MEMBERS
-                const leaderRegistry = {};
-                pSnap.forEach(d => leaderRegistry[d.id] = { name: d.data().full_name, chapel: d.data().chapel_name || "Branch" });
-                mAdminSnap.forEach(d => leaderRegistry[d.id] = { name: d.data().full_name + " (Admin)", chapel: d.data().chapel_name || "HQ" });
-                
+                // 4. FETCH RAW MEMBERS
                 const allMembers = [];
                 mSnap.forEach(d => allMembers.push({ id: d.id, ...d.data() }));
+                
+                // 5. GROUP BY HIERARCHY (Senior Pastor Roll-Up)
+                const seniorBuckets = {};
 
-                const today = new Date();
+                // A. First Pass: Identify Senior Pastors (Roots)
+                // A Senior Pastor is anyone who DOES NOT have a 'pastorId' field
+                const allLeaders = [];
+                pSnap.forEach(d => allLeaders.push({ id: d.id, ...d.data() }));
+                mAdminSnap.forEach(d => allLeaders.push({ id: d.id, ...d.data() }));
 
-                // 5. CALCULATE SCORES
-                globalAuditData = Object.keys(leaderRegistry).map(id => {
-                    const info = leaderRegistry[id];
-                    const members = allMembers.filter(m => m.pastorId === id);
+                allLeaders.forEach(leader => {
+                    if (!leader.pastorId) {
+                        // This is a Senior Pastor / Root Node
+                        seniorBuckets[leader.id] = {
+                            name: leader.full_name,
+                            chapel: leader.chapel_name || "Branch",
+                            teamIds: [leader.id], // Starts with just themselves
+                            juniorCount: 0
+                        };
+                    }
+                });
+
+                // B. Second Pass: Attach Junior Pastors (Branches)
+                // If a leader HAS a 'pastorId', add them to that Senior's bucket
+                allLeaders.forEach(leader => {
+                    if (leader.pastorId) {
+                        const bossId = leader.pastorId;
+                        if (seniorBuckets[bossId]) {
+                            seniorBuckets[bossId].teamIds.push(leader.id);
+                            seniorBuckets[bossId].juniorCount++;
+                        } else {
+                            // Edge Case: Orphan Pastor (Boss not found)
+                            // Treat them as their own Senior for now so they don't vanish
+                            seniorBuckets[leader.id] = {
+                                name: leader.full_name,
+                                chapel: leader.chapel_name || "Unassigned",
+                                teamIds: [leader.id],
+                                juniorCount: 0
+                            };
+                        }
+                    }
+                });
+
+                // 6. CALCULATE SCORES PER SENIOR PASTOR
+                globalAuditData = Object.keys(seniorBuckets).map(seniorId => {
+                    const bucket = seniorBuckets[seniorId];
                     
-                    if (members.length === 0) return { ...info, members: 0, attendance: 0, conversion: 0, status: 'Low' };
+                    // Find ALL members belonging to ANYONE in this team (Senior + Juniors)
+                    const teamMembers = allMembers.filter(m => bucket.teamIds.includes(m.pastorId));
+
+                    if (teamMembers.length === 0) {
+                        return { 
+                            name: bucket.name, 
+                            chapel: bucket.chapel, 
+                            members: 0, attendance: 0, conversion: 0, status: 'Low' 
+                        };
+                    }
 
                     let sumOfIndividualRates = 0;
                     let countOfScoredMembers = 0;
                     let eligibleConv = 0;
                     let established = 0;
 
-                    members.forEach(m => {
+                    const today = new Date();
+
+                    teamMembers.forEach(m => {
                         const joinDateStr = parseDate(m.registration_date) || "2024-01-01";
                         const joinDateObj = new Date(joinDateStr);
 
-                        // Denominator (From Master Calendar)
                         const memberPossibleEvents = masterEventDates.filter(d => d >= joinDateStr);
                         const possibleCount = memberPossibleEvents.length;
 
-                        // Numerator (From Linked Attendance)
                         const memberCheckIns = allAttendance.filter(att => {
                             const isMember = att.memberId === m.id;
                             const isPresent = att.status && att.status.toLowerCase().includes("present");
@@ -412,15 +442,16 @@
                         }
                     });
 
-                    const pastorAverage = countOfScoredMembers > 0 ? Math.round(sumOfIndividualRates / countOfScoredMembers) : 0;
+                    const teamAverage = countOfScoredMembers > 0 ? Math.round(sumOfIndividualRates / countOfScoredMembers) : 0;
                     const convRate = eligibleConv > 0 ? Math.round((established / eligibleConv) * 100) : 0;
                     
                     return { 
-                        ...info, 
-                        members: members.length, 
-                        attendance: pastorAverage, 
+                        name: bucket.name, 
+                        chapel: bucket.juniorCount > 0 ? `${bucket.chapel} (+${bucket.juniorCount} Pastors)` : bucket.chapel, 
+                        members: teamMembers.length, 
+                        attendance: teamAverage, 
                         conversion: convRate,
-                        status: pastorAverage > 70 ? 'High' : (pastorAverage > 40 ? 'Mid' : 'Low')
+                        status: teamAverage > 70 ? 'High' : (teamAverage > 40 ? 'Mid' : 'Low')
                     };
                 });
 
@@ -442,7 +473,10 @@
             body.innerHTML = data.map((l, i) => `
                 <tr>
                     <td style="opacity:0.4;">#${i+1}</td>
-                    <td><b style="color:white;">${l.name}</b><br><small style="color:var(--text-dim)">${l.chapel}</small></td>
+                    <td>
+                        <b style="color:white; font-size:1rem;">${l.name}</b><br>
+                        <small style="color:var(--text-dim); font-size:0.75rem;">${l.chapel}</small>
+                    </td>
                     <td>${l.members}</td>
                     <td><span style="color:${l.attendance > 70 ? '#00ff88' : l.attendance > 40 ? '#f1c40f' : '#ff4b5c'}">${l.attendance}%</span></td>
                     <td>${l.conversion}%</td>
