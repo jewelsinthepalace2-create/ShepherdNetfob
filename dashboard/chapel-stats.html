@@ -268,12 +268,12 @@
         const db = getFirestore(app, "fobrealdbase");
         const auth = getAuth(app);
 
-        // GLOBAL VARIABLES TO FIX CHART BUG
+        // GLOBALS
         let globalAuditData = [];
         let pieChartInstance = null;
         let barChartInstance = null;
 
-        // --- UI LOGIC ---
+        // UI SETUP
         const menuBtn = document.getElementById('menuBtn');
         const overlay = document.getElementById('overlay');
         const body = document.body;
@@ -294,30 +294,25 @@
             });
         }
 
-        // --- DATE PARSER HELPER ---
+        // --- DATE PARSER ---
         function parseDate(field) {
             if (!field) return null;
             let dateObj = null;
-            // Handle Firestore Timestamp
             if (field.toDate && typeof field.toDate === 'function') dateObj = field.toDate();
-            // Handle String
             else if (typeof field === 'string') dateObj = new Date(field);
-            // Handle Seconds (Unix)
             else if (field.seconds) dateObj = new Date(field.seconds * 1000);
             
-            // Return YYYY-MM-DD or null if invalid
             if (dateObj && !isNaN(dateObj)) {
                 return dateObj.toISOString().split('T')[0];
             }
             return null;
         }
 
-        // --- MAIN DATA LOGIC ---
         async function loadGlobalDashboard() {
             try {
-                console.log("--- STARTING SYNC ---");
+                console.log("--- STARTING LINKED SYNC ---");
 
-                // 1. FETCH ALL DATA
+                // 1. FETCH ALL COLLECTIONS
                 const [pSnap, mAdminSnap, mSnap, aSnap, eSnap] = await Promise.all([
                     getDocs(collection(db, "pastors")),
                     getDocs(collection(db, "master_admin")),
@@ -326,47 +321,55 @@
                     getDocs(collection(db, "events"))
                 ]);
 
-                // 2. MAP LEADERS
-                const leaderRegistry = {};
-                pSnap.forEach(d => {
-                    leaderRegistry[d.id] = { name: d.data().full_name, chapel: d.data().chapel_name || "Branch" };
-                });
-                mAdminSnap.forEach(d => {
-                    leaderRegistry[d.id] = { name: d.data().full_name + " (Admin)", chapel: d.data().chapel_name || "HQ" };
-                });
-
-                // 3. GET MEMBERS
-                const allMembers = [];
-                mSnap.forEach(d => allMembers.push({ id: d.id, ...d.data() }));
-
-                // 4. PREPARE MASTER CALENDAR (Now using Bulletproof Parser)
-                const todayStr = new Date().toISOString().split('T')[0];
+                // 2. BUILD EVENT LOOKUP MAP (The Critical Fix)
+                // We create a dictionary: { "EventID_123": "2026-01-10" }
+                const eventDateMap = {};
                 const masterEventDates = [];
-                
+                const todayStr = new Date().toISOString().split('T')[0];
+
                 eSnap.forEach(d => {
                     const data = d.data();
-                    // Check 'date' field, or 'timestamp', or 'eventDate'
                     const validDate = parseDate(data.date) || parseDate(data.timestamp);
-                    
-                    if (validDate && validDate <= todayStr) {
-                        masterEventDates.push(validDate);
+                    if (validDate) {
+                        eventDateMap[d.id] = validDate; // Store ID -> Date link
+                        if (validDate <= todayStr) {
+                            masterEventDates.push(validDate);
+                        }
                     }
                 });
                 masterEventDates.sort();
-                
-                console.log(`Found ${masterEventDates.length} past events in Master Calendar.`); // DIAGNOSTIC LOG
+                console.log(`Loaded ${Object.keys(eventDateMap).length} Events for lookup.`);
 
-                // 5. PARSE ATTENDANCE
+                // 3. PARSE ATTENDANCE (Now using the Map)
                 const allAttendance = [];
                 aSnap.forEach(d => {
                     const data = d.data();
-                    const validDate = parseDate(data.timestamp) || parseDate(data.date);
-                    if(validDate) allAttendance.push({ ...data, derivedDate: validDate });
+                    
+                    // A. Try to find date inside the attendance record (Legacy support)
+                    let recordDate = parseDate(data.timestamp) || parseDate(data.date);
+                    
+                    // B. If not found, LOOK IT UP using eventId (The Fix)
+                    if (!recordDate && data.eventId && eventDateMap[data.eventId]) {
+                        recordDate = eventDateMap[data.eventId];
+                    }
+
+                    if (recordDate) {
+                        allAttendance.push({ ...data, derivedDate: recordDate });
+                    }
                 });
+                console.log(`Successfully linked ${allAttendance.length} attendance records to dates.`);
+
+                // 4. MAP LEADERS & MEMBERS
+                const leaderRegistry = {};
+                pSnap.forEach(d => leaderRegistry[d.id] = { name: d.data().full_name, chapel: d.data().chapel_name || "Branch" });
+                mAdminSnap.forEach(d => leaderRegistry[d.id] = { name: d.data().full_name + " (Admin)", chapel: d.data().chapel_name || "HQ" });
+                
+                const allMembers = [];
+                mSnap.forEach(d => allMembers.push({ id: d.id, ...d.data() }));
 
                 const today = new Date();
 
-                // 6. CALCULATE SCORES
+                // 5. CALCULATE SCORES
                 globalAuditData = Object.keys(leaderRegistry).map(id => {
                     const info = leaderRegistry[id];
                     const members = allMembers.filter(m => m.pastorId === id);
@@ -379,31 +382,29 @@
                     let established = 0;
 
                     members.forEach(m => {
-                        // Normalize Join Date
                         const joinDateStr = parseDate(m.registration_date) || "2024-01-01";
                         const joinDateObj = new Date(joinDateStr);
 
-                        // B. Calculate INDIVIDUAL Denominator (Based on Master Calendar)
+                        // Denominator (From Master Calendar)
                         const memberPossibleEvents = masterEventDates.filter(d => d >= joinDateStr);
                         const possibleCount = memberPossibleEvents.length;
 
-                        // C. Calculate INDIVIDUAL Numerator (Unique Days Present)
-                        const memberCheckIns = allAttendance.filter(att => 
-                            att.memberId === m.id && 
-                            att.status && att.status.toLowerCase() === "present" && 
-                            att.derivedDate >= joinDateStr
-                        );
+                        // Numerator (From Linked Attendance)
+                        const memberCheckIns = allAttendance.filter(att => {
+                            const isMember = att.memberId === m.id;
+                            const isPresent = att.status && att.status.toLowerCase().includes("present");
+                            const isAfterJoin = att.derivedDate >= joinDateStr;
+                            return isMember && isPresent && isAfterJoin;
+                        });
+                        
                         const daysPresentCount = new Set(memberCheckIns.map(r => r.derivedDate)).size;
 
-                        // D. Calculate Individual %
-                        // We include them in the average only if they have had at least 1 chance to attend
                         if (possibleCount > 0) {
                             const individualRate = (daysPresentCount / possibleCount) * 100;
                             sumOfIndividualRates += individualRate;
                             countOfScoredMembers++;
                         } 
 
-                        // Conversion Stats
                         const daysInChurch = (today - joinDateObj) / (1000 * 60 * 60 * 24);
                         if (daysInChurch > 30) {
                             eligibleConv++;
@@ -411,7 +412,6 @@
                         }
                     });
 
-                    // E. Final Average Calculation
                     const pastorAverage = countOfScoredMembers > 0 ? Math.round(sumOfIndividualRates / countOfScoredMembers) : 0;
                     const convRate = eligibleConv > 0 ? Math.round((established / eligibleConv) * 100) : 0;
                     
@@ -432,14 +432,13 @@
 
             } catch (err) {
                 console.error("Dashboard Error:", err);
-                document.getElementById('syncText').innerText = "Data Sync Error. See Console (F12).";
+                document.getElementById('syncText').innerText = "Data Sync Error. Check console.";
             }
         }
 
         function renderTable(data) {
             const body = document.getElementById('auditBody');
             if(!body) return;
-
             body.innerHTML = data.map((l, i) => `
                 <tr>
                     <td style="opacity:0.4;">#${i+1}</td>
@@ -453,14 +452,12 @@
         }
 
         function renderCharts(members, data) {
-            // FIX: DESTROY OLD CHARTS IF THEY EXIST
             if (pieChartInstance) { pieChartInstance.destroy(); }
             if (barChartInstance) { barChartInstance.destroy(); }
 
             const established = members.filter(m => m.status === "Established Member").length;
             const newConverts = members.length - established;
 
-            // PIE CHART
             const pieCtx = document.getElementById('maturityPie');
             if(pieCtx) {
                 pieChartInstance = new Chart(pieCtx, {
@@ -473,14 +470,10 @@
                             borderWidth: 0 
                         }] 
                     },
-                    options: { 
-                        maintainAspectRatio: false, cutout: '75%', 
-                        plugins: { legend: { position: 'bottom', labels: { color: '#aaa' } } } 
-                    }
+                    options: { maintainAspectRatio: false, cutout: '75%', plugins: { legend: { position: 'bottom', labels: { color: '#aaa' } } } }
                 });
             }
 
-            // BAR CHART
             const barCtx = document.getElementById('attendanceBar');
             if(barCtx) {
                 barChartInstance = new Chart(barCtx, {
