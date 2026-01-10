@@ -309,7 +309,7 @@
         // --- 2. DATA LOGIC ---
 async function loadGlobalDashboard() {
             try {
-                // 1. FETCH DATA
+                // 1. FETCH ALL DATA
                 const [pSnap, mAdminSnap, mSnap, aSnap] = await Promise.all([
                     getDocs(collection(db, "pastors")),
                     getDocs(collection(db, "master_admin")),
@@ -326,17 +326,17 @@ async function loadGlobalDashboard() {
                     leaderRegistry[d.id] = { name: d.data().full_name + " (Admin)", chapel: d.data().chapel_name || "HQ" };
                 });
 
-                // 3. GET CURRENT MEMBERS
+                // 3. GET MEMBERS
                 const allMembers = [];
                 mSnap.forEach(d => allMembers.push({ id: d.id, ...d.data() }));
 
-                // 4. PARSE ATTENDANCE DATES
+                // 4. PREPARE ATTENDANCE (BULLETPROOF DATE PARSER)
                 const allAttendance = [];
                 aSnap.forEach(d => {
                     const data = d.data();
                     let rawDate = null;
 
-                    // Bulletproof Date Parsing
+                    // Handle Timestamp Objects vs Strings vs Date strings
                     if (data.timestamp && typeof data.timestamp.toDate === 'function') {
                         rawDate = data.timestamp.toDate();
                     } else if (typeof data.timestamp === 'string') {
@@ -345,30 +345,35 @@ async function loadGlobalDashboard() {
                         rawDate = new Date(data.date);
                     }
 
-                    // Standardize to YYYY-MM-DD
-                    const dateStr = rawDate ? rawDate.toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+                    // Standardize to YYYY-MM-DD. Default to today if invalid to prevent crashes, 
+                    // but usually you might want to skip invalid dates.
+                    const dateStr = rawDate && !isNaN(rawDate) ? 
+                        rawDate.toISOString().split('T')[0] : 
+                        new Date().toISOString().split('T')[0];
+                        
                     allAttendance.push({ ...data, derivedDate: dateStr });
                 });
 
-                // Global list of all Unique Sundays/Event Days in history
+                // Get Global History of Unique Sundays/Event Days
                 const uniqueEventDates = [...new Set(allAttendance.map(a => a.derivedDate))].sort();
                 const today = new Date();
 
-                // 5. CALCULATE STATS (CAPPED AT 100%)
+                // 5. CALCULATE PASTOR SCORES
                 globalAuditData = Object.keys(leaderRegistry).map(id => {
                     const info = leaderRegistry[id];
                     const members = allMembers.filter(m => m.pastorId === id);
                     
+                    // Handle empty pastors
                     if (members.length === 0) return { ...info, members: 0, attendance: 0, conversion: 0, status: 'Low' };
 
-                    let totalPossible = 0;
-                    let totalDaysPresent = 0; // Tracks unique days, not total check-ins
+                    let totalPossibleDays = 0;
+                    let totalDaysPresent = 0;
                     let eligibleConv = 0;
                     let established = 0;
 
                     members.forEach(m => {
                         // Normalize Join Date
-                        let joinDate = new Date("2024-01-01");
+                        let joinDate = new Date("2024-01-01"); // Default fallback
                         if (m.registration_date) {
                             if(typeof m.registration_date.toDate === 'function') joinDate = m.registration_date.toDate();
                             else if(typeof m.registration_date === 'string') joinDate = new Date(m.registration_date);
@@ -376,28 +381,22 @@ async function loadGlobalDashboard() {
                         }
                         const joinDateStr = joinDate.toISOString().split('T')[0];
                         
-                        // Denominator: How many distinct calendar dates have passed since they joined?
+                        // Denominator: Unique calendar dates passed since member joined
                         const eligibleEvents = uniqueEventDates.filter(d => d >= joinDateStr);
-                        totalPossible += eligibleEvents.length;
+                        totalPossibleDays += eligibleEvents.length;
                         
-                        // Numerator: COUNT UNIQUE DAYS PRESENT
-                        // 1. Get all check-ins for this member
+                        // Numerator: Unique calendar dates member was present
                         const memberCheckIns = allAttendance.filter(att => 
                             att.memberId === m.id && 
                             att.status && att.status.toLowerCase() === "present" && 
                             att.derivedDate >= joinDateStr
                         );
-
-                        // 2. Extract just the date strings (e.g. "2026-01-10")
-                        const checkInDates = memberCheckIns.map(r => r.derivedDate);
-
-                        // 3. Use Set to count UNIQUE days only.
-                        // (3 check-ins on Jan 10th becomes size = 1)
-                        const uniqueDays = new Set(checkInDates).size;
+                        // Using Set() ensures 3 services in 1 day = 1 Day Present
+                        const uniqueDays = new Set(memberCheckIns.map(r => r.derivedDate)).size;
                         
                         totalDaysPresent += uniqueDays;
 
-                        // Conversion Logic
+                        // Conversion Stats
                         const daysInChurch = (today - joinDate) / (1000 * 60 * 60 * 24);
                         if (daysInChurch > 30) {
                             eligibleConv++;
@@ -405,8 +404,8 @@ async function loadGlobalDashboard() {
                         }
                     });
 
-                    // Calculate Average (Weighted Aggregate)
-                    const attRate = totalPossible > 0 ? Math.round((totalDaysPresent / totalPossible) * 100) : 0;
+                    // Weighted Aggregate Calculation
+                    const attRate = totalPossibleDays > 0 ? Math.round((totalDaysPresent / totalPossibleDays) * 100) : 0;
                     const convRate = eligibleConv > 0 ? Math.round((established / eligibleConv) * 100) : 0;
                     
                     return { 
@@ -418,7 +417,7 @@ async function loadGlobalDashboard() {
                     };
                 });
 
-                // Sort by highest attendance rate
+                // Sort: Highest Performers First
                 globalAuditData.sort((a,b) => b.attendance - a.attendance);
 
                 document.getElementById('syncText').innerHTML = `<i class="fa-solid fa-shield-check" style="color:#00ff88"></i> Global Audit • Sync Complete`;
