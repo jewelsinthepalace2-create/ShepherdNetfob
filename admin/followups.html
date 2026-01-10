@@ -1,76 +1,6 @@
-<!DOCTYPE html><html lang="en"><head>
-    <meta charset="UTF-8">
-    <title>Network Intelligence | ShepherdNet</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
-    <style>
-        :root { --primary: #4facfe; --bg: #0f172a; --glass: rgba(255, 255, 255, 0.05); --border: rgba(255, 255, 255, 0.1); --red: #ff4b5c; --green: #00ff88; }
-        body { background: var(--bg); color: white; font-family: 'Poppins', sans-serif; padding: 20px; margin: 0; }
-        .container { max-width: 1000px; margin: 0 auto; padding-bottom: 50px; }
-        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
-        
-        .analytics-card { background: var(--glass); border: 1px solid var(--border); border-radius: 24px; padding: 25px; margin-bottom: 30px; }
-        .graph-container { display: flex; align-items: flex-end; gap: 20px; height: 180px; margin-top: 20px; border-bottom: 1px solid var(--border); padding-bottom: 10px; justify-content: center; }
-        .bar-group { width: 100px; display: flex; flex-direction: column; align-items: center; gap: 10px; }
-        .bar { width: 60px; border-radius: 8px 8px 0 0; transition: height 1s ease; position: relative; min-height: 5px; }
-        .bar-expected { background: rgba(255,255,255,0.1); }
-        .bar-present { background: var(--primary); box-shadow: 0 0 20px rgba(79, 172, 254, 0.4); }
-        .bar-label { font-size: 0.7rem; font-weight: 600; text-align: center; }
-
-        .list-section { background: var(--glass); border: 1px solid var(--border); border-radius: 20px; padding: 20px; }
-        .table-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-        table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
-        th { text-align: left; opacity: 0.5; padding: 12px; border-bottom: 1px solid var(--border); }
-        td { padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.02); }
-        
-        .btn-sort { background: var(--primary); color: #0f172a; border: none; padding: 8px 15px; border-radius: 8px; font-size: 0.75rem; cursor: pointer; font-weight: 600; }
-        .badge { padding: 4px 8px; border-radius: 5px; font-size: 0.65rem; font-weight: 600; }
-        .badge-invitee { background: rgba(0, 255, 136, 0.1); color: var(--green); }
-        .badge-member { background: rgba(79, 172, 254, 0.1); color: var(--primary); }
-        .status-tag { padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: 600; }
-        .status-present { background: rgba(0, 255, 136, 0.2); color: var(--green); border: 1px solid var(--green); }
-        .status-absent { background: rgba(255, 75, 92, 0.2); color: var(--red); border: 1px solid var(--red); }
-    </style>
-</head><body>
-
-<div class="container">
-    <header>
-        <div>
-            <h1>Global Intelligence</h1>
-            <p id="eventStatus" style="opacity:0.6; font-size: 0.8rem;">Verifying Identity...</p>
-        </div>
-        <a href="index.html" style="color: var(--primary); text-decoration: none; font-size: 0.85rem;">← Exit</a>
-    </header>
-
-    <div class="analytics-card">
-        <h3 style="font-size: 0.9rem;">Service Attendance Dynamics</h3>
-        <div class="graph-container" id="graphArea"></div>
-    </div>
-
-    <div class="list-section">
-        <div class="table-header">
-            <h3 style="margin:0; font-size: 0.9rem;">Personnel Registry (Expected Today)</h3>
-            <button class="btn-sort" onclick="sortDataByInviter()">Sort by Inviter/Shepherd</button>
-        </div>
-        <table>
-            <thead>
-                <tr>
-                    <th>NAME</th>
-                    <th>RANK</th>
-                    <th>INVITED BY / SHEPHERD</th>
-                    <th>STATUS</th>
-                </tr>
-            </thead>
-            <tbody id="registryBody">
-                <tr><td colspan="4" style="text-align:center; padding:30px; opacity:0.5;">Syncing...</td></tr>
-            </tbody>
-        </table>
-    </div>
-</div>
-
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
-    import { getFirestore, collection, getDocs, query, where, orderBy, limit } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+    import { getFirestore, collection, getDocs, query, where, limit } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
 
     const firebaseConfig = { 
@@ -87,14 +17,11 @@
 
     let masterList = [];
 
-    // --- THE FIX: WAIT FOR AUTHENTICATION ---
     onAuthStateChanged(auth, (user) => {
         if (user) {
-            console.log("Authenticated as:", user.email);
-            init(); // Only run init AFTER we know who you are
+            init();
         } else {
-            console.log("No user found. Redirecting...");
-            window.location.href = "index.html"; // Boot them out if not logged in
+            window.location.href = "index.html";
         }
     });
 
@@ -102,14 +29,12 @@
         try {
             document.getElementById('eventStatus').innerText = "Syncing database...";
             
-            // Simplified Query to find the latest event
+            // Get latest event
             const eventSnap = await getDocs(query(collection(db, "events"), limit(10)));
-            
             const latestEvent = eventSnap.docs
                 .map(d => d.data())
                 .filter(e => e.title !== "Dawn Prayers")
                 .sort((a, b) => {
-                    // Handle Firestore Timestamps vs Date objects vs Strings
                     const dateA = a.date.toDate ? a.date.toDate() : new Date(a.date);
                     const dateB = b.date.toDate ? b.date.toDate() : new Date(b.date);
                     return dateB - dateA;
@@ -123,19 +48,18 @@
                 document.getElementById('eventStatus').innerText = "No Event Found.";
             }
         } catch (e) {
-            console.error("Critical Error:", e);
+            console.error(e);
             document.getElementById('registryBody').innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--red);">Error: ${e.message}</td></tr>`;
         }
     }
 
     async function fetchData(eventDate) {
-        // Date Range Logic for "That Day"
         const start = new Date(eventDate); start.setHours(0,0,0,0);
         const end = new Date(eventDate); end.setHours(23,59,59,999);
 
         try {
             const [attSnap, memSnap, invSnap, pastorsSnap] = await Promise.all([
-                getDocs(query(collection(db, "attendance"))), // Fetch all, filter in JS to avoid index issues for now
+                getDocs(collection(db, "attendance")),
                 getDocs(collection(db, "members")),
                 getDocs(collection(db, "invitees")),
                 getDocs(collection(db, "pastors"))
@@ -144,7 +68,6 @@
             const pastorsMap = {};
             pastorsSnap.forEach(d => pastorsMap[d.id] = d.data().full_name);
 
-            // Filter Attendance locally to be safe
             const attendedIds = new Set();
             attSnap.forEach(doc => {
                 const data = doc.data();
@@ -152,18 +75,25 @@
                 if(data.timestamp && data.timestamp.toDate) attDate = data.timestamp.toDate();
                 else if(data.date) attDate = new Date(data.date);
 
+                // Use loose date matching (same day)
                 if (attDate && attDate >= start && attDate <= end) {
-                    attendedIds.add(data.memberId || doc.id.split('_')[0]);
+                    // Check if status is present
+                    if(data.status && data.status.toLowerCase() === 'present') {
+                        attendedIds.add(data.memberId || doc.id.split('_')[0]);
+                    }
                 }
             });
 
             masterList = [];
 
-            // Build Full Expected List
             memSnap.forEach(d => {
                 const data = d.data();
+                // --- THE FIX: Combine First + Last Name if Full Name is missing ---
+                const combinedName = `${data.first_name || ''} ${data.last_name || ''}`.trim();
+                const displayName = data.full_name || combinedName || "Unnamed Member";
+
                 masterList.push({
-                    name: data.full_name || "Unknown Member",
+                    name: displayName,
                     type: 'member',
                     inviter: data.shepherd_name || pastorsMap[data.pastorId] || "Station Pastor",
                     present: attendedIds.has(d.id)
@@ -172,8 +102,10 @@
 
             invSnap.forEach(d => {
                 const data = d.data();
+                const displayName = data.full_name || `${data.first_name || ''} ${data.last_name || ''}`.trim() || "Unnamed Invitee";
+                
                 masterList.push({
-                    name: data.full_name || `${data.first_name || ''} ${data.last_name || ''}`.trim() || "New Invitee",
+                    name: displayName,
                     type: 'invitee',
                     inviter: data.invited_by || pastorsMap[data.pastorId] || "N/A",
                     present: attendedIds.has(d.id)
@@ -191,7 +123,6 @@
         const total = masterList.length;
         const percent = total > 0 ? (present / total) * 100 : 0;
 
-        // Graph
         document.getElementById('graphArea').innerHTML = `
             <div class="bar-group">
                 <div class="bar bar-expected" style="height: 100%"></div>
@@ -203,7 +134,6 @@
             </div>
         `;
 
-        // Table
         document.getElementById('registryBody').innerHTML = masterList.map(p => `
             <tr>
                 <td><b>${p.name}</b></td>
@@ -223,4 +153,3 @@
         render();
     };
 </script>
-</body></html>
