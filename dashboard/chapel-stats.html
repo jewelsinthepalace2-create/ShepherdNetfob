@@ -330,13 +330,12 @@ async function loadGlobalDashboard() {
                 const allMembers = [];
                 mSnap.forEach(d => allMembers.push({ id: d.id, ...d.data() }));
 
-                // 4. PREPARE ATTENDANCE (BULLETPROOF DATE PARSER)
+                // 4. PARSE ATTENDANCE
                 const allAttendance = [];
                 aSnap.forEach(d => {
                     const data = d.data();
                     let rawDate = null;
 
-                    // Handle Timestamp Objects vs Strings vs Date strings
                     if (data.timestamp && typeof data.timestamp.toDate === 'function') {
                         rawDate = data.timestamp.toDate();
                     } else if (typeof data.timestamp === 'string') {
@@ -345,8 +344,6 @@ async function loadGlobalDashboard() {
                         rawDate = new Date(data.date);
                     }
 
-                    // Standardize to YYYY-MM-DD. Default to today if invalid to prevent crashes, 
-                    // but usually you might want to skip invalid dates.
                     const dateStr = rawDate && !isNaN(rawDate) ? 
                         rawDate.toISOString().split('T')[0] : 
                         new Date().toISOString().split('T')[0];
@@ -354,26 +351,25 @@ async function loadGlobalDashboard() {
                     allAttendance.push({ ...data, derivedDate: dateStr });
                 });
 
-                // Get Global History of Unique Sundays/Event Days
+                // Global History of Unique Event Days
                 const uniqueEventDates = [...new Set(allAttendance.map(a => a.derivedDate))].sort();
                 const today = new Date();
 
-                // 5. CALCULATE PASTOR SCORES
+                // 5. CALCULATE PASTOR SCORES (AVERAGE OF INDIVIDUAL AVERAGES)
                 globalAuditData = Object.keys(leaderRegistry).map(id => {
                     const info = leaderRegistry[id];
                     const members = allMembers.filter(m => m.pastorId === id);
                     
-                    // Handle empty pastors
                     if (members.length === 0) return { ...info, members: 0, attendance: 0, conversion: 0, status: 'Low' };
 
-                    let totalPossibleDays = 0;
-                    let totalDaysPresent = 0;
+                    let sumOfIndividualRates = 0;
+                    let countOfScoredMembers = 0;
                     let eligibleConv = 0;
                     let established = 0;
 
                     members.forEach(m => {
-                        // Normalize Join Date
-                        let joinDate = new Date("2024-01-01"); // Default fallback
+                        // A. Normalize Join Date
+                        let joinDate = new Date("2024-01-01");
                         if (m.registration_date) {
                             if(typeof m.registration_date.toDate === 'function') joinDate = m.registration_date.toDate();
                             else if(typeof m.registration_date === 'string') joinDate = new Date(m.registration_date);
@@ -381,20 +377,26 @@ async function loadGlobalDashboard() {
                         }
                         const joinDateStr = joinDate.toISOString().split('T')[0];
                         
-                        // Denominator: Unique calendar dates passed since member joined
-                        const eligibleEvents = uniqueEventDates.filter(d => d >= joinDateStr);
-                        totalPossibleDays += eligibleEvents.length;
-                        
-                        // Numerator: Unique calendar dates member was present
+                        // B. Calculate INDIVIDUAL Denominator (Based on Join Date)
+                        const memberPossibleEvents = uniqueEventDates.filter(d => d >= joinDateStr);
+                        const possibleCount = memberPossibleEvents.length;
+
+                        // C. Calculate INDIVIDUAL Numerator
                         const memberCheckIns = allAttendance.filter(att => 
                             att.memberId === m.id && 
                             att.status && att.status.toLowerCase() === "present" && 
                             att.derivedDate >= joinDateStr
                         );
-                        // Using Set() ensures 3 services in 1 day = 1 Day Present
-                        const uniqueDays = new Set(memberCheckIns.map(r => r.derivedDate)).size;
-                        
-                        totalDaysPresent += uniqueDays;
+                        // Using Set() for "100% Daily Cap" logic
+                        const daysPresentCount = new Set(memberCheckIns.map(r => r.derivedDate)).size;
+
+                        // D. Calculate Individual %
+                        if (possibleCount > 0) {
+                            const individualRate = (daysPresentCount / possibleCount) * 100;
+                            sumOfIndividualRates += individualRate;
+                            countOfScoredMembers++;
+                        } 
+                        // Note: If possibleCount is 0 (joined today, no service yet), we exclude them from the average so they don't drag it to 0.
 
                         // Conversion Stats
                         const daysInChurch = (today - joinDate) / (1000 * 60 * 60 * 24);
@@ -404,20 +406,19 @@ async function loadGlobalDashboard() {
                         }
                     });
 
-                    // Weighted Aggregate Calculation
-                    const attRate = totalPossibleDays > 0 ? Math.round((totalDaysPresent / totalPossibleDays) * 100) : 0;
+                    // E. Final Average Calculation
+                    const pastorAverage = countOfScoredMembers > 0 ? Math.round(sumOfIndividualRates / countOfScoredMembers) : 0;
                     const convRate = eligibleConv > 0 ? Math.round((established / eligibleConv) * 100) : 0;
                     
                     return { 
                         ...info, 
                         members: members.length, 
-                        attendance: attRate, 
+                        attendance: pastorAverage, 
                         conversion: convRate,
-                        status: attRate > 70 ? 'High' : (attRate > 40 ? 'Mid' : 'Low')
+                        status: pastorAverage > 70 ? 'High' : (pastorAverage > 40 ? 'Mid' : 'Low')
                     };
                 });
 
-                // Sort: Highest Performers First
                 globalAuditData.sort((a,b) => b.attendance - a.attendance);
 
                 document.getElementById('syncText').innerHTML = `<i class="fa-solid fa-shield-check" style="color:#00ff88"></i> Global Audit • Sync Complete`;
