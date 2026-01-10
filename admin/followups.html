@@ -37,7 +37,7 @@
     <header>
         <div>
             <h1>Global Intelligence</h1>
-            <p id="eventStatus" style="opacity:0.6; font-size: 0.8rem;">Syncing database...</p>
+            <p id="eventStatus" style="opacity:0.6; font-size: 0.8rem;">Verifying Identity...</p>
         </div>
         <a href="index.html" style="color: var(--primary); text-decoration: none; font-size: 0.85rem;">← Exit</a>
     </header>
@@ -62,7 +62,7 @@
                 </tr>
             </thead>
             <tbody id="registryBody">
-                <tr><td colspan="4" style="text-align:center; padding:30px; opacity:0.5;">Waiting for Permission & Data...</td></tr>
+                <tr><td colspan="4" style="text-align:center; padding:30px; opacity:0.5;">Syncing...</td></tr>
             </tbody>
         </table>
     </div>
@@ -71,6 +71,7 @@
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
     import { getFirestore, collection, getDocs, query, where, orderBy, limit } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
 
     const firebaseConfig = { 
         apiKey: "AIzaSyCBv60eRCO0e4dFBMKGKnIATouxTuk1Bcc",
@@ -82,73 +83,107 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app, "fobrealdbase");
+    const auth = getAuth(app);
 
     let masterList = [];
 
+    // --- THE FIX: WAIT FOR AUTHENTICATION ---
+    onAuthStateChanged(auth, (user) => {
+        if (user) {
+            console.log("Authenticated as:", user.email);
+            init(); // Only run init AFTER we know who you are
+        } else {
+            console.log("No user found. Redirecting...");
+            window.location.href = "index.html"; // Boot them out if not logged in
+        }
+    });
+
     async function init() {
         try {
-            // Simplified Query to avoid Indexing errors for now
+            document.getElementById('eventStatus').innerText = "Syncing database...";
+            
+            // Simplified Query to find the latest event
             const eventSnap = await getDocs(query(collection(db, "events"), limit(10)));
             
-            // Filter locally to avoid "Missing Permission" until you click the Firebase link
             const latestEvent = eventSnap.docs
                 .map(d => d.data())
                 .filter(e => e.title !== "Dawn Prayers")
-                .sort((a, b) => b.date.toDate() - a.date.toDate())[0];
+                .sort((a, b) => {
+                    // Handle Firestore Timestamps vs Date objects vs Strings
+                    const dateA = a.date.toDate ? a.date.toDate() : new Date(a.date);
+                    const dateB = b.date.toDate ? b.date.toDate() : new Date(b.date);
+                    return dateB - dateA;
+                })[0];
 
             if(latestEvent) {
-                document.getElementById('eventStatus').innerText = `Current Event: ${latestEvent.title} (${latestEvent.date.toDate().toLocaleDateString()})`;
-                await fetchData(latestEvent.date.toDate());
+                const eventDateObj = latestEvent.date.toDate ? latestEvent.date.toDate() : new Date(latestEvent.date);
+                document.getElementById('eventStatus').innerText = `Current Event: ${latestEvent.title} (${eventDateObj.toLocaleDateString()})`;
+                await fetchData(eventDateObj);
             } else {
                 document.getElementById('eventStatus').innerText = "No Event Found.";
             }
         } catch (e) {
             console.error("Critical Error:", e);
-            document.getElementById('registryBody').innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--red);">Check Index Link in Console or Rules.</td></tr>`;
+            document.getElementById('registryBody').innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--red);">Error: ${e.message}</td></tr>`;
         }
     }
 
     async function fetchData(eventDate) {
+        // Date Range Logic for "That Day"
         const start = new Date(eventDate); start.setHours(0,0,0,0);
         const end = new Date(eventDate); end.setHours(23,59,59,999);
 
-        const [attSnap, memSnap, invSnap, pastorsSnap] = await Promise.all([
-            getDocs(query(collection(db, "attendance"), where("timestamp", ">=", start), where("timestamp", "<=", end))),
-            getDocs(collection(db, "members")),
-            getDocs(collection(db, "invitees")),
-            getDocs(collection(db, "pastors"))
-        ]);
+        try {
+            const [attSnap, memSnap, invSnap, pastorsSnap] = await Promise.all([
+                getDocs(query(collection(db, "attendance"))), // Fetch all, filter in JS to avoid index issues for now
+                getDocs(collection(db, "members")),
+                getDocs(collection(db, "invitees")),
+                getDocs(collection(db, "pastors"))
+            ]);
 
-        const pastorsMap = {};
-        pastorsSnap.forEach(d => pastorsMap[d.id] = d.data().full_name);
+            const pastorsMap = {};
+            pastorsSnap.forEach(d => pastorsMap[d.id] = d.data().full_name);
 
-        const attendedIds = new Set();
-        attSnap.forEach(doc => attendedIds.add(doc.id.split('_')[0]));
+            // Filter Attendance locally to be safe
+            const attendedIds = new Set();
+            attSnap.forEach(doc => {
+                const data = doc.data();
+                let attDate = null;
+                if(data.timestamp && data.timestamp.toDate) attDate = data.timestamp.toDate();
+                else if(data.date) attDate = new Date(data.date);
 
-        masterList = [];
-
-        // Build Full Expected List
-        memSnap.forEach(d => {
-            const data = d.data();
-            masterList.push({
-                name: data.full_name || "Unknown Member",
-                type: 'member',
-                inviter: data.shepherd_name || pastorsMap[data.pastorId] || "Station Pastor",
-                present: attendedIds.has(d.id)
+                if (attDate && attDate >= start && attDate <= end) {
+                    attendedIds.add(data.memberId || doc.id.split('_')[0]);
+                }
             });
-        });
 
-        invSnap.forEach(d => {
-            const data = d.data();
-            masterList.push({
-                name: data.full_name || `${data.first_name || ''} ${data.last_name || ''}`.trim() || "New Invitee",
-                type: 'invitee',
-                inviter: data.invited_by || pastorsMap[data.pastorId] || "N/A",
-                present: attendedIds.has(d.id)
+            masterList = [];
+
+            // Build Full Expected List
+            memSnap.forEach(d => {
+                const data = d.data();
+                masterList.push({
+                    name: data.full_name || "Unknown Member",
+                    type: 'member',
+                    inviter: data.shepherd_name || pastorsMap[data.pastorId] || "Station Pastor",
+                    present: attendedIds.has(d.id)
+                });
             });
-        });
 
-        render();
+            invSnap.forEach(d => {
+                const data = d.data();
+                masterList.push({
+                    name: data.full_name || `${data.first_name || ''} ${data.last_name || ''}`.trim() || "New Invitee",
+                    type: 'invitee',
+                    inviter: data.invited_by || pastorsMap[data.pastorId] || "N/A",
+                    present: attendedIds.has(d.id)
+                });
+            });
+
+            render();
+        } catch (err) {
+            console.error(err);
+        }
     }
 
     function render() {
@@ -184,10 +219,8 @@
     }
 
     window.sortDataByInviter = () => {
-        masterList.sort((a, b) => a.inviter.localeCompare(b.inviter));
+        masterList.sort((a, b) => (a.inviter || "").localeCompare(b.inviter || ""));
         render();
     };
-
-    init();
 </script>
 </body></html>
