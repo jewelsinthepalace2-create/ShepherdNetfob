@@ -309,12 +309,13 @@
         // --- 2. DATA LOGIC ---
 async function loadGlobalDashboard() {
             try {
-                // 1. FETCH ALL DATA
-                const [pSnap, mAdminSnap, mSnap, aSnap] = await Promise.all([
+                // 1. FETCH ALL DATA (Added "events" collection)
+                const [pSnap, mAdminSnap, mSnap, aSnap, eSnap] = await Promise.all([
                     getDocs(collection(db, "pastors")),
                     getDocs(collection(db, "master_admin")),
                     getDocs(collection(db, "members")),
-                    getDocs(collection(db, "attendance"))
+                    getDocs(collection(db, "attendance")),
+                    getDocs(collection(db, "events")) // <--- THE MISSING LINK
                 ]);
 
                 // 2. MAP LEADERS
@@ -330,32 +331,41 @@ async function loadGlobalDashboard() {
                 const allMembers = [];
                 mSnap.forEach(d => allMembers.push({ id: d.id, ...d.data() }));
 
-                // 4. PARSE ATTENDANCE
+                // 4. PREPARE MASTER CALENDAR (The Source of Truth)
+                // We use the 'events' collection instead of guessing from attendance
+                const todayStr = new Date().toISOString().split('T')[0];
+                const masterEventDates = [];
+                
+                eSnap.forEach(d => {
+                    const data = d.data();
+                    if (data.date && data.date <= todayStr) {
+                        masterEventDates.push(data.date);
+                    }
+                });
+                // Sort dates chronologically
+                masterEventDates.sort();
+
+                // 5. PARSE ATTENDANCE (For Numerator)
                 const allAttendance = [];
                 aSnap.forEach(d => {
                     const data = d.data();
-                    let rawDate = null;
-
+                    let dateStr = "";
+                    
+                    // Handle Timestamp/String formats
                     if (data.timestamp && typeof data.timestamp.toDate === 'function') {
-                        rawDate = data.timestamp.toDate();
+                        dateStr = data.timestamp.toDate().toISOString().split('T')[0];
                     } else if (typeof data.timestamp === 'string') {
-                        rawDate = new Date(data.timestamp);
+                        dateStr = new Date(data.timestamp).toISOString().split('T')[0];
                     } else if (data.date) {
-                        rawDate = new Date(data.date);
+                        dateStr = data.date;
                     }
-
-                    const dateStr = rawDate && !isNaN(rawDate) ? 
-                        rawDate.toISOString().split('T')[0] : 
-                        new Date().toISOString().split('T')[0];
-                        
-                    allAttendance.push({ ...data, derivedDate: dateStr });
+                    
+                    if(dateStr) allAttendance.push({ ...data, derivedDate: dateStr });
                 });
 
-                // Global History of Unique Event Days
-                const uniqueEventDates = [...new Set(allAttendance.map(a => a.derivedDate))].sort();
                 const today = new Date();
 
-                // 5. CALCULATE PASTOR SCORES (AVERAGE OF INDIVIDUAL AVERAGES)
+                // 6. CALCULATE SCORES (Average of Individual Averages)
                 globalAuditData = Object.keys(leaderRegistry).map(id => {
                     const info = leaderRegistry[id];
                     const members = allMembers.filter(m => m.pastorId === id);
@@ -377,17 +387,18 @@ async function loadGlobalDashboard() {
                         }
                         const joinDateStr = joinDate.toISOString().split('T')[0];
                         
-                        // B. Calculate INDIVIDUAL Denominator (Based on Join Date)
-                        const memberPossibleEvents = uniqueEventDates.filter(d => d >= joinDateStr);
+                        // B. Calculate INDIVIDUAL Denominator
+                        // Compare Join Date against the MASTER CALENDAR, not attendance history
+                        const memberPossibleEvents = masterEventDates.filter(d => d >= joinDateStr);
                         const possibleCount = memberPossibleEvents.length;
 
-                        // C. Calculate INDIVIDUAL Numerator
+                        // C. Calculate INDIVIDUAL Numerator (Actual Presence)
                         const memberCheckIns = allAttendance.filter(att => 
                             att.memberId === m.id && 
                             att.status && att.status.toLowerCase() === "present" && 
                             att.derivedDate >= joinDateStr
                         );
-                        // Using Set() for "100% Daily Cap" logic
+                        // Count Unique Days Present
                         const daysPresentCount = new Set(memberCheckIns.map(r => r.derivedDate)).size;
 
                         // D. Calculate Individual %
@@ -396,7 +407,6 @@ async function loadGlobalDashboard() {
                             sumOfIndividualRates += individualRate;
                             countOfScoredMembers++;
                         } 
-                        // Note: If possibleCount is 0 (joined today, no service yet), we exclude them from the average so they don't drag it to 0.
 
                         // Conversion Stats
                         const daysInChurch = (today - joinDate) / (1000 * 60 * 60 * 24);
