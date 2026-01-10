@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Intelligence | ShepherdNet Pro</title>
-    <link rel="icon" type="image/png" href="https://i.ibb.co/60bRQP5Z/Jewels-background-removed.png">
+    <link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/3004/3004458.png">
+    
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -40,9 +41,10 @@
             backdrop-filter: blur(20px); 
             z-index: 2000;
             transform: translateX(-100%);
-            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: transform 0.3s ease-in-out;
         }
 
+        /* This class makes the sidebar visible */
         body.sidebar-open .sidebar { transform: translateX(0); }
 
         .logo { 
@@ -71,6 +73,7 @@
             flex: 1; overflow-y: auto; padding: 40px; 
             scroll-behavior: smooth; position: relative;
             transition: 0.3s;
+            width: 100%; /* Ensure full width on mobile */
         }
 
         .container { max-width: 1200px; margin: 0 auto; }
@@ -81,22 +84,19 @@
         /* --- ANALYTICS --- */
         .analytics-grid { 
             display: grid; 
-            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); /* Made slightly wider */
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); 
             gap: 20px; margin-bottom: 30px; 
         }
 
         .chart-card { 
             background: var(--glass); border: 1px solid var(--border); 
             padding: 25px; border-radius: 24px; 
-            min-height: 350px; /* Fixed height for better visibility */
+            min-height: 350px; 
             display: flex; flex-direction: column;
         }
 
         .chart-container {
-            flex: 1;
-            position: relative;
-            width: 100%;
-            height: 100%;
+            flex: 1; position: relative; width: 100%; min-height: 250px;
         }
 
         .chart-card h3 { 
@@ -109,6 +109,7 @@
         .card { 
             background: var(--glass); border: 1px solid var(--border); 
             padding: 25px; border-radius: 24px; 
+            overflow: hidden; /* Prevent overflow issues */
         }
 
         .table-header { 
@@ -130,8 +131,9 @@
         }
         .search-box input:focus { border-color: var(--primary); background: rgba(255,255,255,0.1); }
 
-        .table-container { overflow-x: auto; }
+        .table-container { overflow-x: auto; width: 100%; }
         table { width: 100%; border-collapse: collapse; min-width: 600px; }
+        
         th { 
             text-align: left; font-size: 0.75rem; color: var(--text-dim); 
             padding: 12px; border-bottom: 1px solid var(--border); 
@@ -147,7 +149,7 @@
         .mid { background: rgba(241, 196, 15, 0.1); color: #f1c40f; }
         .low { background: rgba(255, 75, 92, 0.1); color: #ff4b5c; }
 
-        /* --- MOBILE UI --- */
+        /* --- MOBILE TOGGLE BUTTON --- */
         .menu-btn {
             position: fixed; bottom: 30px; right: 30px;
             width: 60px; height: 60px;
@@ -164,6 +166,7 @@
             display: none; opacity: 0; transition: 0.3s;
         }
 
+        /* Mobile State */
         body.sidebar-open .overlay { display: block; opacity: 1; }
 
         /* DESKTOP VIEWPORT */
@@ -174,9 +177,9 @@
         }
 
         @media (max-width: 600px) {
-            .main-content { padding: 25px; }
+            .main-content { padding: 25px 20px 80px 20px; }
             header h1 { font-size: 1.4rem; }
-            .chart-card { min-height: 300px; } /* Slightly smaller for mobile */
+            .chart-card { min-height: 300px; }
         }
     </style>
 </head>
@@ -251,7 +254,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, collection, getDocs, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
         import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
         const firebaseConfig = { 
@@ -267,31 +270,46 @@
 
         let globalAuditData = [];
 
-        // UI Interactions
+        // --- 1. UI LOGIC (Moved to top so it works even if data fails) ---
         const menuBtn = document.getElementById('menuBtn');
         const overlay = document.getElementById('overlay');
         const body = document.body;
+        const searchInput = document.getElementById('leaderSearch');
 
-        menuBtn.onclick = () => body.classList.toggle('sidebar-open');
-        overlay.onclick = () => body.classList.remove('sidebar-open');
-        document.querySelectorAll('.nav-item').forEach(item => {
-            item.onclick = () => body.classList.remove('sidebar-open');
-        });
+        // Sidebar Toggles
+        if(menuBtn) {
+            menuBtn.addEventListener('click', () => {
+                body.classList.toggle('sidebar-open');
+            });
+        }
+        
+        if(overlay) {
+            overlay.addEventListener('click', () => {
+                body.classList.remove('sidebar-open');
+            });
+        }
+
+        // Live Search Logic
+        if(searchInput) {
+            searchInput.addEventListener('input', (e) => {
+                const term = e.target.value.toLowerCase();
+                const filtered = globalAuditData.filter(l => 
+                    l.name.toLowerCase().includes(term) || l.chapel.toLowerCase().includes(term)
+                );
+                renderTable(filtered);
+            });
+        }
 
         // Logout
-        document.getElementById('btnLogout').onclick = () => signOut(auth);
+        const btnLogout = document.getElementById('btnLogout');
+        if(btnLogout) {
+            btnLogout.addEventListener('click', () => signOut(auth));
+        }
 
-        // LIVE SEARCH
-        document.getElementById('leaderSearch').oninput = (e) => {
-            const term = e.target.value.toLowerCase();
-            const filtered = globalAuditData.filter(l => 
-                l.name.toLowerCase().includes(term) || l.chapel.toLowerCase().includes(term)
-            );
-            renderTable(filtered);
-        };
-
+        // --- 2. DATA LOGIC ---
         async function loadGlobalDashboard() {
             try {
+                // Fetch all collections in parallel
                 const [pSnap, mAdminSnap, mSnap, aSnap] = await Promise.all([
                     getDocs(collection(db, "pastors")),
                     getDocs(collection(db, "master_admin")),
@@ -299,36 +317,68 @@
                     getDocs(collection(db, "attendance"))
                 ]);
 
+                // 1. Build Registry of Leaders (Map ID -> Name/Chapel)
                 const leaderRegistry = {};
-                pSnap.docs.forEach(d => leaderRegistry[d.id] = { name: d.data().full_name, chapel: d.data().chapel_name || "Branch" });
-                mAdminSnap.docs.forEach(d => leaderRegistry[d.id] = { name: d.data().full_name + " (Admin)", chapel: d.data().chapel_name || "HQ" });
+                pSnap.forEach(d => {
+                    leaderRegistry[d.id] = { name: d.data().full_name, chapel: d.data().chapel_name || "Branch" };
+                });
+                mAdminSnap.forEach(d => {
+                    leaderRegistry[d.id] = { name: d.data().full_name + " (Admin)", chapel: d.data().chapel_name || "HQ" };
+                });
 
-                const allMembers = mSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-                const allAttendance = aSnap.docs.map(d => d.data());
+                // 2. Process Members & Attendance
+                const allMembers = [];
+                mSnap.forEach(d => allMembers.push({ id: d.id, ...d.data() }));
+
+                const allAttendance = [];
+                aSnap.forEach(d => allAttendance.push(d.data()));
+
+                // Get unique dates for calculation
                 const uniqueEventDates = [...new Set(allAttendance.map(a => a.date))].sort();
                 const today = new Date();
 
+                // 3. Calculate Stats for each Leader
+                // using standard .map to avoid "unexpected token" errors
                 globalAuditData = Object.keys(leaderRegistry).map(id => {
                     const info = leaderRegistry[id];
+                    
+                    // Filter members belonging to this leader
                     const members = allMembers.filter(m => m.pastorId === id);
                     
-                    if (members.length === 0) return { ...info, members: 0, attendance: 0, conversion: 0, status: 'Low' };
+                    if (members.length === 0) {
+                        return { ...info, members: 0, attendance: 0, conversion: 0, status: 'Low' };
+                    }
 
-                    let totalPossible = 0, totalPresent = 0, eligibleConv = 0, established = 0;
+                    let totalPossible = 0;
+                    let totalPresent = 0;
+                    let eligibleConv = 0;
+                    let established = 0;
 
+                    // Analyze each member
                     members.forEach(m => {
-                        let joinDate = m.registration_date?.toDate ? m.registration_date.toDate() : 
-                                       (m.registration_date?.seconds ? new Date(m.registration_date.seconds * 1000) : new Date("2024-01-01"));
+                        // Safe date conversion
+                        let joinDate = new Date("2024-01-01"); // Default
+                        if (m.registration_date) {
+                            if(m.registration_date.toDate) joinDate = m.registration_date.toDate();
+                            else if(m.registration_date.seconds) joinDate = new Date(m.registration_date.seconds * 1000);
+                        }
 
                         const joinDateStr = joinDate.toISOString().split('T')[0];
-                        const eligibleEvents = uniqueEventDates.filter(d => d >= joinDateStr);
                         
+                        // Count valid event dates since they joined
+                        const eligibleEvents = uniqueEventDates.filter(d => d >= joinDateStr);
                         totalPossible += eligibleEvents.length;
                         
-                        totalPresent += allAttendance.filter(att => 
-                            att.memberId === m.id && att.status?.toLowerCase() === "present" && att.date >= joinDateStr
+                        // Count how many they attended
+                        const presentCount = allAttendance.filter(att => 
+                            att.memberId === m.id && 
+                            att.status && att.status.toLowerCase() === "present" && 
+                            att.date >= joinDateStr
                         ).length;
+                        
+                        totalPresent += presentCount;
 
+                        // Check conversion/maturity (30+ days in system)
                         const daysInChurch = (today - joinDate) / (1000 * 60 * 60 * 24);
                         if (daysInChurch > 30) {
                             eligibleConv++;
@@ -336,6 +386,7 @@
                         }
                     });
 
+                    // Calculate percentages safely
                     const attRate = totalPossible > 0 ? Math.round((totalPresent / totalPossible) * 100) : 0;
                     const convRate = eligibleConv > 0 ? Math.round((established / eligibleConv) * 100) : 0;
                     
@@ -344,28 +395,40 @@
                         members: members.length, 
                         attendance: attRate, 
                         conversion: convRate,
-                        status: attRate > 70 ? 'High' : attRate > 40 ? 'Mid' : 'Low'
+                        status: attRate > 70 ? 'High' : (attRate > 40 ? 'Mid' : 'Low')
                     };
-                }).sort((a,b) => b.attendance - a.attendance);
+                });
 
-                document.getElementById('syncText').innerHTML = `<i class="fa-solid fa-shield-check" style="color:#00ff88"></i> Global Audit • Sync Complete`;
+                // Sort by attendance performance
+                globalAuditData.sort((a,b) => b.attendance - a.attendance);
+
+                // Update UI
+                const syncText = document.getElementById('syncText');
+                if(syncText) syncText.innerHTML = `<i class="fa-solid fa-shield-check" style="color:#00ff88"></i> Global Audit • Sync Complete`;
+                
                 renderTable(globalAuditData);
                 renderCharts(allMembers, globalAuditData);
 
             } catch (err) {
-                console.error(err);
-                document.getElementById('syncText').innerText = "Network Error. Please refresh.";
+                console.error("Dashboard Error:", err);
+                const syncText = document.getElementById('syncText');
+                if(syncText) syncText.innerText = "Data Sync Error. Check console.";
             }
         }
 
         function renderTable(data) {
             const body = document.getElementById('auditBody');
+            if(!body) return;
+
             body.innerHTML = data.map((l, i) => `
                 <tr>
                     <td style="opacity:0.4;">#${i+1}</td>
-                    <td><b>${l.name}</b><br><small style="color:var(--text-dim)">${l.chapel}</small></td>
+                    <td>
+                        <b style="color:white;">${l.name}</b><br>
+                        <small style="color:var(--text-dim)">${l.chapel}</small>
+                    </td>
                     <td>${l.members}</td>
-                    <td>${l.attendance}%</td>
+                    <td><span style="color:${l.attendance > 70 ? '#00ff88' : '#fff'}">${l.attendance}%</span></td>
                     <td>${l.conversion}%</td>
                     <td><span class="rank-badge ${l.status.toLowerCase()}">${l.status}</span></td>
                 </tr>
@@ -376,63 +439,60 @@
             const established = members.filter(m => m.status === "Established Member").length;
             const newConverts = members.length - established;
 
-            // Pie Chart Configuration
-            new Chart(document.getElementById('maturityPie'), {
-                type: 'doughnut',
-                data: { 
-                    labels: ['Established', 'New Converts'], 
-                    datasets: [{ 
-                        data: [established, newConverts], 
-                        backgroundColor: ['#4facfe', 'rgba(255,255,255,0.05)'], 
-                        borderWidth: 0 
-                    }] 
-                },
-                options: { 
-                    maintainAspectRatio: false, 
-                    cutout: '75%', 
-                    plugins: { legend: { position: 'bottom', labels: { color: '#aaa', padding: 20 } } } 
-                }
-            });
+            // Pie Chart
+            const pieCtx = document.getElementById('maturityPie');
+            if(pieCtx) {
+                new Chart(pieCtx, {
+                    type: 'doughnut',
+                    data: { 
+                        labels: ['Established', 'New Converts'], 
+                        datasets: [{ 
+                            data: [established, newConverts], 
+                            backgroundColor: ['#4facfe', 'rgba(255,255,255,0.05)'], 
+                            borderWidth: 0 
+                        }] 
+                    },
+                    options: { 
+                        maintainAspectRatio: false, 
+                        cutout: '75%', 
+                        plugins: { legend: { position: 'bottom', labels: { color: '#aaa' } } } 
+                    }
+                });
+            }
 
-            // Improved Bar Chart Visibility 
-
-[Image of sample bar chart]
-
-            new Chart(document.getElementById('attendanceBar'), {
-                type: 'bar',
-                data: { 
-                    labels: data.slice(0,5).map(x => x.name.split(' ')[0]), 
-                    datasets: [{ 
-                        label: 'Attendance %', 
-                        data: data.slice(0,5).map(x => x.attendance), 
-                        backgroundColor: '#00f2fe', 
-                        borderRadius: 6,
-                        barPercentage: 0.6
-                    }] 
-                },
-                options: { 
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: { 
-                        y: { 
-                            beginAtZero: true, 
-                            max: 100,
-                            grid: { color: 'rgba(255,255,255,0.1)' }, // Visible grid lines
-                            ticks: { color: '#ccc', font: { size: 11 } } 
+            // Bar Chart
+            const barCtx = document.getElementById('attendanceBar');
+            if(barCtx) {
+                new Chart(barCtx, {
+                    type: 'bar',
+                    data: { 
+                        labels: data.slice(0,5).map(x => x.name.split(' ')[0]), 
+                        datasets: [{ 
+                            label: 'Attendance %', 
+                            data: data.slice(0,5).map(x => x.attendance), 
+                            backgroundColor: '#00f2fe', 
+                            borderRadius: 6
+                        }] 
+                    },
+                    options: { 
+                        maintainAspectRatio: false,
+                        scales: { 
+                            y: { beginAtZero: true, max: 100, grid: { color: 'rgba(255,255,255,0.1)' } }, 
+                            x: { grid: { display: false }, ticks: { color: '#fff' } } 
                         }, 
-                        x: { 
-                            grid: { display: false }, 
-                            ticks: { color: '#fff', font: { weight: 'bold' } } 
-                        } 
-                    }, 
-                    plugins: { legend: { display: false } } 
-                }
-            });
+                        plugins: { legend: { display: false } } 
+                    }
+                });
+            }
         }
 
+        // Initialize Authentication
         onAuthStateChanged(auth, user => {
-            if (user) loadGlobalDashboard();
-            else window.location.href = "index.html";
+            if (user) {
+                loadGlobalDashboard();
+            } else {
+                window.location.href = "index.html";
+            }
         });
     </script>
 </body>
