@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Network Intelligence | ShepherdNet</title>
+    <title>Global Intelligence | ShepherdNet</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -11,43 +11,53 @@
         body { background: var(--bg); color: white; font-family: 'Poppins', sans-serif; padding: 20px; padding-bottom: 80px; }
         .container { max-width: 1000px; margin: 0 auto; }
         
+        /* HEADER */
         header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; flex-wrap: wrap; gap: 15px; }
         h1 { margin: 0; font-size: 1.4rem; }
         
-        select {
-            background: #1e293b; color: white; border: 1px solid var(--primary);
-            padding: 8px 12px; border-radius: 8px; font-family: inherit; cursor: pointer;
-            outline: none; font-size: 0.9rem;
-        }
+        select { background: #1e293b; color: white; border: 1px solid var(--primary); padding: 8px 12px; border-radius: 8px; font-family: inherit; cursor: pointer; outline: none; font-size: 0.9rem; }
 
+        /* GRID */
         .dashboard-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; margin-bottom: 30px; }
         @media (max-width: 768px) { .dashboard-grid { grid-template-columns: 1fr; } }
 
-        .card { background: var(--glass); border: 1px solid var(--border); border-radius: 20px; padding: 20px; backdrop-filter: blur(10px); }
-        .card-title { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; opacity: 0.7; margin-bottom: 15px; display: block; }
+        .card { background: var(--glass); border: 1px solid var(--border); border-radius: 20px; padding: 20px; backdrop-filter: blur(10px); margin-bottom: 25px; }
+        .card-title { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; opacity: 0.7; margin-bottom: 15px; display: block; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px; }
 
+        /* KPI */
         .kpi-row { display: flex; gap: 15px; margin-bottom: 20px; }
         .kpi-box { flex: 1; background: rgba(255,255,255,0.03); padding: 15px; border-radius: 12px; text-align: center; }
         .kpi-val { font-size: 1.5rem; font-weight: bold; display: block; }
-        .kpi-lbl { font-size: 0.7rem; opacity: 0.6; }
+        .kpi-lbl { font-size: 0.6rem; opacity: 0.6; }
 
-        .notes-list { max-height: 300px; overflow-y: auto; }
-        .note-item { background: rgba(255, 75, 92, 0.05); border-left: 3px solid var(--red); padding: 10px; margin-bottom: 8px; border-radius: 4px; }
-        .note-text { font-size: 0.8rem; color: #ffcccb; font-style: italic; }
-        .note-author { font-size: 0.7rem; opacity: 0.6; margin-top: 4px; display: block; }
+        /* EXPECTATION LIST */
+        .target-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; }
+        .target-card { background: rgba(255,255,255,0.03); border: 1px solid var(--border); padding: 15px; border-radius: 12px; position: relative; }
+        .target-name { font-weight: 600; font-size: 0.95rem; display: block; margin-bottom: 5px; }
+        .target-meta { font-size: 0.75rem; opacity: 0.6; display: block; margin-bottom: 10px; }
+        .effort-badge { 
+            font-size: 0.7rem; padding: 4px 8px; border-radius: 6px; 
+            background: rgba(0,0,0,0.3); color: var(--gold); font-family: monospace;
+            display: inline-block;
+        }
+        .probability-dot { height: 8px; width: 8px; border-radius: 50%; position: absolute; top: 15px; right: 15px; }
 
+        /* TABLE */
         .table-card { overflow-x: auto; }
         table { width: 100%; border-collapse: collapse; min-width: 700px; }
         th { text-align: left; opacity: 0.5; padding: 15px; border-bottom: 1px solid var(--border); font-size: 0.7rem; letter-spacing: 1px; }
         td { padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.02); font-size: 0.85rem; vertical-align: top; }
         
-        .badge { padding: 4px 8px; border-radius: 6px; font-size: 0.6rem; font-weight: 700; text-transform: uppercase; }
-        .badge-member { background: rgba(79, 172, 254, 0.15); color: var(--primary); }
-        .badge-invitee { background: rgba(255, 215, 0, 0.15); color: var(--gold); }
+        /* UTILS */
         .status-pill { padding: 4px 10px; border-radius: 20px; font-size: 0.7rem; font-weight: bold; display: inline-flex; align-items: center; gap: 6px; }
-        .pill-present { background: rgba(0, 255, 136, 0.1); color: var(--green); border: 1px solid rgba(0, 255, 136, 0.2); }
-        .pill-absent { background: rgba(255, 75, 92, 0.1); color: var(--red); border: 1px solid rgba(255, 75, 92, 0.2); }
+        .pill-present { background: rgba(0, 255, 136, 0.1); color: var(--green); }
+        .pill-absent { background: rgba(255, 75, 92, 0.1); color: var(--red); }
         .status-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+        
+        .notes-list { max-height: 300px; overflow-y: auto; }
+        .note-item { background: rgba(255, 75, 92, 0.05); border-left: 3px solid var(--red); padding: 10px; margin-bottom: 8px; border-radius: 4px; }
+        .note-text { font-size: 0.8rem; color: #ffcccb; font-style: italic; }
+        .note-author { font-size: 0.7rem; opacity: 0.6; margin-top: 4px; display: block; }
     </style>
 </head>
 <body>
@@ -62,6 +72,7 @@
         <div style="display:flex; gap:10px; align-items:center;">
             <select id="timeFilter" onchange="window.updateTimeframe()">
                 <option value="auto" selected>Auto (Past 5 Events)</option>
+                <option value="week">Last 1 Week</option>
                 <option value="1">Last 1 Month</option>
                 <option value="3">Last 3 Months</option>
                 <option value="6">Last 6 Months</option>
@@ -73,36 +84,35 @@
 
     <div class="dashboard-grid">
         <div class="card">
-            <span class="card-title">Attendance Trends</span>
+            <span class="card-title">Growth & Retention Trends</span>
             <div class="kpi-row">
-                <div class="kpi-box">
-                    <span class="kpi-val" id="avgExpected">-</span>
-                    <span class="kpi-lbl">AVG EXPECTED</span>
-                </div>
-                <div class="kpi-box">
-                    <span class="kpi-val" id="avgActual" style="color:var(--green)">-</span>
-                    <span class="kpi-lbl">AVG ACTUAL</span>
-                </div>
-                <div class="kpi-box">
-                    <span class="kpi-val" id="retentionRate">-</span>
-                    <span class="kpi-lbl">RETENTION</span>
-                </div>
+                <div class="kpi-box"><span class="kpi-val" id="avgExpected">-</span><span class="kpi-lbl">AVG EXPECTED</span></div>
+                <div class="kpi-box"><span class="kpi-val" id="avgActual" style="color:var(--green)">-</span><span class="kpi-lbl">AVG ACTUAL</span></div>
+                <div class="kpi-box"><span class="kpi-val" id="retentionRate">-</span><span class="kpi-lbl">RETENTION</span></div>
             </div>
-            <div style="height:200px; width:100%;">
-                <canvas id="trendChart"></canvas>
-            </div>
+            <div style="height:200px; width:100%;"><canvas id="trendChart"></canvas></div>
         </div>
 
         <div class="card">
-            <span class="card-title">Intelligence & Notes</span>
+            <span class="card-title">Challenge Log</span>
             <div class="notes-list" id="notesArea">
-                <p style="text-align:center; opacity:0.5; padding:20px;">Loading Intelligence...</p>
+                <p style="text-align:center; opacity:0.5; padding:20px;">Loading...</p>
             </div>
         </div>
     </div>
 
+    <div class="card" style="border-color:var(--primary);">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <span class="card-title" style="color:var(--primary); border:none; margin:0;">🎯 TARGETS FOR NEXT SERVICE (<span id="nextSundayDate">...</span>)</span>
+            <button onclick="window.print()" style="background:none; border:1px solid var(--border); color:white; cursor:pointer; padding:4px 10px; border-radius:5px; font-size:0.7rem;">Print List</button>
+        </div>
+        <div style="margin-top:15px;" id="targetArea" class="target-grid">
+            <p style="opacity:0.5;">Loading targets...</p>
+        </div>
+    </div>
+
     <div class="card table-card">
-        <span class="card-title">Registry: Most Recent Service</span>
+        <span class="card-title">Registry History: Most Recent Service</span>
         <table>
             <thead>
                 <tr>
@@ -129,92 +139,97 @@
     const db = getFirestore(app, "fobrealdbase");
     const auth = getAuth(app);
 
-    let GLOBAL_EVENTS = []; 
-    let GLOBAL_ATT = [];
-    let GLOBAL_MEM = [];
-    let GLOBAL_INV = [];
+    let GLOBAL_EVENTS = []; let GLOBAL_ATT = []; let GLOBAL_MEM = []; let GLOBAL_INV = [];
 
     onAuthStateChanged(auth, (user) => { if (user) init(); });
 
     async function init() {
         try {
-            // 1. FETCH RAW DATA (Grab 100 events to be safe)
+            // 1. FETCH ALL DATA
             const eventSnap = await getDocs(query(collection(db, "events"), orderBy("date", "desc"), limit(100)));
             const attSnap = await getDocs(collection(db, "attendance"));
             const memSnap = await getDocs(collection(db, "members"));
             const invSnap = await getDocs(collection(db, "invitees"));
 
-            if (eventSnap.empty) {
-                document.getElementById('eventLabel').innerText = "Database Empty (No Events).";
-                return;
-            }
+            if (eventSnap.empty) { document.getElementById('eventLabel').innerText = "No Events."; return; }
 
-            // 2. PROCESS EVENTS (Standardize Dates)
+            // 2. PROCESS EVENTS
             GLOBAL_EVENTS = eventSnap.docs.map(d => {
                 const data = d.data();
-                // Safe date conversion
                 const jsDate = (data.date && data.date.toDate) ? data.date.toDate() : new Date(data.date);
                 return { id: d.id, ...data, jsDate: jsDate };
-            });
+            }).sort((a, b) => a.jsDate - b.jsDate);
 
-            // Sort Oldest -> Newest (Jan -> Dec)
-            GLOBAL_EVENTS.sort((a, b) => a.jsDate - b.jsDate);
-
-            // 3. STORE OTHER DATA
+            // 3. STORE DATA
             GLOBAL_ATT = attSnap.docs.map(d => ({id:d.id, ...d.data()}));
             GLOBAL_MEM = memSnap.docs.map(d => ({id:d.id, ...d.data()}));
             GLOBAL_INV = invSnap.docs.map(d => ({id:d.id, ...d.data()}));
 
-            // 4. TRIGGER RENDER
+            // 4. RENDER ALL SECTIONS
             window.updateTimeframe(); 
+            renderNextSundayTargets(); // <--- NEW FUNCTION
 
         } catch (error) {
             console.error(error);
-            document.getElementById('eventLabel').innerText = "Error Loading Data: " + error.message;
+            document.getElementById('eventLabel').innerText = "Error: " + error.message;
         }
     }
 
-    // --- SMART FILTER LOGIC ---
+    // --- NEW: NEXT SUNDAY LOGIC ---
+    function renderNextSundayTargets() {
+        // Calculate Next Sunday
+        const d = new Date();
+        d.setDate(d.getDate() + (7 - d.getDay()) % 7);
+        const dateStr = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+        document.getElementById('nextSundayDate').innerText = dateStr;
+
+        const container = document.getElementById('targetArea');
+        
+        // Filter active invitees
+        const targets = GLOBAL_INV.filter(i => i.status !== 'graduated');
+        
+        if(targets.length === 0) {
+            container.innerHTML = "<p style='grid-column:1/-1; text-align:center; opacity:0.5'>No pending invitees.</p>";
+            return;
+        }
+
+        container.innerHTML = targets.map(t => {
+            const effort = (t.calls || 0) + (t.visits || 0);
+            let color = "#ff4b5c"; // Red (Low)
+            if(effort > 2) color = "#00ff88"; // Green (High)
+            else if(effort > 0) color = "#ffd700"; // Gold (Medium)
+
+            return `
+            <div class="target-card">
+                <span class="target-name">${t.fullName}</span>
+                <span class="target-meta">📍 ${t.hostel || 'No Addr'}</span>
+                <span class="effort-badge">Calls: ${t.calls||0} | Visits: ${t.visits||0}</span>
+                <div class="probability-dot" style="background:${color}; box-shadow:0 0 5px ${color}"></div>
+            </div>`;
+        }).join('');
+    }
+
+    // --- EXISTING DASHBOARD LOGIC ---
     window.updateTimeframe = () => {
         const filterVal = document.getElementById('timeFilter').value;
-        const now = new Date();
+        const endOfToday = new Date(); endOfToday.setHours(23,59,59,999);
         
         let filteredEvents = [];
 
-        // STRATEGY 1: Filter by Time (Strict "Past/Present" Only)
         if (filterVal !== 'auto') {
-            const months = parseInt(filterVal);
             const cutoffDate = new Date();
-            cutoffDate.setMonth(cutoffDate.getMonth() - months);
+            if(filterVal === 'week') cutoffDate.setDate(cutoffDate.getDate() - 7);
+            else cutoffDate.setMonth(cutoffDate.getMonth() - parseInt(filterVal));
             cutoffDate.setHours(0,0,0,0);
-
-            // Filter: Must be AFTER cutoff AND BEFORE tomorrow (ignore future)
-            const endOfToday = new Date(); 
-            endOfToday.setHours(23,59,59,999);
-
             filteredEvents = GLOBAL_EVENTS.filter(e => e.jsDate >= cutoffDate && e.jsDate <= endOfToday);
         }
 
-        // STRATEGY 2: The "Auto" / Fail-Safe Mode
-        // If user selects "Auto", OR if the time filter returned 0 results...
-        // We forcibly grab the last 5 events that are NOT in the distant future.
         if (filterVal === 'auto' || filteredEvents.length === 0) {
-            const endOfToday = new Date(); 
-            endOfToday.setHours(23,59,59,999);
-            
-            // Get all events that are <= Today
             const pastEvents = GLOBAL_EVENTS.filter(e => e.jsDate <= endOfToday);
-            
-            // If we still have nothing, just show the absolute last 5 events in DB (even if future)
-            // This is the ultimate "Show Something" fallback
-            const sourceList = pastEvents.length > 0 ? pastEvents : GLOBAL_EVENTS;
-            filteredEvents = sourceList.slice(-5); // Take last 5
+            filteredEvents = pastEvents.length > 0 ? pastEvents.slice(-5) : GLOBAL_EVENTS.slice(-5);
         }
 
-        if (filteredEvents.length === 0) {
-            alert("No data found.");
-            return;
-        }
+        if (filteredEvents.length === 0) return;
 
         const latestEvent = filteredEvents[filteredEvents.length - 1];
         document.getElementById('eventLabel').innerText = `Focus: ${latestEvent.title} • ${latestEvent.jsDate.toLocaleDateString()}`;
@@ -223,48 +238,37 @@
     };
 
     function calculateStats(events, latestEvent) {
-        let graphLabels = [];
-        let graphExpected = [];
-        let graphActual = [];
-        let allNotes = [];
-        let latestRegistry = [];
+        let graphLabels = [], graphExpected = [], graphActual = [], allNotes = [], latestRegistry = [];
 
         events.forEach(evt => {
             const eDate = evt.jsDate;
             const dayStart = new Date(eDate); dayStart.setHours(0,0,0,0);
             const dayEnd = new Date(eDate); dayEnd.setHours(23,59,59,999);
-            
             graphLabels.push(eDate.toLocaleDateString(undefined, {month:'short', day:'numeric'}));
 
-            let presentCount = 0;
-            let expectedCount = 0;
+            // EXPECTED
+            let activeInvitees = 0;
+            GLOBAL_INV.forEach(inv => {
+                const invDate = inv.lastUpdated ? inv.lastUpdated.toDate() : new Date(0);
+                if (invDate <= dayEnd) activeInvitees++;
+            });
+            let expectedCount = GLOBAL_MEM.length + activeInvitees;
 
-            // Count Members (Using Timestamp)
+            // ACTUAL
+            let presentCount = 0;
             GLOBAL_ATT.forEach(d => {
                 const t = d.timestamp ? d.timestamp.toDate() : new Date(d.date || 0);
-                if(t >= dayStart && t <= dayEnd) {
-                    expectedCount++;
-                    if(d.status && d.status.toLowerCase().includes('present')) presentCount++;
-                }
+                if(t >= dayStart && t <= dayEnd && d.status && d.status.toLowerCase().includes('present')) presentCount++;
             });
-
-            // Count Invitees (Using History)
             GLOBAL_INV.forEach(inv => {
                 const lastUp = inv.lastUpdated ? inv.lastUpdated.toDate() : new Date(0);
-                // Active on day?
-                if(lastUp > dayStart && lastUp < dayEnd) {
-                    expectedCount++;
-                    if(inv.status === 'honoured') presentCount++;
-                }
-                // History?
-                if(inv.history && Array.isArray(inv.history)) {
-                    inv.history.forEach(h => {
-                        const hDate = h.period ? h.period.toDate() : new Date(0);
-                        if(hDate >= dayStart && hDate <= dayEnd) {
-                            expectedCount++;
-                            if(h.status === 'honoured') presentCount++;
-                        }
-                    });
+                const isFresh = lastUp > dayStart && lastUp < dayEnd;
+                if((isFresh && inv.status === 'honoured') || 
+                   (inv.history && inv.history.some(h => {
+                       const hDate = h.period.toDate();
+                       return hDate >= dayStart && hDate <= dayEnd && h.status === 'honoured';
+                   }))) {
+                    presentCount++;
                 }
             });
 
@@ -273,40 +277,31 @@
             graphActual.push(presentCount);
         });
 
-        // --- TABLE DATA (Latest Event) ---
-        const latestDate = latestEvent.jsDate;
-        const startDay = new Date(latestDate); startDay.setHours(0,0,0,0);
-        const endDay = new Date(latestDate); endDay.setHours(23,59,59,999);
-
+        // TABLE LOGIC
+        const startDay = new Date(latestEvent.jsDate); startDay.setHours(0,0,0,0);
+        const endDay = new Date(latestEvent.jsDate); endDay.setHours(23,59,59,999);
         let attMap = {};
         GLOBAL_ATT.forEach(d => {
-            const t = d.timestamp ? d.timestamp.toDate() : new Date(d.date || 0);
-            if(t >= startDay && t <= endDay) {
-                const cleanId = d.memberId || d.id.split('_')[0];
-                attMap[cleanId] = d;
-            }
+            const t = d.timestamp ? d.timestamp.toDate() : new Date(d.date||0);
+            if(t >= startDay && t <= endDay) attMap[d.memberId || d.id.split('_')[0]] = d;
         });
 
-        // Members
         GLOBAL_MEM.forEach(m => {
             const rec = attMap[m.id];
-            let fullName = m.full_name || `${m.first_name||''} ${m.last_name||''}`.trim() || "Unknown";
+            let name = m.full_name || `${m.first_name||''} ${m.last_name||''}`.trim() || "Unknown";
             const isPresent = rec && rec.status && rec.status.toLowerCase().includes('present');
             const note = (rec && rec.notes) ? rec.notes : "";
-
-            if(note && !isPresent) allNotes.push({ name: fullName, note: note, type: 'Member' });
-            latestRegistry.push({ name: fullName, type: 'member', present: isPresent, effort: "—", note: isPresent?"":(note||"Absent") });
+            if(note && !isPresent) allNotes.push({name, note, type:'Member'});
+            latestRegistry.push({name, type:'member', present:isPresent, effort:"—", note:isPresent?"":(note||"Absent")});
         });
 
-        // Invitees
         GLOBAL_INV.forEach(i => {
             if(i.status === 'graduated') return;
-            const name = i.fullName || i.name || "Unknown";
-            const isPresent = i.status === 'honoured';
+            const name = i.fullName || "Unknown";
+            const isPresent = i.status === 'honoured'; 
             const note = i.notes || "";
-            
-            if(note && !isPresent) allNotes.push({ name: name, note: note, type: 'Invitee' });
-            latestRegistry.push({ name: name, type: 'invitee', present: isPresent, effort: `📞${i.calls||0}|🏠${i.visits||0}`, note: isPresent?"":(note||"No Report") });
+            if(note && !isPresent) allNotes.push({name, note, type:'Invitee'});
+            latestRegistry.push({name, type:'invitee', present:isPresent, effort:`📞${i.calls||0}|🏠${i.visits||0}`, note:isPresent?"":(note||"No Report")});
         });
 
         renderUI(graphLabels, graphExpected, graphActual, allNotes, latestRegistry);
@@ -319,39 +314,19 @@
 
         new Chart(ctx.getContext('2d'), {
             type: 'line',
-            data: {
-                labels: labels,
-                datasets: [
-                    { label: 'Expected', data: expected, borderColor: '#4facfe', backgroundColor: 'rgba(79, 172, 254, 0.1)', fill: true, tension: 0.4 },
-                    { label: 'Actual', data: actual, borderColor: '#00ff88', backgroundColor: 'rgba(0, 255, 136, 0.1)', fill: true, tension: 0.4 }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: { legend: { labels: { color: 'white' } } },
-                scales: { y: { grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { color: '#ccc' }, beginAtZero: true }, x: { display: false } }
-            }
+            data: { labels, datasets: [{ label: 'Expected', data: expected, borderColor: '#4facfe', backgroundColor: 'rgba(79, 172, 254, 0.1)', fill: true, tension: 0.4 }, { label: 'Actual', data: actual, borderColor: '#00ff88', backgroundColor: 'rgba(0, 255, 136, 0.1)', fill: true, tension: 0.4 }] },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: 'white' } } }, scales: { y: { grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { color: '#ccc' }, beginAtZero: true }, x: { display: false } } }
         });
 
-        const avgExp = Math.round(expected.reduce((a,b)=>a+b,0) / (expected.length||1));
-        const avgAct = Math.round(actual.reduce((a,b)=>a+b,0) / (actual.length||1));
+        const avgExp = Math.round(expected.reduce((a,b)=>a+b,0)/(expected.length||1));
+        const avgAct = Math.round(actual.reduce((a,b)=>a+b,0)/(actual.length||1));
         document.getElementById('avgExpected').innerText = avgExp;
         document.getElementById('avgActual').innerText = avgAct;
-        document.getElementById('retentionRate').innerText = avgExp > 0 ? Math.round((avgAct/avgExp)*100)+"%" : "0%";
+        document.getElementById('retentionRate').innerText = avgExp>0 ? Math.round((avgAct/avgExp)*100)+"%" : "0%";
 
-        const notesDiv = document.getElementById('notesArea');
-        notesDiv.innerHTML = notes.length ? notes.map(n => `<div class="note-item"><span class="note-text">"${n.note}"</span><span class="note-author">${n.name} (${n.type})</span></div>`).join('') : "<p style='text-align:center; opacity:0.5; padding:20px;'>No challenges.</p>";
-
-        const regBody = document.getElementById('registryBody');
-        regBody.innerHTML = registry.length ? registry.map(r => `
-            <tr>
-                <td><b>${r.name}</b><br><span class="badge badge-${r.type}">${r.type}</span></td>
-                <td><span style="font-family:monospace; font-size:0.8rem; background:rgba(255,255,255,0.05); padding:3px 6px; border-radius:4px;">${r.effort}</span></td>
-                <td><div class="status-pill ${r.present?'pill-present':'pill-absent'}"><span class="status-dot"></span>${r.present?'PRESENT':'ABSENT'}</div></td>
-                <td><span style="font-size:0.8rem; color:${r.present?'#ccc':'#ffcccb'}; font-style:${r.present?'normal':'italic'}">${r.note}</span></td>
-            </tr>
-        `).join('') : `<tr><td colspan="4" style="text-align:center;">No Data</td></tr>`;
+        document.getElementById('notesArea').innerHTML = notes.length ? notes.map(n => `<div class="note-item"><span class="note-text">"${n.note}"</span><span class="note-author">${n.name} (${n.type})</span></div>`).join('') : "<p style='text-align:center; opacity:0.5; padding:20px;'>No challenges.</p>";
+        
+        document.getElementById('registryBody').innerHTML = registry.length ? registry.map(r => `<tr><td><b>${r.name}</b><br><span class="badge badge-${r.type}">${r.type}</span></td><td><span style="font-family:monospace; font-size:0.8rem; background:rgba(255,255,255,0.05); padding:3px 6px; border-radius:4px;">${r.effort}</span></td><td><div class="status-pill ${r.present?'pill-present':'pill-absent'}"><span class="status-dot"></span>${r.present?'PRESENT':'ABSENT'}</div></td><td><span style="font-size:0.8rem; color:${r.present?'#ccc':'#ffcccb'}; font-style:${r.present?'normal':'italic'}">${r.note}</span></td></tr>`).join('') : `<tr><td colspan="4" style="text-align:center;">No Data</td></tr>`;
     }
 </script>
 </body>
