@@ -15,7 +15,6 @@
         header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; flex-wrap: wrap; gap: 15px; }
         h1 { margin: 0; font-size: 1.4rem; }
         
-        /* THE FILTER DROPDOWN */
         select {
             background: #1e293b; color: white; border: 1px solid var(--primary);
             padding: 8px 12px; border-radius: 8px; font-family: inherit; cursor: pointer;
@@ -67,6 +66,7 @@
         
         <div style="display:flex; gap:10px; align-items:center;">
             <select id="timeFilter" onchange="window.updateTimeframe()">
+                <option value="week">Last 1 Week</option>
                 <option value="1">Last 1 Month</option>
                 <option value="3">Last 3 Months</option>
                 <option value="6" selected>Last 6 Months</option>
@@ -78,7 +78,7 @@
 
     <div class="dashboard-grid">
         <div class="card">
-            <span class="card-title">Attendance Trends (Actual vs Expected)</span>
+            <span class="card-title">Attendance Trends</span>
             <div class="kpi-row">
                 <div class="kpi-box">
                     <span class="kpi-val" id="avgExpected">-</span>
@@ -99,7 +99,7 @@
         </div>
 
         <div class="card">
-            <span class="card-title">Why they missed (Intelligence)</span>
+            <span class="card-title">Intelligence & Notes</span>
             <div class="notes-list" id="notesArea">
                 <p style="text-align:center; opacity:0.5; padding:20px;">Loading Intelligence...</p>
             </div>
@@ -134,7 +134,6 @@
     const db = getFirestore(app, "fobrealdbase");
     const auth = getAuth(app);
 
-    // Global Stores (To allow filtering without re-fetching)
     let GLOBAL_EVENTS = []; 
     let GLOBAL_ATT = [];
     let GLOBAL_MEM = [];
@@ -144,8 +143,7 @@
 
     async function init() {
         try {
-            // 1. FETCH RAW DATA (One Time Load)
-            // Fetch 100 events to cover at least 2 years of history safely
+            // 1. FETCH RAW DATA
             const eventSnap = await getDocs(query(collection(db, "events"), orderBy("date", "desc"), limit(100)));
             const attSnap = await getDocs(collection(db, "attendance"));
             const memSnap = await getDocs(collection(db, "members"));
@@ -164,18 +162,17 @@
                 const data = d.data();
                 const jsDate = (data.date && data.date.toDate) ? data.date.toDate() : new Date(data.date);
                 return { id: d.id, ...data, jsDate: jsDate };
-            }).filter(e => e.jsDate <= now); // STRICT FILTER: No future events
+            }).filter(e => e.jsDate <= now); 
 
-            // Sort Oldest -> Newest for easy graphing
             GLOBAL_EVENTS.sort((a, b) => a.jsDate - b.jsDate);
 
-            // 3. STORE OTHER DATA
+            // 3. STORE DATA
             GLOBAL_ATT = attSnap.docs.map(d => ({id:d.id, ...d.data()}));
             GLOBAL_MEM = memSnap.docs.map(d => ({id:d.id, ...d.data()}));
             GLOBAL_INV = invSnap.docs.map(d => ({id:d.id, ...d.data()}));
 
-            // 4. TRIGGER INITIAL RENDER
-            window.updateTimeframe(); // Defaults to 6 months per HTML select
+            // 4. DEFAULT RENDER
+            window.updateTimeframe(); 
 
         } catch (error) {
             console.error(error);
@@ -183,13 +180,20 @@
         }
     }
 
-    // --- FILTER LOGIC ---
+    // --- UPDATED FILTER LOGIC (Includes 'Week') ---
     window.updateTimeframe = () => {
-        const months = parseInt(document.getElementById('timeFilter').value);
-        
-        // Calculate Cutoff Date
+        const filterVal = document.getElementById('timeFilter').value;
         const cutoffDate = new Date();
-        cutoffDate.setMonth(cutoffDate.getMonth() - months);
+
+        if (filterVal === 'week') {
+            // Set date to 7 days ago
+            cutoffDate.setDate(cutoffDate.getDate() - 7);
+        } else {
+            // Set date to X months ago
+            cutoffDate.setMonth(cutoffDate.getMonth() - parseInt(filterVal));
+        }
+        
+        // Reset time to start of day for clean comparison
         cutoffDate.setHours(0,0,0,0);
 
         // Filter Events based on Cutoff
@@ -200,10 +204,7 @@
             return;
         }
 
-        // The latest event is simply the last one in our filtered list
         const latestEvent = filteredEvents[filteredEvents.length - 1];
-
-        // Update UI
         document.getElementById('eventLabel').innerText = `Focus: ${latestEvent.title} • ${latestEvent.jsDate.toLocaleDateString()}`;
         
         calculateStats(filteredEvents, latestEvent);
@@ -227,7 +228,7 @@
             let presentCount = 0;
             let expectedCount = 0;
 
-            // Check Members
+            // Members
             GLOBAL_ATT.forEach(d => {
                 const t = d.timestamp ? d.timestamp.toDate() : new Date(d.date || 0);
                 if(t >= dayStart && t <= dayEnd) {
@@ -236,15 +237,15 @@
                 }
             });
 
-            // Check Invitees
+            // Invitees
             GLOBAL_INV.forEach(inv => {
                 const lastUp = inv.lastUpdated ? inv.lastUpdated.toDate() : new Date(0);
-                // Was active on that day?
+                // Active on day?
                 if(lastUp > dayStart && lastUp < dayEnd) {
                     expectedCount++;
                     if(inv.status === 'honoured') presentCount++;
                 }
-                // Was active in history?
+                // History?
                 if(inv.history && Array.isArray(inv.history)) {
                     inv.history.forEach(h => {
                         const hDate = h.period ? h.period.toDate() : new Date(0);
@@ -261,12 +262,11 @@
             graphActual.push(presentCount);
         });
 
-        // --- TABLE DATA (Latest Event Only) ---
+        // --- TABLE DATA ---
         const latestDate = latestEvent.jsDate;
         const startDay = new Date(latestDate); startDay.setHours(0,0,0,0);
         const endDay = new Date(latestDate); endDay.setHours(23,59,59,999);
 
-        // Map Attendance
         let attMap = {};
         GLOBAL_ATT.forEach(d => {
             const t = d.timestamp ? d.timestamp.toDate() : new Date(d.date || 0);
@@ -276,7 +276,7 @@
             }
         });
 
-        // Members
+        // Process Members
         GLOBAL_MEM.forEach(m => {
             const rec = attMap[m.id];
             let fullName = m.full_name || `${m.first_name||''} ${m.last_name||''}`.trim() || "Unknown";
@@ -287,7 +287,7 @@
             latestRegistry.push({ name: fullName, type: 'member', present: isPresent, effort: "—", note: isPresent?"":(note||"Absent") });
         });
 
-        // Invitees
+        // Process Invitees
         GLOBAL_INV.forEach(i => {
             if(i.status === 'graduated') return;
             const name = i.fullName || i.name || "Unknown";
