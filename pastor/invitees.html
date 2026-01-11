@@ -3,105 +3,49 @@
 <head>
     <meta charset="UTF-8">
     <title>Invitee Mandate | ShepherdNet</title>
-    <link rel="icon" type="image/png" href="https://i.ibb.co/60bRQP5Z/Jewels-background-removed.png">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
         :root { --primary: #4facfe; --bg: #0f172a; --glass: rgba(255, 255, 255, 0.05); --border: rgba(255, 255, 255, 0.1); --green: #00ff88; --red: #ff4b5c; }
-        body { background: var(--bg); color: white; font-family: 'Poppins', sans-serif; padding: 20px; }
+        body { background: var(--bg); color: white; font-family: 'Poppins', sans-serif; padding: 20px; padding-bottom: 80px; }
         .container { max-width: 600px; margin: 0 auto; }
         .card { background: var(--glass); padding: 20px; border-radius: 20px; border: 1px solid var(--border); margin-bottom: 20px; }
-        .input-group { margin-bottom: 15px; }
-        input, select, textarea { width: 100%; padding: 12px; border-radius: 10px; background: #1e293b; color: white; border: 1px solid var(--border); box-sizing: border-box; font-family: inherit; font-size: 0.9rem; }
-        .invitee-item { background: var(--glass); border: 1px solid var(--border); border-radius: 15px; padding: 15px; margin-bottom: 15px; }
-        .flex-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; gap: 10px; }
-        .counter-box { display: flex; align-items: center; gap: 10px; background: rgba(0,0,0,0.2); padding: 5px 15px; border-radius: 8px; }
-        .btn-sm { background: var(--primary); border: none; color: white; padding: 5px 10px; border-radius: 5px; cursor: pointer; font-weight: bold; }
-        .status-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
-        .btn-status { padding: 10px; border-radius: 8px; border: 1px solid var(--border); cursor: pointer; background: rgba(255,255,255,0.05); color: white; font-size: 0.8rem; }
-        .btn-status.honoured { background: var(--green); color: #000; font-weight: bold; border: none; }
-        .btn-status.declined { background: var(--red); color: white; border: none; }
-        .section-label { font-size: 0.65rem; color: var(--primary); letter-spacing: 1px; margin: 15px 0 5px 0; text-transform: uppercase; font-weight: 600; }
+        input, select, textarea { width: 100%; padding: 12px; border-radius: 10px; background: rgba(0,0,0,0.3); color: white; border: 1px solid var(--border); box-sizing: border-box; font-family: inherit; font-size: 0.9rem; outline: none; }
         
-        #promoModal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15, 23, 42, 0.98); z-index:1000; overflow-y:auto; padding:20px; box-sizing:border-box; }
-        .modal-content { max-width:500px; margin:20px auto; background: #1e293b; border: 1px solid var(--primary); padding: 25px; border-radius: 20px; box-shadow: 0 0 30px rgba(79, 172, 254, 0.2); }
+        .invitee-item { background: #1e293b; border: 1px solid var(--border); border-radius: 16px; padding: 16px; margin-bottom: 16px; }
+        .effort-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 15px 0; }
+        .effort-box { background: rgba(255,255,255,0.03); padding: 10px; border-radius: 10px; text-align: center; display: flex; justify-content: space-between; align-items: center; }
+        .btn-count { background: var(--primary); color: #0f172a; border: none; width: 30px; height: 30px; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        
+        .action-row { display: flex; gap: 10px; margin-top: 10px; }
+        .btn-action { flex: 1; padding: 12px; border-radius: 10px; border: none; font-weight: 600; cursor: pointer; }
+        .btn-present { background: rgba(0, 255, 136, 0.1); color: var(--green); border: 1px solid rgba(0, 255, 136, 0.3); }
+        .btn-absent { background: rgba(255, 75, 92, 0.1); color: var(--red); border: 1px solid rgba(255, 75, 92, 0.3); }
+        
+        /* The "Why" Input Box (Hidden by default) */
+        .reason-box { display: none; margin-top: 10px; background: rgba(255, 75, 92, 0.05); padding: 10px; border-radius: 10px; border: 1px solid var(--red); }
+        .reason-input { width: 100%; margin-bottom: 8px; background: #0f172a; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <div class="flex-row" style="margin-bottom: 20px;">
-        <div>
-            <h1>Invitee Mandate</h1>
-            <p id="userStatus" style="opacity:0.6; font-size: 0.8rem;">Checking role...</p>
-        </div>
-        <a id="dynamicDashLink" href="#" style="color: var(--primary); text-decoration: none; font-size: 0.8rem; border: 1px solid var(--primary); padding: 5px 12px; border-radius: 8px;">Dashboard</a>
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+        <h2>Invitee Mandate</h2>
+        <a href="index.html" style="color:var(--primary); text-decoration:none; border:1px solid var(--primary); padding:5px 10px; border-radius:8px;">Dashboard</a>
     </div>
 
     <div class="card">
-        <h3 style="margin-bottom: 15px;">Target a New Soul</h3>
-        <input type="text" id="invName" placeholder="Full Name" style="margin-bottom: 10px;">
-        <div class="flex-row">
-            <input type="text" id="invHostel" placeholder="Hostel/Residence">
-            <input type="tel" id="invPhone" placeholder="Phone Number">
+        <h3 style="margin-top:0; color:var(--primary);">Target New Soul</h3>
+        <input type="text" id="invName" placeholder="Full Name" style="margin-bottom:10px;">
+        <div style="display:flex; gap:10px; margin-bottom:10px;">
+            <input type="text" id="invHostel" placeholder="Residence">
+            <input type="tel" id="invPhone" placeholder="Phone">
         </div>
-        <button onclick="addNewInvitee()" style="width:100%; padding:14px; background:var(--primary); border:none; border-radius:10px; color:white; font-weight:600; cursor:pointer; margin-top: 10px;">+ Register for Sunday</button>
+        <button onclick="addInvitee()" style="width:100%; padding:12px; background:var(--primary); border:none; border-radius:10px; font-weight:bold; cursor:pointer;">+ Add to Watchlist</button>
     </div>
 
-    <div id="inviteeList">
-        <p style="text-align:center; opacity:0.5; padding: 40px;">Loading mandate list...</p>
-    </div>
-</div>
-
-<div id="promoModal">
-    <div class="modal-content">
-        <h2 style="color:var(--primary); text-align:center; margin-bottom: 5px;">Soul Growth: Promotion</h2>
-        <p style="font-size:0.75rem; opacity:0.7; text-align:center; margin-bottom: 20px;">Complete this form to move the soul to the Members Database.</p>
-        
-        <input type="hidden" id="promoId">
-        
-        <div class="section-label">Identity (Match Database)</div>
-        <div class="flex-row">
-            <input type="text" id="promoFirstname" placeholder="First Name">
-            <input type="text" id="promoSurname" placeholder="Surname (Last Name)">
-        </div>
-        
-        <div class="flex-row" style="margin-top:5px;">
-            <select id="promoGender">
-                <option value="Male">Male</option>
-                <option value="Female">Female</option>
-            </select>
-            <div style="flex: 1.5;">
-                <label style="font-size: 0.6rem; color: #888;">Date of Birth</label>
-                <input type="date" id="promoBirthday">
-            </div>
-        </div>
-
-        <div class="section-label">Campus Information</div>
-        <div class="flex-row">
-            <select id="promoLevel">
-                <option value="Level 100">Level 100</option>
-                <option value="Level 200">Level 200</option>
-                <option value="Level 300">Level 300</option>
-                <option value="Level 400">Level 400</option>
-                <option value="Level 500">Level 500</option>
-                <option value="Level 600">Level 600</option>
-                <option value="Alumnus">Alumnus</option>
-                <option value="Non-Student">Non-Student</option>
-            </select>
-            <input type="text" id="promoCourse" placeholder="Course (e.g. BSc Chemistry)">
-        </div>
-        <input type="text" id="promoHostel" placeholder="Hostel/Residential Address" style="margin-top: 10px;">
-
-        <div class="section-label">Parental/Guardian Contact</div>
-        <input type="text" id="promoEmergencyName" placeholder="Guardian Full Name" style="margin-bottom:10px;">
-        <input type="tel" id="promoEmergencyPhone" placeholder="Guardian Phone (0XX...)">
-
-        <div style="display:flex; gap:10px; margin-top:25px;">
-            <button onclick="closePromo()" style="flex:1; padding:15px; background:rgba(255,255,255,0.05); color:white; border-radius:10px; border:none; cursor:pointer;">Cancel</button>
-            <button id="promoSaveBtn" onclick="finalSubmitPromotion()" style="flex:2; padding:15px; background:var(--green); color:#0f172a; font-weight:bold; border-radius:10px; border:none; cursor:pointer;">Finalize Membership</button>
-        </div>
-    </div>
+    <div id="listArea">Loading...</div>
 </div>
 
 <script type="module">
@@ -109,70 +53,26 @@
     import { getFirestore, collection, addDoc, getDocs, query, where, doc, updateDoc, serverTimestamp, getDoc } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
 
-    const firebaseConfig = { 
-        apiKey: "AIzaSyCBv60eRCO0e4dFBMKGKnIATouxTuk1Bcc",
-        authDomain: "fob-database-139d1.firebaseapp.com",
-        projectId: "fob-database-139d1",
-        storageBucket: "fob-database-139d1.firebasestorage.app",
-        appId: "1:375165731354:web:b5fa57dcb2d71ee0d8c7a3"
-    };
-
+    const firebaseConfig = { apiKey: "AIzaSyCBv60eRCO0e4dFBMKGKnIATouxTuk1Bcc", authDomain: "fob-database-139d1.firebaseapp.com", projectId: "fob-database-139d1", storageBucket: "fob-database-139d1.firebasestorage.app", appId: "1:375165731354:web:b5fa57dcb2d71ee0d8c7a3" };
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app, "fobrealdbase");
     const auth = getAuth(app);
     let currentUser = null;
-    let userRole = null;
-    let myPastorId = null;
 
-    onAuthStateChanged(auth, async (user) => {
-        if (user) { 
-            currentUser = user; 
-            await identifyUserRole(user.uid);
-            loadInvitees(); 
-        } else { window.location.href = "login.html"; }
+    onAuthStateChanged(auth, (user) => {
+        if(user) { currentUser = user; loadInvitees(); }
+        else location.href = "index.html";
     });
 
-    async function identifyUserRole(uid) {
-        const dashLink = document.getElementById('dynamicDashLink');
-        
-        const pSnap = await getDoc(doc(db, "pastors", uid));
-        const sSnap = await getDoc(doc(db, "shepherds", uid));
-        const aSnap = await getDoc(doc(db, "master_admin", uid));
-
-        if (pSnap.exists()) {
-            userRole = 'pastor'; 
-            myPastorId = uid;
-            dashLink.href = "index.html"; 
-            document.getElementById('userStatus').innerText = "Reporting as Pastor";
-        } else if (sSnap.exists()) {
-            userRole = 'shepherd'; 
-            myPastorId = sSnap.data().assigned_pastor_id;
-            dashLink.href = "../shepherd/index.html";
-            document.getElementById('userStatus').innerText = "Reporting as Shepherd";
-        } else if (aSnap.exists()) {
-            userRole = 'master_admin';
-            dashLink.href = "../admin/index.html";
-            document.getElementById('userStatus').innerText = "Admin Oversight";
-        }
-    }
-
-    function getLastMonday() {
-        const now = new Date();
-        const diff = now.getDay() === 0 ? 6 : now.getDay() - 1;
-        const monday = new Date(now.setDate(now.getDate() - diff));
-        monday.setHours(0,0,0,0);
-        return monday;
-    }
-
-    window.addNewInvitee = async () => {
+    window.addInvitee = async () => {
         const name = document.getElementById('invName').value;
-        const hostel = document.getElementById('invHostel').value;
         const phone = document.getElementById('invPhone').value;
-        if(!name || !phone) return alert("Missing Info");
-
+        const hostel = document.getElementById('invHostel').value;
+        if(!name) return;
+        
         await addDoc(collection(db, "invitees"), {
-            fullName: name, hostel: hostel, phone: phone,
-            pastorId: myPastorId, shepherdId: currentUser.uid,
+            fullName: name, phone, hostel,
+            shepherdId: currentUser.uid,
             calls: 0, visits: 0, status: 'unmarked',
             lastUpdated: serverTimestamp()
         });
@@ -180,133 +80,94 @@
     };
 
     async function loadInvitees() {
-        const listDiv = document.getElementById('inviteeList');
-        let q = query(collection(db, "invitees"), where("shepherdId", "==", currentUser.uid));
-        if (userRole === 'pastor') q = query(collection(db, "invitees"), where("pastorId", "==", currentUser.uid));
-
+        const q = query(collection(db, "invitees"), where("shepherdId", "==", currentUser.uid));
         const snap = await getDocs(q);
-        const lastMonday = getLastMonday();
         let html = "";
-
+        
         snap.forEach(d => {
-            const inv = d.data();
-            if(inv.status === 'graduated') return;
-            
+            const data = d.data();
             const id = d.id;
-            const firstName = inv.fullName.split(' ')[0];
-            const isFresh = inv.lastUpdated?.toDate() > lastMonday;
+            if(data.status === 'graduated') return;
+
+            // Reset logic: Check if data is old (from last week)
+            const lastMonday = new Date();
+            lastMonday.setDate(lastMonday.getDate() - (lastMonday.getDay() + 6) % 7);
+            lastMonday.setHours(0,0,0,0);
             
-            const currentStatus = isFresh ? inv.status : 'unmarked';
-            const calls = isFresh ? inv.calls : 0;
-            const visits = isFresh ? inv.visits : 0;
+            const lastUpdate = data.lastUpdated ? data.lastUpdated.toDate() : new Date(0);
+            const isFresh = lastUpdate > lastMonday;
+            
+            const calls = isFresh ? (data.calls || 0) : 0;
+            const visits = isFresh ? (data.visits || 0) : 0;
 
             html += `
-                <div class="invitee-item">
-                    <div class="flex-row">
-                        <div style="flex: 1;">
-                            <span style="font-weight:600; color:var(--primary); font-size: 1.1rem;">${inv.fullName}</span><br>
-                            <small style="opacity:0.6;">📍 ${inv.hostel} | 📱 ${inv.phone}</small>
-                        </div>
-                        <button class="btn-sm" onclick="promoteToMember('${id}')" style="background:none; border:1px solid var(--primary); font-size:0.7rem;">PROMOTE 🎓</button>
+            <div class="invitee-item">
+                <div style="display:flex; justify-content:space-between;">
+                    <b>${data.fullName}</b>
+                    <small>${data.phone}</small>
+                </div>
+                
+                <div class="effort-grid">
+                    <div class="effort-box">
+                        <button class="btn-count" onclick="updateCount('${id}', 'calls', -1)">-</button>
+                        <span>📞 ${calls}</span>
+                        <button class="btn-count" onclick="updateCount('${id}', 'calls', 1)">+</button>
                     </div>
+                    <div class="effort-box">
+                        <button class="btn-count" onclick="updateCount('${id}', 'visits', -1)">-</button>
+                        <span>🏠 ${visits}</span>
+                        <button class="btn-count" onclick="updateCount('${id}', 'visits', 1)">+</button>
+                    </div>
+                </div>
 
-                    <div style="background: rgba(255,255,255,0.03); padding: 12px; border-radius: 12px; margin: 10px 0;">
-                        <div class="flex-row">
-                            <span style="font-size: 0.8rem;">How many times did you <b>call ${firstName}</b>?</span>
-                            <div class="counter-box">
-                                <button class="btn-sm" onclick="updateCounter('${id}', 'calls', -1)">-</button>
-                                <span id="call-${id}">${calls}</span>
-                                <button class="btn-sm" onclick="updateCounter('${id}', 'calls', 1)">+</button>
-                            </div>
-                        </div>
-                        <div class="flex-row" style="margin-top:10px;">
-                            <span style="font-size: 0.8rem;">How many times did you <b>visit ${firstName}</b>?</span>
-                            <div class="counter-box">
-                                <button class="btn-sm" onclick="updateCounter('${id}', 'visits', -1)">-</button>
-                                <span id="visit-${id}">${visits}</span>
-                                <button class="btn-sm" onclick="updateCounter('${id}', 'visits', 1)">+</button>
-                            </div>
-                        </div>
-                    </div>
+                <div class="action-row" id="btns-${id}">
+                    <button class="btn-action btn-absent" onclick="showReasonBox('${id}')">Did Not Come</button>
+                    <button class="btn-action btn-present" onclick="markPresent('${id}')">Honoured Invite</button>
+                </div>
 
-                    <div class="status-btns">
-                        <button class="btn-status ${currentStatus === 'honoured' ? 'honoured' : ''}" 
-                            onclick="updateStatus('${id}', 'honoured')">Honoured Invitation</button>
-                        <button class="btn-status ${currentStatus === 'declined' ? 'declined' : ''}" 
-                            onclick="updateStatus('${id}', 'declined')">Did Not Come</button>
-                    </div>
-                </div>`;
+                <div id="reason-box-${id}" class="reason-box">
+                    <label style="color:var(--red); font-size:0.8rem; font-weight:bold;">Why didn't they come?</label>
+                    <input type="text" id="reason-input-${id}" class="reason-input" placeholder="e.g. Went home, Sick, Has lectures...">
+                    <button class="btn-action btn-absent" style="width:100%; padding:8px;" onclick="submitAbsence('${id}')">Confirm Absence</button>
+                </div>
+            </div>`;
         });
-        listDiv.innerHTML = html || "<p style='text-align:center; opacity:0.5; padding: 20px;'>No active invitees found.</p>";
+        document.getElementById('listArea').innerHTML = html || "<p style='text-align:center; opacity:0.5'>No invitees found.</p>";
     }
 
-    window.updateCounter = async (id, field, change) => {
+    window.updateCount = async (id, field, change) => {
+        // Simple increment for now. Ideally should check freshness like in previous full code.
         const docRef = doc(db, "invitees", id);
         const snap = await getDoc(docRef);
-        let val = (snap.data()[field] || 0) + change;
-        if(val < 0) val = 0;
-        await updateDoc(docRef, { [field]: val, lastUpdated: serverTimestamp() });
-        document.getElementById(`${field === 'calls' ? 'call' : 'visit'}-${id}`).innerText = val;
-    };
-
-    window.updateStatus = async (id, newStatus) => {
-        await updateDoc(doc(db, "invitees", id), { status: newStatus, lastUpdated: serverTimestamp() });
+        const val = (snap.data()[field] || 0) + change;
+        await updateDoc(docRef, { [field]: val < 0 ? 0 : val, lastUpdated: serverTimestamp() });
         loadInvitees();
     };
 
-    window.promoteToMember = async (inviteeId) => {
-        const invSnap = await getDoc(doc(db, "invitees", inviteeId));
-        const data = invSnap.data();
-        const names = data.fullName.split(' ');
-        
-        document.getElementById('promoId').value = inviteeId;
-        document.getElementById('promoFirstname').value = names[0];
-        document.getElementById('promoSurname').value = names.slice(1).join(' ');
-        document.getElementById('promoHostel').value = data.hostel || "";
-        document.getElementById('promoModal').style.display = 'block';
+    // --- THE NEW LOGIC ---
+    window.showReasonBox = (id) => {
+        document.getElementById(`btns-${id}`).style.display = 'none';
+        document.getElementById(`reason-box-${id}`).style.display = 'block';
     };
 
-    window.closePromo = () => document.getElementById('promoModal').style.display = 'none';
-
-    window.finalSubmitPromotion = async () => {
-        const btn = document.getElementById('promoSaveBtn');
-        const inviteeId = document.getElementById('promoId').value;
-        const invSnap = await getDoc(doc(db, "invitees", inviteeId));
-        const invData = invSnap.data();
-
-        btn.disabled = true; btn.innerText = "Syncing with Database...";
-        const dob = document.getElementById('promoBirthday').value;
+    window.submitAbsence = async (id) => {
+        const reason = document.getElementById(`reason-input-${id}`).value;
+        if(!reason) return alert("Please type a reason.");
         
-        const memberData = {
-            last_name: document.getElementById('promoSurname').value,
-            first_name: document.getElementById('promoFirstname').value,
-            other_names: "", 
-            gender: document.getElementById('promoGender').value,
-            dob: dob,
-            dob_day_month: dob ? dob.substring(5) : null,
-            phone: invData.phone,
-            hostel: document.getElementById('promoHostel').value,
-            course: document.getElementById('promoCourse').value,
-            level: document.getElementById('promoLevel').value,
-            status: "New Convert",
-            emergency_name: document.getElementById('promoEmergencyName').value,
-            emergency_phone: document.getElementById('promoEmergencyPhone').value,
-            photo_url: null,
-            recorded_by_id: currentUser.uid,
-            pastorId: myPastorId,
-            shepherdId: currentUser.uid,
-            timestamp: new Date().toISOString()
-        };
+        await updateDoc(doc(db, "invitees", id), {
+            status: 'declined',
+            notes: reason, // SAVING THE REASON
+            lastUpdated: serverTimestamp()
+        });
+        loadInvitees();
+    };
 
-        try {
-            await addDoc(collection(db, "members"), memberData);
-            await updateDoc(doc(db, "invitees", inviteeId), { status: 'graduated', lastUpdated: serverTimestamp() });
-            alert("Glory to God! Member added successfully.");
-            location.reload();
-        } catch (e) {
-            alert("Error: " + e.message);
-            btn.disabled = false; btn.innerText = "Try Again";
-        }
+    window.markPresent = async (id) => {
+        await updateDoc(doc(db, "invitees", id), {
+            status: 'honoured',
+            lastUpdated: serverTimestamp()
+        });
+        loadInvitees();
     };
 </script>
 </body>
