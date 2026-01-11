@@ -137,18 +137,15 @@
         if(user) { 
             currentUser = user; 
             await determineRole(user.uid);
-            fetchNextEvent(); // <--- NEW: Get the target event
+            fetchNextEvent(); 
             loadInvitees(); 
         } else { location.href = "index.html"; }
     });
 
-    // --- NEW: FETCH NEXT EVENT ---
+    // --- FIX: LOOK FOR 'name' FIELD ---
     async function fetchNextEvent() {
-        // Find the closest event in the future (or today)
         const todayStr = new Date().toISOString().split('T')[0];
-        
         try {
-            // "Give me events where date >= today, sort by date ascending (closest first), take 1"
             const q = query(
                 collection(db, "events"), 
                 where("date", ">=", todayStr),
@@ -162,12 +159,14 @@
             if (!snap.empty) {
                 const evt = snap.docs[0].data();
                 const d = evt.date && evt.date.toDate ? evt.date.toDate() : new Date(evt.date);
-                banner.innerText = `🎯 Target: ${evt.title} (${d.toLocaleDateString()})`;
+                // LOOK FOR 'name' OR 'title'
+                const eventName = evt.name || evt.title || "Upcoming Service";
+                banner.innerText = `🎯 Target: ${eventName} (${d.toLocaleDateString()})`;
             } else {
                 banner.innerText = "No upcoming service scheduled.";
             }
         } catch(e) {
-            console.log("Event fetch error:", e); // Likely needs index
+            console.log("Event fetch error:", e);
             document.getElementById('eventBanner').innerText = "Target: Upcoming Sunday Service";
         }
     }
