@@ -13,6 +13,13 @@
         /* HEADER */
         .header-flex { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
         h1 { margin: 0; font-size: 1.5rem; }
+        
+        /* EVENT BANNER (New Feature) */
+        .event-banner {
+            background: rgba(79, 172, 254, 0.1); border: 1px solid var(--primary);
+            color: var(--primary); padding: 10px; border-radius: 12px;
+            text-align: center; margin-bottom: 20px; font-size: 0.9rem; font-weight: 600;
+        }
 
         /* CARD STYLES */
         .card { background: var(--glass); padding: 20px; border-radius: 20px; border: 1px solid var(--border); margin-bottom: 20px; backdrop-filter: blur(10px); }
@@ -36,12 +43,10 @@
         .btn-present { background: rgba(0, 255, 136, 0.1); color: var(--green); border: 1px solid rgba(0, 255, 136, 0.3); }
         .btn-absent { background: rgba(255, 75, 92, 0.1); color: var(--red); border: 1px solid rgba(255, 75, 92, 0.3); }
         
-        /* TOP CONTROLS */
         .top-controls { display: flex; justify-content: space-between; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.05); }
         .btn-promote { background: none; border: 1px solid var(--primary); color: var(--primary); padding: 4px 12px; border-radius: 6px; font-size: 0.7rem; cursor: pointer; font-weight: bold; }
         .btn-delete { background: none; border: 1px solid var(--red); color: var(--red); padding: 4px 12px; border-radius: 6px; font-size: 0.7rem; cursor: pointer; opacity: 0.7; transition: 0.2s; }
-        .btn-delete:hover { opacity: 1; background: rgba(255, 75, 92, 0.1); }
-
+        
         /* REASON BOX */
         .reason-box { display: none; margin-top: 15px; background: rgba(255, 75, 92, 0.05); padding: 15px; border-radius: 12px; border: 1px solid rgba(255, 75, 92, 0.3); }
         
@@ -59,6 +64,10 @@
             <p id="roleDisplay" style="opacity:0.6; font-size: 0.8rem; margin-top:5px;">Identifying Role...</p>
         </div>
         <a id="dashLink" href="#" style="color:var(--primary); text-decoration:none; border:1px solid var(--primary); padding:6px 14px; border-radius:8px; font-size:0.8rem;">Dashboard</a>
+    </div>
+
+    <div id="eventBanner" class="event-banner">
+        Loading next event...
     </div>
 
     <div class="card">
@@ -95,6 +104,8 @@
             <option value="Level 200">Level 200</option>
             <option value="Level 300">Level 300</option>
             <option value="Level 400">Level 400</option>
+            <option value="Level 500">Level 500</option>
+            <option value="Level 600">Level 600</option>
             <option value="Non-Student">Non-Student</option>
         </select>
         <input type="text" id="promoCourse" placeholder="Course">
@@ -109,9 +120,9 @@
 </div>
 
 <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
-    import { getFirestore, collection, addDoc, getDocs, query, where, doc, updateDoc, serverTimestamp, getDoc, arrayUnion, deleteDoc } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
-    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, collection, addDoc, getDocs, query, where, doc, updateDoc, serverTimestamp, getDoc, arrayUnion, deleteDoc, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
     const firebaseConfig = { apiKey: "AIzaSyCBv60eRCO0e4dFBMKGKnIATouxTuk1Bcc", authDomain: "fob-database-139d1.firebaseapp.com", projectId: "fob-database-139d1", storageBucket: "fob-database-139d1.firebasestorage.app", appId: "1:375165731354:web:b5fa57dcb2d71ee0d8c7a3" };
     const app = initializeApp(firebaseConfig);
@@ -126,9 +137,40 @@
         if(user) { 
             currentUser = user; 
             await determineRole(user.uid);
+            fetchNextEvent(); // <--- NEW: Get the target event
             loadInvitees(); 
         } else { location.href = "index.html"; }
     });
+
+    // --- NEW: FETCH NEXT EVENT ---
+    async function fetchNextEvent() {
+        // Find the closest event in the future (or today)
+        const todayStr = new Date().toISOString().split('T')[0];
+        
+        try {
+            // "Give me events where date >= today, sort by date ascending (closest first), take 1"
+            const q = query(
+                collection(db, "events"), 
+                where("date", ">=", todayStr),
+                orderBy("date", "asc"),
+                limit(1)
+            );
+            
+            const snap = await getDocs(q);
+            const banner = document.getElementById('eventBanner');
+            
+            if (!snap.empty) {
+                const evt = snap.docs[0].data();
+                const d = evt.date && evt.date.toDate ? evt.date.toDate() : new Date(evt.date);
+                banner.innerText = `🎯 Target: ${evt.title} (${d.toLocaleDateString()})`;
+            } else {
+                banner.innerText = "No upcoming service scheduled.";
+            }
+        } catch(e) {
+            console.log("Event fetch error:", e); // Likely needs index
+            document.getElementById('eventBanner').innerText = "Target: Upcoming Sunday Service";
+        }
+    }
 
     async function determineRole(uid) {
         const link = document.getElementById('dashLink');
