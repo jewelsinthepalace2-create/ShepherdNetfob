@@ -51,9 +51,9 @@
     <div class="header-flex">
         <div>
             <h1>Invitee Mandate</h1>
-            <p id="roleDisplay" style="opacity:0.6; font-size: 0.8rem; margin-top:5px;">Loading Profile...</p>
+            <p id="roleDisplay" style="opacity:0.6; font-size: 0.8rem; margin-top:5px;">Identifying Role...</p>
         </div>
-        <a href="index.html" style="color:var(--primary); text-decoration:none; border:1px solid var(--primary); padding:6px 14px; border-radius:8px; font-size:0.8rem;">Dashboard</a>
+        <a id="dashLink" href="#" style="color:var(--primary); text-decoration:none; border:1px solid var(--primary); padding:6px 14px; border-radius:8px; font-size:0.8rem;">Dashboard</a>
     </div>
 
     <div class="card">
@@ -114,7 +114,7 @@
     const auth = getAuth(app);
     
     let currentUser = null;
-    let myRole = null; // 'shepherd' or 'pastor'
+    let myRole = null; 
     let myPastorId = null; 
 
     onAuthStateChanged(auth, async (user) => {
@@ -125,25 +125,39 @@
         } else { location.href = "index.html"; }
     });
 
-    // --- 0. ROLE DETECTION ---
+    // --- 0. SMART ROLE DETECTION & LINKING ---
     async function determineRole(uid) {
+        const link = document.getElementById('dashLink');
+        const roleText = document.getElementById('roleDisplay');
+
+        // Check Collections
+        const aSnap = await getDoc(doc(db, "master_admin", uid));
         const pSnap = await getDoc(doc(db, "pastors", uid));
         const sSnap = await getDoc(doc(db, "shepherds", uid));
         
-        if (pSnap.exists()) {
+        if (aSnap.exists()) {
+            myRole = 'master_admin';
+            myPastorId = uid; // Admin acts as their own Pastor
+            link.href = "../admin/index.html";
+            roleText.innerText = "Master Admin Oversight";
+        } 
+        else if (pSnap.exists()) {
             myRole = 'pastor';
-            myPastorId = uid;
-            document.getElementById('roleDisplay').innerText = "Logged in as Pastor";
-        } else if (sSnap.exists()) {
+            myPastorId = uid; // Pastor is self-governing
+            link.href = "../pastor/index.html";
+            roleText.innerText = "Pastor's Mandate";
+        } 
+        else if (sSnap.exists()) {
             myRole = 'shepherd';
-            // Shepherds usually have an 'assigned_pastor_id' or 'pastorId' field
+            // Shepherds must have a pastor assigned in their DB document
             myPastorId = sSnap.data().assigned_pastor_id || sSnap.data().pastorId; 
-            document.getElementById('roleDisplay').innerText = "Logged in as Shepherd";
-        } else {
-            // Fallback for Master Admin
-            myRole = 'pastor'; 
-            myPastorId = uid; 
-            document.getElementById('roleDisplay').innerText = "Logged in as Admin";
+            link.href = "../shepherd/index.html";
+            roleText.innerText = "Shepherd's Watch";
+        } 
+        else {
+            // Fallback (e.g. unassigned user)
+            link.href = "index.html"; 
+            roleText.innerText = "Unassigned User";
         }
     }
 
@@ -152,42 +166,46 @@
         const name = document.getElementById('invName').value;
         const phone = document.getElementById('invPhone').value;
         const hostel = document.getElementById('invHostel').value;
-        
         if(!name) return alert("Name is required");
 
-        // Logic: If I am a Shepherd, save my ID. If I am a Pastor, save mine.
-        const shepherdId = myRole === 'shepherd' ? currentUser.uid : null;
-        const pastorId = myRole === 'pastor' ? currentUser.uid : myPastorId;
+        // Logic: 
+        // If Shepherd -> shepherdId = Me, pastorId = My Boss
+        // If Pastor/Admin -> shepherdId = Me (direct oversight), pastorId = Me
+        
+        const shepherdId = currentUser.uid; // Whoever adds it is the "Shepherd" of that soul initially
+        const pastorId = (myRole === 'master_admin' || myRole === 'pastor') ? currentUser.uid : myPastorId;
 
         await addDoc(collection(db, "invitees"), {
             fullName: name, phone, hostel,
             shepherdId: shepherdId,
             pastorId: pastorId,
-            // Current Week Stats
             calls: 0, visits: 0, status: 'unmarked', notes: "",
             lastUpdated: serverTimestamp(),
-            history: [] // Array to store past performance
+            history: [] 
         });
         location.reload();
     };
 
-    // --- 2. LOAD LIST WITH "FRESHNESS" CHECK ---
+    // --- 2. LOAD LIST (Query Logic) ---
     async function loadInvitees() {
         const listDiv = document.getElementById('listArea');
-        
-        // Query based on Role
         let q;
+
+        // QUERY RULES:
+        // 1. Shepherd -> See only my direct invitees (shepherdId == Me)
+        // 2. Pastor OR Admin -> See ALL invitees under my branch (pastorId == Me)
+        
         if(myRole === 'shepherd') {
             q = query(collection(db, "invitees"), where("shepherdId", "==", currentUser.uid));
         } else {
-            // Pastors see everyone under them
+            // This covers both 'pastor' and 'master_admin'
             q = query(collection(db, "invitees"), where("pastorId", "==", currentUser.uid));
         }
 
         const snap = await getDocs(q);
         let html = "";
         
-        // Define "Fresh" Window (Since last Monday)
+        // "Freshness" Window (Since last Monday)
         const lastMonday = new Date();
         lastMonday.setDate(lastMonday.getDate() - (lastMonday.getDay() + 6) % 7);
         lastMonday.setHours(0,0,0,0);
@@ -206,12 +224,10 @@
             const lastUpdate = data.lastUpdated ? data.lastUpdated.toDate() : new Date(0);
             const isFresh = lastUpdate > lastMonday;
 
-            // VISUAL VALUES (If old, show 0)
             const dCalls = isFresh ? (data.calls || 0) : 0;
             const dVisits = isFresh ? (data.visits || 0) : 0;
             const dStatus = isFresh ? (data.status || 'unmarked') : 'unmarked';
 
-            // STYLES
             const pStyle = dStatus === 'honoured' ? 'background:var(--green); color:#0f172a;' : '';
             const aStyle = dStatus === 'declined' ? 'background:var(--red); color:white;' : '';
 
@@ -267,7 +283,6 @@
         const snap = await getDoc(docRef);
         const old = snap.data();
         
-        // Archive old data
         const entry = {
             period: old.lastUpdated || new Date(),
             calls: old.calls || 0,
@@ -276,7 +291,6 @@
             notes: old.notes || ""
         };
 
-        // Reset fields
         await updateDoc(docRef, {
             history: arrayUnion(entry),
             calls: 0, visits: 0, status: 'unmarked', notes: "",
@@ -289,7 +303,7 @@
         const docRef = doc(db, "invitees", id);
         if(!isFresh) await handleFreshness(docRef, false);
 
-        const snap = await getDoc(docRef); // Re-fetch to get reset value if needed
+        const snap = await getDoc(docRef); 
         let val = (snap.data()[field] || 0) + change;
         if(val < 0) val = 0;
 
@@ -339,7 +353,6 @@
         btn.disabled = true; btn.innerText = "Processing...";
 
         try {
-            // Get original invitee data for phone/hostel fallback
             const invSnap = await getDoc(doc(db, "invitees", id));
             const invData = invSnap.data();
 
