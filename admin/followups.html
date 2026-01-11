@@ -149,6 +149,7 @@
     async function init() {
         try {
             // 1. FETCH RAW DATA
+            // We fetch 100 events to ensure we have enough history
             const eventSnap = await getDocs(query(collection(db, "events"), orderBy("date", "desc"), limit(100)));
             const attSnap = await getDocs(collection(db, "attendance"));
             const memSnap = await getDocs(collection(db, "members"));
@@ -159,39 +160,181 @@
                 return;
             }
 
-            // 2. PROCESS EVENTS (Remove Future Dates AND Dawn Prayers)
-            const now = new Date();
-            now.setHours(23, 59, 59, 999);
-
+            // 2. PROCESS EVENTS (Relaxed Filter)
+            // We ONLY filter out "Dawn Prayers" here. We keep future events in memory for now.
             GLOBAL_EVENTS = eventSnap.docs.map(d => {
                 const data = d.data();
                 const jsDate = (data.date && data.date.toDate) ? data.date.toDate() : new Date(data.date);
-                // Standardize title
                 const title = data.name || data.title || "Service";
                 return { id: d.id, ...data, title: title, jsDate: jsDate };
             })
             .filter(e => {
-                // FILTER: Exclude Future events AND "Dawn Prayers"
-                const isPast = e.jsDate <= now;
-                const isNotDawn = !e.title.toLowerCase().includes("dawn prayer");
-                return isPast && isNotDawn;
+                // Only remove Dawn Prayers. Keep everything else.
+                return !e.title.toLowerCase().includes("dawn prayer");
             });
 
+            // Sort Oldest -> Newest
             GLOBAL_EVENTS.sort((a, b) => a.jsDate - b.jsDate);
 
-            // 3. STORE DATA
+            // 3. STORE OTHER DATA
             GLOBAL_ATT = attSnap.docs.map(d => ({id:d.id, ...d.data()}));
             GLOBAL_MEM = memSnap.docs.map(d => ({id:d.id, ...d.data()}));
             GLOBAL_INV = invSnap.docs.map(d => ({id:d.id, ...d.data()}));
 
             // 4. RENDER
-            window.updateTimeframe(); 
-            renderNextSundayTargets();
+            renderNextSundayTargets(); // This works, so we run it.
+            window.updateTimeframe();  // Now we run the analytics.
 
         } catch (error) {
             console.error(error);
             document.getElementById('eventLabel').innerText = "Error Loading Data.";
         }
+    }
+
+    // --- ANALYTICS FILTER LOGIC ---
+    window.updateTimeframe = () => {
+        // Safety Check
+        if (GLOBAL_EVENTS.length === 0) {
+            document.getElementById('eventLabel').innerText = "No Service Data Found.";
+            return;
+        }
+
+        const filterVal = document.getElementById('timeFilter').value;
+        const endOfToday = new Date(); 
+        endOfToday.setHours(23, 59, 59, 999); // Include today's events
+
+        // 1. First, isolate ONLY past/present events
+        const allPastEvents = GLOBAL_EVENTS.filter(e => e.jsDate <= endOfToday);
+
+        if (allPastEvents.length === 0) {
+            // Fallback: If no past events exist, try to show the oldest future one just so the screen isn't blank
+            // Or show a specific message
+             document.getElementById('eventLabel').innerText = "Waiting for first service...";
+             return;
+        }
+
+        let eventsToRender = [];
+
+        // 2. Apply Time Window Filter
+        if (filterVal === 'auto') {
+            // Auto: Just take the last 5 events that happened
+            eventsToRender = allPastEvents.slice(-5);
+        } else {
+            // Time Window: Calculate cutoff date
+            const cutoffDate = new Date();
+            if(filterVal === 'week') cutoffDate.setDate(cutoffDate.getDate() - 7);
+            else cutoffDate.setMonth(cutoffDate.getMonth() - parseInt(filterVal));
+            cutoffDate.setHours(0,0,0,0);
+
+            // Filter the past events by this window
+            eventsToRender = allPastEvents.filter(e => e.jsDate >= cutoffDate);
+        }
+
+        // 3. Final Check & Render
+        if (eventsToRender.length === 0) {
+            // If the window is too small (e.g., "Last Week" but no service last week),
+            // Fallback to showing the last known service.
+            eventsToRender = [allPastEvents[allPastEvents.length - 1]];
+        }
+
+        const latestEvent = eventsToRender[eventsToRender.length - 1];
+        document.getElementById('eventLabel').innerText = `Focus: ${latestEvent.title} • ${latestEvent.jsDate.toLocaleDateString()}`;
+        
+        calculateStats(eventsToRender, latestEvent);
+    };
+
+    function calculateStats(events, latestEvent) {
+        let graphLabels = [], graphExpected = [], graphActual = [], allNotes = [], latestRegistry = [];
+
+        events.forEach(evt => {
+            const eDate = evt.jsDate;
+            const dayStart = new Date(eDate); dayStart.setHours(0,0,0,0);
+            const dayEnd = new Date(eDate); dayEnd.setHours(23,59,59,999);
+            
+            graphLabels.push(eDate.toLocaleDateString(undefined, {month:'short', day:'numeric'}));
+
+            // EXPECTED: All Members + Active Invitees
+            let activeInvitees = 0;
+            GLOBAL_INV.forEach(inv => {
+                const invDate = inv.lastUpdated ? inv.lastUpdated.toDate() : new Date(0);
+                if (invDate <= dayEnd) activeInvitees++;
+            });
+            let expectedCount = GLOBAL_MEM.length + activeInvitees;
+
+            // ACTUAL: Present Members + Honoured Invitees
+            let presentCount = 0;
+            GLOBAL_ATT.forEach(d => {
+                const t = d.timestamp ? d.timestamp.toDate() : new Date(d.date || 0);
+                if(t >= dayStart && t <= dayEnd && d.status && d.status.toLowerCase().includes('present')) presentCount++;
+            });
+            
+            GLOBAL_INV.forEach(inv => {
+                const lastUp = inv.lastUpdated ? inv.lastUpdated.toDate() : new Date(0);
+                // Check if invitee was active/honoured on THIS specific event day
+                // 1. Check current status if date matches
+                const isFresh = lastUp > dayStart && lastUp < dayEnd;
+                if(isFresh && inv.status === 'honoured') {
+                    presentCount++;
+                } 
+                // 2. Check history array
+                else if(inv.history && Array.isArray(inv.history)) {
+                    inv.history.forEach(h => {
+                        const hDate = h.period.toDate();
+                        if(hDate >= dayStart && hDate <= dayEnd && h.status === 'honoured') {
+                            presentCount++;
+                        }
+                    });
+                }
+            });
+
+            if(expectedCount === 0) expectedCount = presentCount; // Prevent div by zero visuals
+            graphExpected.push(expectedCount);
+            graphActual.push(presentCount);
+        });
+
+        // TABLE DATA (Based on Latest Event)
+        const startDay = new Date(latestEvent.jsDate); startDay.setHours(0,0,0,0);
+        const endDay = new Date(latestEvent.jsDate); endDay.setHours(23,59,59,999);
+        
+        // Map Attendance for speed
+        let attMap = {};
+        GLOBAL_ATT.forEach(d => {
+            const t = d.timestamp ? d.timestamp.toDate() : new Date(d.date||0);
+            if(t >= startDay && t <= endDay) attMap[d.memberId || d.id.split('_')[0]] = d;
+        });
+
+        // Members List
+        GLOBAL_MEM.forEach(m => {
+            const rec = attMap[m.id];
+            let name = m.full_name || `${m.first_name||''} ${m.last_name||''}`.trim() || "Unknown";
+            const isPresent = rec && rec.status && rec.status.toLowerCase().includes('present');
+            const note = (rec && rec.notes) ? rec.notes : "";
+            
+            if(note && !isPresent) allNotes.push({name, note, type:'Member'});
+            
+            latestRegistry.push({
+                name, type:'member', present:isPresent, effort:"—", 
+                note: isPresent ? "" : (note || "Absent")
+            });
+        });
+
+        // Invitees List
+        GLOBAL_INV.forEach(i => {
+            if(i.status === 'graduated') return;
+            const name = i.fullName || "Unknown";
+            const isPresent = i.status === 'honoured'; // Simplified for latest view
+            const note = i.notes || "";
+            
+            if(note && !isPresent) allNotes.push({name, note, type:'Invitee'});
+            
+            latestRegistry.push({
+                name, type:'invitee', present:isPresent, 
+                effort: `📞${i.calls||0}|🏠${i.visits||0}`, 
+                note: isPresent ? "" : (note || "No Report")
+            });
+        });
+
+        renderUI(graphLabels, graphExpected, graphActual, allNotes, latestRegistry);
     }
 
     function renderNextSundayTargets() {
@@ -223,124 +366,44 @@
         }).join('');
     }
 
-    // --- FILTER LOGIC ---
-    window.updateTimeframe = () => {
-        const filterVal = document.getElementById('timeFilter').value;
-        const endOfToday = new Date(); endOfToday.setHours(23,59,59,999);
-        
-        let filteredEvents = [];
-
-        if (filterVal !== 'auto') {
-            const cutoffDate = new Date();
-            if(filterVal === 'week') cutoffDate.setDate(cutoffDate.getDate() - 7);
-            else cutoffDate.setMonth(cutoffDate.getMonth() - parseInt(filterVal));
-            cutoffDate.setHours(0,0,0,0);
-            filteredEvents = GLOBAL_EVENTS.filter(e => e.jsDate >= cutoffDate && e.jsDate <= endOfToday);
-        }
-
-        if (filterVal === 'auto' || filteredEvents.length === 0) {
-            const pastEvents = GLOBAL_EVENTS.filter(e => e.jsDate <= endOfToday);
-            filteredEvents = pastEvents.length > 0 ? pastEvents.slice(-5) : GLOBAL_EVENTS.slice(-5);
-        }
-
-        if (filteredEvents.length === 0) return;
-
-        const latestEvent = filteredEvents[filteredEvents.length - 1];
-        document.getElementById('eventLabel').innerText = `Focus: ${latestEvent.title} • ${latestEvent.jsDate.toLocaleDateString()}`;
-        
-        calculateStats(filteredEvents, latestEvent);
-    };
-
-    function calculateStats(events, latestEvent) {
-        let graphLabels = [], graphExpected = [], graphActual = [], allNotes = [], latestRegistry = [];
-
-        events.forEach(evt => {
-            const eDate = evt.jsDate;
-            const dayStart = new Date(eDate); dayStart.setHours(0,0,0,0);
-            const dayEnd = new Date(eDate); dayEnd.setHours(23,59,59,999);
-            graphLabels.push(eDate.toLocaleDateString(undefined, {month:'short', day:'numeric'}));
-
-            // EXPECTED
-            let activeInvitees = 0;
-            GLOBAL_INV.forEach(inv => {
-                const invDate = inv.lastUpdated ? inv.lastUpdated.toDate() : new Date(0);
-                if (invDate <= dayEnd) activeInvitees++;
-            });
-            let expectedCount = GLOBAL_MEM.length + activeInvitees;
-
-            // ACTUAL
-            let presentCount = 0;
-            GLOBAL_ATT.forEach(d => {
-                const t = d.timestamp ? d.timestamp.toDate() : new Date(d.date || 0);
-                if(t >= dayStart && t <= dayEnd && d.status && d.status.toLowerCase().includes('present')) presentCount++;
-            });
-            GLOBAL_INV.forEach(inv => {
-                const lastUp = inv.lastUpdated ? inv.lastUpdated.toDate() : new Date(0);
-                const isFresh = lastUp > dayStart && lastUp < dayEnd;
-                if((isFresh && inv.status === 'honoured') || 
-                   (inv.history && inv.history.some(h => {
-                       const hDate = h.period.toDate();
-                       return hDate >= dayStart && hDate <= dayEnd && h.status === 'honoured';
-                   }))) {
-                    presentCount++;
-                }
-            });
-
-            if(expectedCount === 0) expectedCount = presentCount;
-            graphExpected.push(expectedCount);
-            graphActual.push(presentCount);
-        });
-
-        // TABLE DATA
-        const startDay = new Date(latestEvent.jsDate); startDay.setHours(0,0,0,0);
-        const endDay = new Date(latestEvent.jsDate); endDay.setHours(23,59,59,999);
-        let attMap = {};
-        GLOBAL_ATT.forEach(d => {
-            const t = d.timestamp ? d.timestamp.toDate() : new Date(d.date||0);
-            if(t >= startDay && t <= endDay) attMap[d.memberId || d.id.split('_')[0]] = d;
-        });
-
-        GLOBAL_MEM.forEach(m => {
-            const rec = attMap[m.id];
-            let name = m.full_name || `${m.first_name||''} ${m.last_name||''}`.trim() || "Unknown";
-            const isPresent = rec && rec.status && rec.status.toLowerCase().includes('present');
-            const note = (rec && rec.notes) ? rec.notes : "";
-            if(note && !isPresent) allNotes.push({name, note, type:'Member'});
-            latestRegistry.push({name, type:'member', present:isPresent, effort:"—", note:isPresent?"":(note||"Absent")});
-        });
-
-        GLOBAL_INV.forEach(i => {
-            if(i.status === 'graduated') return;
-            const name = i.fullName || "Unknown";
-            const isPresent = i.status === 'honoured'; 
-            const note = i.notes || "";
-            if(note && !isPresent) allNotes.push({name, note, type:'Invitee'});
-            latestRegistry.push({name, type:'invitee', present:isPresent, effort:`📞${i.calls||0}|🏠${i.visits||0}`, note:isPresent?"":(note||"No Report")});
-        });
-
-        renderUI(graphLabels, graphExpected, graphActual, allNotes, latestRegistry);
-    }
-
     function renderUI(labels, expected, actual, notes, registry) {
+        // CHART
         const ctx = document.getElementById('trendChart');
         const chartStatus = Chart.getChart("trendChart"); 
         if (chartStatus != undefined) chartStatus.destroy();
 
         new Chart(ctx.getContext('2d'), {
             type: 'line',
-            data: { labels, datasets: [{ label: 'Expected', data: expected, borderColor: '#4facfe', backgroundColor: 'rgba(79, 172, 254, 0.1)', fill: true, tension: 0.4 }, { label: 'Actual', data: actual, borderColor: '#00ff88', backgroundColor: 'rgba(0, 255, 136, 0.1)', fill: true, tension: 0.4 }] },
-            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: 'white' } } }, scales: { y: { grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { color: '#ccc' }, beginAtZero: true }, x: { display: false } } }
+            data: { 
+                labels, 
+                datasets: [
+                    { label: 'Expected', data: expected, borderColor: '#4facfe', backgroundColor: 'rgba(79, 172, 254, 0.1)', fill: true, tension: 0.4 }, 
+                    { label: 'Actual', data: actual, borderColor: '#00ff88', backgroundColor: 'rgba(0, 255, 136, 0.1)', fill: true, tension: 0.4 }
+                ] 
+            },
+            options: { 
+                responsive: true, 
+                maintainAspectRatio: false, 
+                plugins: { legend: { labels: { color: 'white' } } }, 
+                scales: { 
+                    y: { grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { color: '#ccc' }, beginAtZero: true }, 
+                    x: { display: false } 
+                } 
+            }
         });
 
+        // KPIS
         const avgExp = Math.round(expected.reduce((a,b)=>a+b,0)/(expected.length||1));
         const avgAct = Math.round(actual.reduce((a,b)=>a+b,0)/(actual.length||1));
         document.getElementById('avgExpected').innerText = avgExp;
         document.getElementById('avgActual').innerText = avgAct;
         document.getElementById('retentionRate').innerText = avgExp>0 ? Math.round((avgAct/avgExp)*100)+"%" : "0%";
 
-        document.getElementById('notesArea').innerHTML = notes.length ? notes.map(n => `<div class="note-item"><span class="note-text">"${n.note}"</span><span class="note-author">${n.name} (${n.type})</span></div>`).join('') : "<p style='text-align:center; opacity:0.5; padding:20px;'>No challenges.</p>";
+        // NOTES
+        document.getElementById('notesArea').innerHTML = notes.length ? notes.map(n => `<div class="note-item"><span class="note-text">"${n.note}"</span><span class="note-author">${n.name} (${n.type})</span></div>`).join('') : "<p style='text-align:center; opacity:0.5; padding:20px;'>No challenges recorded.</p>";
         
-        document.getElementById('registryBody').innerHTML = registry.length ? registry.map(r => `<tr><td><b>${r.name}</b><br><span class="badge badge-${r.type}">${r.type}</span></td><td><span style="font-family:monospace; font-size:0.8rem; background:rgba(255,255,255,0.05); padding:3px 6px; border-radius:4px;">${r.effort}</span></td><td><div class="status-pill ${r.present?'pill-present':'pill-absent'}"><span class="status-dot"></span>${r.present?'PRESENT':'ABSENT'}</div></td><td><span style="font-size:0.8rem; color:${r.present?'#ccc':'#ffcccb'}; font-style:${r.present?'normal':'italic'}">${r.note}</span></td></tr>`).join('') : `<tr><td colspan="4" style="text-align:center;">No Data</td></tr>`;
+        // REGISTRY
+        document.getElementById('registryBody').innerHTML = registry.length ? registry.map(r => `<tr><td><b>${r.name}</b><br><span class="badge badge-${r.type}">${r.type}</span></td><td><span style="font-family:monospace; font-size:0.8rem; background:rgba(255,255,255,0.05); padding:3px 6px; border-radius:4px;">${r.effort}</span></td><td><div class="status-pill ${r.present?'pill-present':'pill-absent'}"><span class="status-dot"></span>${r.present?'PRESENT':'ABSENT'}</div></td><td><span style="font-size:0.8rem; color:${r.present?'#ccc':'#ffcccb'}; font-style:${r.present?'normal':'italic'}">${r.note}</span></td></tr>`).join('') : `<tr><td colspan="4" style="text-align:center;">No Data Available</td></tr>`;
     }
 </script>
 </body>
