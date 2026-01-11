@@ -115,35 +115,58 @@
 </div>
 
 <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
-    import { getFirestore, collection, getDocs, query, limit, orderBy } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
-    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
+    // --- CORRECTED IMPORTS (Version 10.7.1) ---
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, collection, getDocs, query, limit, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
-    const firebaseConfig = { apiKey: "AIzaSyCBv60eRCO0e4dFBMKGKnIATouxTuk1Bcc", authDomain: "fob-database-139d1.firebaseapp.com", projectId: "fob-database-139d1", storageBucket: "fob-database-139d1.firebasestorage.app", appId: "1:375165731354:web:b5fa57dcb2d71ee0d8c7a3" };
+    const firebaseConfig = { 
+        apiKey: "AIzaSyCBv60eRCO0e4dFBMKGKnIATouxTuk1Bcc", 
+        authDomain: "fob-database-139d1.firebaseapp.com", 
+        projectId: "fob-database-139d1", 
+        storageBucket: "fob-database-139d1.firebasestorage.app", 
+        appId: "1:375165731354:web:b5fa57dcb2d71ee0d8c7a3" 
+    };
+    
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app, "fobrealdbase");
     const auth = getAuth(app);
 
     onAuthStateChanged(auth, (user) => {
-        if (user) init(); else location.href = "index.html";
+        if (user) {
+            init();
+        } else {
+            // Optional: Redirect to login if not authenticated
+            // location.href = "index.html";
+            console.log("User not logged in");
+        }
     });
 
     async function init() {
-        // 1. Fetch Last 6 Events for Trends
-        const eventSnap = await getDocs(query(collection(db, "events"), orderBy("date", "desc"), limit(6)));
-        let events = eventSnap.docs.map(d => ({ id: d.id, ...d.data() })).reverse(); // Reverse to show oldest -> newest
+        try {
+            // 1. Fetch Last 6 Events for Trends
+            const eventSnap = await getDocs(query(collection(db, "events"), orderBy("date", "desc"), limit(6)));
+            
+            if (eventSnap.empty) {
+                document.getElementById('eventLabel').innerText = "No Service Data.";
+                return;
+            }
 
-        if(events.length === 0) {
-            document.getElementById('eventLabel').innerText = "No Service Data.";
-            return;
+            // Reverse to show oldest -> newest for the graph
+            let events = eventSnap.docs.map(d => ({ id: d.id, ...d.data() })).reverse(); 
+
+            // The LAST event is the "Live" one we show the table for
+            const latestEvent = events[events.length - 1];
+            
+            // Safety check for date
+            const dateString = latestEvent.date.toDate ? latestEvent.date.toDate() : new Date(latestEvent.date);
+            document.getElementById('eventLabel').innerText = `Focus: ${latestEvent.title} • ${dateString.toLocaleDateString()}`;
+
+            await processAnalytics(events, latestEvent);
+        } catch (error) {
+            console.error("Initialization Error:", error);
+            document.getElementById('registryBody').innerHTML = `<tr><td colspan="4" style="text-align:center; color:#ff4b5c;">Error loading data: ${error.message}</td></tr>`;
         }
-
-        // The LAST event is the "Live" one we show the table for
-        const latestEvent = events[events.length - 1];
-        const eventDate = new Date(latestEvent.date);
-        document.getElementById('eventLabel').innerText = `Focus: ${latestEvent.title} • ${eventDate.toLocaleDateString()}`;
-
-        await processAnalytics(events, latestEvent);
     }
 
     async function processAnalytics(events, latestEvent) {
@@ -162,7 +185,7 @@
 
         // --- 1. BUILD HISTORICAL DATA (For Graph) ---
         events.forEach(evt => {
-            const eDate = new Date(evt.date);
+            const eDate = evt.date.toDate ? evt.date.toDate() : new Date(evt.date);
             const dayStart = new Date(eDate); dayStart.setHours(0,0,0,0);
             const dayEnd = new Date(eDate); dayEnd.setHours(23,59,59,999);
             
@@ -170,26 +193,27 @@
 
             // Calculate Attendance for this specific event day
             let presentCount = 0;
-            let expectedCount = 0; // Invitees active at that time + Members
+            let expectedCount = 0; 
 
             // A. Check Members Attendance
             attSnap.forEach(doc => {
                 const d = doc.data();
                 const t = d.timestamp ? d.timestamp.toDate() : new Date(d.date);
                 if(t >= dayStart && t <= dayEnd) {
-                    expectedCount++; // Every attendance record implies an expectation
+                    expectedCount++; 
                     if(d.status && d.status.toLowerCase().includes('present')) presentCount++;
                 }
             });
 
-            // B. Check Invitee History (The "Archive" we built)
+            // B. Check Invitee History (The "Archive")
             invSnap.forEach(doc => {
                 const inv = doc.data();
-                // Check current status (if fresh)
-                const lastUp = inv.lastUpdated ? inv.lastUpdated.toDate() : new Date(0);
-                const isFresh = lastUp > dayStart && lastUp < dayEnd;
                 
-                if(isFresh) {
+                // Check current status (if fresh for that specific day)
+                const lastUp = inv.lastUpdated ? inv.lastUpdated.toDate() : new Date(0);
+                const isFreshForEvent = lastUp > dayStart && lastUp < dayEnd;
+                
+                if(isFreshForEvent) {
                     expectedCount++;
                     if(inv.status === 'honoured') presentCount++;
                 }
@@ -198,7 +222,6 @@
                 if(inv.history && Array.isArray(inv.history)) {
                     inv.history.forEach(h => {
                         const hDate = h.period ? h.period.toDate() : new Date(0);
-                        // If history entry matches this event date
                         if(hDate >= dayStart && hDate <= dayEnd) {
                             expectedCount++;
                             if(h.status === 'honoured') presentCount++;
@@ -207,19 +230,18 @@
                 }
             });
 
-            // Fallback: If expected is 0 (no data), dont tank the graph
-            if(expectedCount === 0) expectedCount = presentCount; 
-
+            if(expectedCount === 0) expectedCount = presentCount; // Fallback
             graphExpected.push(expectedCount);
             graphActual.push(presentCount);
         });
 
         // --- 2. BUILD LATEST REGISTRY (For Table & Notes) ---
-        const latestStart = new Date(latestEvent.date); latestStart.setHours(0,0,0,0);
-        const latestEnd = new Date(latestEvent.date); latestEnd.setHours(23,59,59,999);
-        const freshWindow = new Date(latestEvent.date); freshWindow.setDate(freshWindow.getDate() - 6);
+        const latestDate = latestEvent.date.toDate ? latestEvent.date.toDate() : new Date(latestEvent.date);
+        const latestStart = new Date(latestDate); latestStart.setHours(0,0,0,0);
+        const latestEnd = new Date(latestDate); latestEnd.setHours(23,59,59,999);
+        const freshWindow = new Date(latestDate); freshWindow.setDate(freshWindow.getDate() - 6);
 
-        // Map Attendance for quick lookup
+        // Map Attendance
         let attMap = {};
         attSnap.forEach(doc => {
             const d = doc.data();
@@ -250,7 +272,6 @@
             const i = doc.data();
             if(i.status === 'graduated') return;
 
-            // Is data relevant to this latest event?
             const lastUp = i.lastUpdated ? i.lastUpdated.toDate() : new Date(0);
             const isRelevant = lastUp > freshWindow;
 
@@ -271,7 +292,7 @@
     }
 
     function renderDashboard(labels, expected, actual, notes, registry) {
-        // 1. RENDER GRAPH
+        // 1. GRAPH
         const ctx = document.getElementById('trendChart').getContext('2d');
         new Chart(ctx, {
             type: 'line',
@@ -304,14 +325,14 @@
             }
         });
 
-        // 2. RENDER KPIS
+        // 2. KPIS
         const avgExp = Math.round(expected.reduce((a,b)=>a+b,0) / expected.length) || 0;
         const avgAct = Math.round(actual.reduce((a,b)=>a+b,0) / actual.length) || 0;
         document.getElementById('avgExpected').innerText = avgExp;
         document.getElementById('avgActual').innerText = avgAct;
         document.getElementById('retentionRate').innerText = avgExp > 0 ? Math.round((avgAct/avgExp)*100)+"%" : "0%";
 
-        // 3. RENDER NOTES
+        // 3. NOTES
         const notesDiv = document.getElementById('notesArea');
         if(notes.length > 0) {
             notesDiv.innerHTML = notes.map(n => `
@@ -321,10 +342,10 @@
                 </div>
             `).join('');
         } else {
-            notesDiv.innerHTML = "<p style='text-align:center; opacity:0.5; padding:20px;'>No specific challenges recorded.</p>";
+            notesDiv.innerHTML = "<p style='text-align:center; opacity:0.5; font-size:0.8rem; padding:20px;'>No specific challenges recorded.</p>";
         }
 
-        // 4. RENDER TABLE
+        // 4. TABLE
         const regBody = document.getElementById('registryBody');
         if(registry.length === 0) {
             regBody.innerHTML = `<tr><td colspan="4" style="text-align:center;">No Data</td></tr>`;
