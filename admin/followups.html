@@ -5,54 +5,48 @@
     <title>Network Intelligence | ShepherdNet</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
     <style>
         :root { 
-            --primary: #4facfe; 
-            --bg: #0f172a; 
-            --glass: rgba(255, 255, 255, 0.05); 
-            --border: rgba(255, 255, 255, 0.1); 
-            --green: #00ff88; 
-            --red: #ff4b5c; 
-            --gold: #ffd700;
+            --primary: #4facfe; --bg: #0f172a; --glass: rgba(255, 255, 255, 0.05); 
+            --border: rgba(255, 255, 255, 0.1); --green: #00ff88; --red: #ff4b5c; --gold: #ffd700;
         }
-        body { background: var(--bg); color: white; font-family: 'Poppins', sans-serif; padding: 20px; }
-        .container { max-width: 1000px; margin: 0 auto; padding-bottom: 50px; }
+        body { background: var(--bg); color: white; font-family: 'Poppins', sans-serif; padding: 20px; padding-bottom: 80px; }
+        .container { max-width: 1000px; margin: 0 auto; }
         
         /* HEADER */
         header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
         h1 { margin: 0; font-size: 1.4rem; }
-        
-        /* ANALYTICS GRAPH CARD */
-        .analytics-card { 
-            background: var(--glass); border: 1px solid var(--border); 
-            border-radius: 20px; padding: 25px; margin-bottom: 25px; 
-            display: flex; flex-direction: column; align-items: center;
-        }
-        .graph-wrapper { 
-            display: flex; align-items: flex-end; gap: 60px; 
-            height: 160px; margin-top: 20px; 
-        }
-        .bar-container { display: flex; flex-direction: column; align-items: center; gap: 10px; }
-        
-        .bar-track { 
-            width: 60px; height: 130px; background: rgba(255,255,255,0.05); 
-            border-radius: 15px; position: relative; overflow: hidden; 
-        }
-        .bar-fill { width: 100%; position: absolute; bottom: 0; transition: height 1s ease; }
-        .fill-target { background: linear-gradient(to top, #4facfe, #00f2fe); opacity: 0.3; }
-        .fill-actual { background: linear-gradient(to top, #00ff88, #00b09b); }
-        
-        .stat-val { font-size: 1.2rem; font-weight: bold; }
-        .stat-lbl { font-size: 0.7rem; opacity: 0.6; letter-spacing: 1px; }
 
-        /* DATA TABLE */
-        .table-card { background: var(--glass); border: 1px solid var(--border); border-radius: 15px; overflow-x: auto; }
+        /* GRID LAYOUT */
+        .dashboard-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; margin-bottom: 30px; }
+        @media (max-width: 768px) { .dashboard-grid { grid-template-columns: 1fr; } }
+
+        /* CARDS */
+        .card { background: var(--glass); border: 1px solid var(--border); border-radius: 20px; padding: 20px; backdrop-filter: blur(10px); }
+        .card-title { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; opacity: 0.7; margin-bottom: 15px; display: block; }
+
+        /* KPI BOXES */
+        .kpi-row { display: flex; gap: 15px; margin-bottom: 20px; }
+        .kpi-box { flex: 1; background: rgba(255,255,255,0.03); padding: 15px; border-radius: 12px; text-align: center; }
+        .kpi-val { font-size: 1.5rem; font-weight: bold; display: block; }
+        .kpi-lbl { font-size: 0.7rem; opacity: 0.6; }
+
+        /* NOTES LIST */
+        .notes-list { max-height: 300px; overflow-y: auto; }
+        .note-item { background: rgba(255, 75, 92, 0.05); border-left: 3px solid var(--red); padding: 10px; margin-bottom: 8px; border-radius: 4px; }
+        .note-text { font-size: 0.8rem; color: #ffcccb; font-style: italic; }
+        .note-author { font-size: 0.7rem; opacity: 0.6; margin-top: 4px; display: block; }
+
+        /* TABLE */
+        .table-card { overflow-x: auto; }
         table { width: 100%; border-collapse: collapse; min-width: 700px; }
         th { text-align: left; opacity: 0.5; padding: 15px; border-bottom: 1px solid var(--border); font-size: 0.7rem; letter-spacing: 1px; }
         td { padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.02); font-size: 0.85rem; vertical-align: top; }
-        
-        /* BADGES & TAGS */
-        .badge { padding: 4px 8px; border-radius: 6px; font-size: 0.6rem; font-weight: 700; text-transform: uppercase; display: inline-block; margin-top: 4px; }
+
+        /* BADGES */
+        .badge { padding: 4px 8px; border-radius: 6px; font-size: 0.6rem; font-weight: 700; text-transform: uppercase; }
         .badge-member { background: rgba(79, 172, 254, 0.15); color: var(--primary); }
         .badge-invitee { background: rgba(255, 215, 0, 0.15); color: var(--gold); }
         
@@ -60,9 +54,6 @@
         .pill-present { background: rgba(0, 255, 136, 0.1); color: var(--green); border: 1px solid rgba(0, 255, 136, 0.2); }
         .pill-absent { background: rgba(255, 75, 92, 0.1); color: var(--red); border: 1px solid rgba(255, 75, 92, 0.2); }
         .status-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
-
-        .effort-tag { font-family: monospace; font-size: 0.75rem; background: rgba(255,255,255,0.05); padding: 4px 8px; border-radius: 6px; color: #ccc; display: inline-block; }
-        .reason-text { color: var(--red); font-style: italic; font-size: 0.8rem; margin-top: 4px; display: block; opacity: 0.9; }
     </style>
 </head>
 <body>
@@ -76,20 +67,44 @@
         <a href="index.html" style="color:var(--primary); text-decoration:none; border:1px solid var(--border); padding:8px 16px; border-radius:8px; font-size:0.8rem;">Back to Dashboard</a>
     </header>
 
-    <div class="analytics-card">
-        <h3 style="margin:0; font-size:0.8rem; opacity:0.7; letter-spacing:1.5px;">SERVICE YIELD</h3>
-        <div class="graph-wrapper" id="graphArea">
+    <div class="dashboard-grid">
+        
+        <div class="card">
+            <span class="card-title">Attendance Trends (Last 5 Events)</span>
+            <div class="kpi-row">
+                <div class="kpi-box">
+                    <span class="kpi-val" id="avgExpected">-</span>
+                    <span class="kpi-lbl">AVG EXPECTED</span>
+                </div>
+                <div class="kpi-box">
+                    <span class="kpi-val" id="avgActual" style="color:var(--green)">-</span>
+                    <span class="kpi-lbl">AVG ACTUAL</span>
+                </div>
+                <div class="kpi-box">
+                    <span class="kpi-val" id="retentionRate">-</span>
+                    <span class="kpi-lbl">RETENTION</span>
+                </div>
             </div>
+            <canvas id="trendChart" height="120"></canvas>
+        </div>
+
+        <div class="card">
+            <span class="card-title">Why they missed (Intelligence)</span>
+            <div class="notes-list" id="notesArea">
+                <p style="text-align:center; opacity:0.5; font-size:0.8rem; padding:20px;">No issues reported.</p>
+            </div>
+        </div>
     </div>
 
-    <div class="table-card">
+    <div class="card table-card">
+        <span class="card-title">Live Registry: Latest Event</span>
         <table>
             <thead>
                 <tr>
                     <th width="30%">NAME / ROLE</th>
                     <th width="20%">EFFORT (Calls/Visits)</th>
                     <th width="15%">STATUS</th>
-                    <th width="35%">REASON / NOTES</th>
+                    <th width="35%">NOTE</th>
                 </tr>
             </thead>
             <tbody id="registryBody">
@@ -101,7 +116,7 @@
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
-    import { getFirestore, collection, getDocs, query, limit } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+    import { getFirestore, collection, getDocs, query, limit, orderBy } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
 
     const firebaseConfig = { apiKey: "AIzaSyCBv60eRCO0e4dFBMKGKnIATouxTuk1Bcc", authDomain: "fob-database-139d1.firebaseapp.com", projectId: "fob-database-139d1", storageBucket: "fob-database-139d1.firebasestorage.app", appId: "1:375165731354:web:b5fa57dcb2d71ee0d8c7a3" };
@@ -114,166 +129,213 @@
     });
 
     async function init() {
-        // 1. Find the most relevant upcoming or recent event
-        const eventSnap = await getDocs(query(collection(db, "events"), limit(10)));
-        const events = eventSnap.docs.map(d => d.data());
-        
-        // Filter: Ignore 'Dawn Prayers' if preferred, Sort Descending by Date
-        const latest = events
-            .filter(e => e.title !== "Dawn Prayers")
-            .sort((a,b) => new Date(b.date) - new Date(a.date))[0];
+        // 1. Fetch Last 6 Events for Trends
+        const eventSnap = await getDocs(query(collection(db, "events"), orderBy("date", "desc"), limit(6)));
+        let events = eventSnap.docs.map(d => ({ id: d.id, ...d.data() })).reverse(); // Reverse to show oldest -> newest
 
-        if(!latest) {
-            document.getElementById('eventLabel').innerText = "No Service Scheduled.";
-            document.getElementById('registryBody').innerHTML = `<tr><td colspan="4" style="text-align:center; padding:30px;">No events found.</td></tr>`;
+        if(events.length === 0) {
+            document.getElementById('eventLabel').innerText = "No Service Data.";
             return;
         }
 
-        const eventDate = new Date(latest.date);
-        document.getElementById('eventLabel').innerText = `Target: ${latest.title} • ${eventDate.toLocaleDateString()}`;
-        
-        loadData(eventDate);
+        // The LAST event is the "Live" one we show the table for
+        const latestEvent = events[events.length - 1];
+        const eventDate = new Date(latestEvent.date);
+        document.getElementById('eventLabel').innerText = `Focus: ${latestEvent.title} • ${eventDate.toLocaleDateString()}`;
+
+        await processAnalytics(events, latestEvent);
     }
 
-    async function loadData(eventDate) {
-        // DEFINITION OF "FRESH DATA": 
-        // We look back 6 days from the event date to see if data is relevant to this service.
-        const startWindow = new Date(eventDate);
-        startWindow.setDate(startWindow.getDate() - 6); 
-        startWindow.setHours(0,0,0,0);
-        
-        // Fetch All Collections in Parallel
+    async function processAnalytics(events, latestEvent) {
+        // Fetch All Data needed
         const [attSnap, memSnap, invSnap] = await Promise.all([
             getDocs(collection(db, "attendance")),
             getDocs(collection(db, "members")),
             getDocs(collection(db, "invitees"))
         ]);
 
-        // --- PREPARE ATTENDANCE MAP (For Members) ---
-        // We map MemberID -> Attendance Document for the specific Event Day
-        let attendanceMap = {};
-        const dayStart = new Date(eventDate); dayStart.setHours(0,0,0,0);
-        const dayEnd = new Date(eventDate); dayEnd.setHours(23,59,59,999);
+        let graphLabels = [];
+        let graphExpected = [];
+        let graphActual = [];
+        let allNotes = [];
+        let latestRegistry = [];
 
+        // --- 1. BUILD HISTORICAL DATA (For Graph) ---
+        events.forEach(evt => {
+            const eDate = new Date(evt.date);
+            const dayStart = new Date(eDate); dayStart.setHours(0,0,0,0);
+            const dayEnd = new Date(eDate); dayEnd.setHours(23,59,59,999);
+            
+            graphLabels.push(eDate.toLocaleDateString(undefined, {month:'short', day:'numeric'}));
+
+            // Calculate Attendance for this specific event day
+            let presentCount = 0;
+            let expectedCount = 0; // Invitees active at that time + Members
+
+            // A. Check Members Attendance
+            attSnap.forEach(doc => {
+                const d = doc.data();
+                const t = d.timestamp ? d.timestamp.toDate() : new Date(d.date);
+                if(t >= dayStart && t <= dayEnd) {
+                    expectedCount++; // Every attendance record implies an expectation
+                    if(d.status && d.status.toLowerCase().includes('present')) presentCount++;
+                }
+            });
+
+            // B. Check Invitee History (The "Archive" we built)
+            invSnap.forEach(doc => {
+                const inv = doc.data();
+                // Check current status (if fresh)
+                const lastUp = inv.lastUpdated ? inv.lastUpdated.toDate() : new Date(0);
+                const isFresh = lastUp > dayStart && lastUp < dayEnd;
+                
+                if(isFresh) {
+                    expectedCount++;
+                    if(inv.status === 'honoured') presentCount++;
+                }
+
+                // Check History Array (Past services)
+                if(inv.history && Array.isArray(inv.history)) {
+                    inv.history.forEach(h => {
+                        const hDate = h.period ? h.period.toDate() : new Date(0);
+                        // If history entry matches this event date
+                        if(hDate >= dayStart && hDate <= dayEnd) {
+                            expectedCount++;
+                            if(h.status === 'honoured') presentCount++;
+                        }
+                    });
+                }
+            });
+
+            // Fallback: If expected is 0 (no data), dont tank the graph
+            if(expectedCount === 0) expectedCount = presentCount; 
+
+            graphExpected.push(expectedCount);
+            graphActual.push(presentCount);
+        });
+
+        // --- 2. BUILD LATEST REGISTRY (For Table & Notes) ---
+        const latestStart = new Date(latestEvent.date); latestStart.setHours(0,0,0,0);
+        const latestEnd = new Date(latestEvent.date); latestEnd.setHours(23,59,59,999);
+        const freshWindow = new Date(latestEvent.date); freshWindow.setDate(freshWindow.getDate() - 6);
+
+        // Map Attendance for quick lookup
+        let attMap = {};
         attSnap.forEach(doc => {
             const d = doc.data();
-            const time = d.timestamp ? d.timestamp.toDate() : new Date(d.date);
-            
-            if(time >= dayStart && time <= dayEnd) {
-                // Determine ID (Handles both formats)
-                const memberId = d.memberId || doc.id.split('_')[0]; 
-                attendanceMap[memberId] = { 
-                    status: (d.status || "").toLowerCase(), 
-                    notes: d.notes || "" 
-                };
+            const t = d.timestamp ? d.timestamp.toDate() : new Date(d.date);
+            if(t >= latestStart && t <= latestEnd) {
+                attMap[d.memberId || doc.id.split('_')[0]] = d;
             }
         });
 
-        let masterList = [];
-
-        // --- A. PROCESS MEMBERS ---
+        // Process Members
         memSnap.forEach(doc => {
             const m = doc.data();
-            const att = attendanceMap[doc.id]; // Check attendance map
+            const rec = attMap[doc.id];
+            const isPresent = rec && rec.status.toLowerCase().includes('present');
+            const note = (rec && rec.notes) ? rec.notes : "";
             
-            const isPresent = att && att.status.includes('present');
-            const isAbsentMarked = att && att.status.includes('absent');
-            
-            // Logic: If marked absent, use note. If not marked at all, say "No Data".
-            let reason = "";
-            if(isAbsentMarked) reason = att.notes;
-            else if(!isPresent) reason = "Not marked in register";
+            if(note && !isPresent) allNotes.push({ name: m.full_name, note: note, type: 'Member' });
 
-            masterList.push({
-                name: m.full_name || m.first_name,
-                type: 'member',
-                present: isPresent,
-                // Members usually don't have call/visit tracking in this system yet
-                effort: "—", 
-                note: isPresent ? "" : reason
+            latestRegistry.push({
+                name: m.full_name, type: 'member',
+                present: isPresent, effort: "—",
+                note: isPresent ? "" : (note || "Absent")
             });
         });
 
-        // --- B. PROCESS INVITEES ---
+        // Process Invitees
         invSnap.forEach(doc => {
             const i = doc.data();
-            if(i.status === 'graduated') return; // Skip if they joined
+            if(i.status === 'graduated') return;
 
-            // INTELLIGENCE CHECK: Is this data Fresh or Old?
-            const lastUpdate = i.lastUpdated ? i.lastUpdated.toDate() : new Date(0);
-            const isFresh = lastUpdate > startWindow;
+            // Is data relevant to this latest event?
+            const lastUp = i.lastUpdated ? i.lastUpdated.toDate() : new Date(0);
+            const isRelevant = lastUp > freshWindow;
 
-            // If fresh, show real numbers. If old, show 0.
-            const calls = isFresh ? (i.calls || 0) : 0;
-            const visits = isFresh ? (i.visits || 0) : 0;
-            const status = isFresh ? (i.status || 'unmarked') : 'unmarked';
-            const note = isFresh ? (i.notes || "") : "";
+            const isPresent = isRelevant && i.status === 'honoured';
+            const note = (isRelevant && i.notes) ? i.notes : "";
+            const effort = isRelevant ? `📞 ${i.calls||0} | 🏠 ${i.visits||0}` : "—";
 
-            const isPresent = status === 'honoured';
+            if(note && !isPresent) allNotes.push({ name: i.fullName, note: note, type: 'Invitee' });
 
-            masterList.push({
-                name: i.fullName,
-                type: 'invitee',
-                present: isPresent,
-                effort: `📞 ${calls} | 🏠 ${visits}`,
-                note: (!isPresent && note) ? note : (status === 'unmarked' ? "No feedback yet" : "")
+            latestRegistry.push({
+                name: i.fullName, type: 'invitee',
+                present: isPresent, effort: effort,
+                note: isPresent ? "" : (note || (isRelevant ? "Absent" : "-"))
             });
         });
 
-        render(masterList);
+        renderDashboard(graphLabels, graphExpected, graphActual, allNotes, latestRegistry);
     }
 
-    function render(list) {
-        // 1. CALCULATE STATS
-        const total = list.length;
-        const present = list.filter(x => x.present).length;
-        const percent = total > 0 ? (present/total)*100 : 0;
+    function renderDashboard(labels, expected, actual, notes, registry) {
+        // 1. RENDER GRAPH
+        const ctx = document.getElementById('trendChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Expected',
+                        data: expected,
+                        borderColor: '#4facfe',
+                        backgroundColor: 'rgba(79, 172, 254, 0.1)',
+                        fill: true, tension: 0.4
+                    },
+                    {
+                        label: 'Actual Attendance',
+                        data: actual,
+                        borderColor: '#00ff88',
+                        backgroundColor: 'rgba(0, 255, 136, 0.1)',
+                        fill: true, tension: 0.4
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { labels: { color: 'white' } } },
+                scales: {
+                    y: { grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { color: '#ccc' } },
+                    x: { grid: { display: false }, ticks: { color: '#ccc' } }
+                }
+            }
+        });
 
-        // 2. RENDER GRAPHS
-        document.getElementById('graphArea').innerHTML = `
-            <div class="bar-container">
-                <div class="bar-track">
-                    <div class="bar-fill fill-target" style="height:100%"></div>
+        // 2. RENDER KPIS
+        const avgExp = Math.round(expected.reduce((a,b)=>a+b,0) / expected.length) || 0;
+        const avgAct = Math.round(actual.reduce((a,b)=>a+b,0) / actual.length) || 0;
+        document.getElementById('avgExpected').innerText = avgExp;
+        document.getElementById('avgActual').innerText = avgAct;
+        document.getElementById('retentionRate').innerText = avgExp > 0 ? Math.round((avgAct/avgExp)*100)+"%" : "0%";
+
+        // 3. RENDER NOTES
+        const notesDiv = document.getElementById('notesArea');
+        if(notes.length > 0) {
+            notesDiv.innerHTML = notes.map(n => `
+                <div class="note-item">
+                    <span class="note-text">"${n.note}"</span>
+                    <span class="note-author">${n.name} (${n.type})</span>
                 </div>
-                <div class="stat-val">${total}</div>
-                <div class="stat-lbl">EXPECTED</div>
-            </div>
-
-            <div class="bar-container">
-                <div class="bar-track">
-                    <div class="bar-fill fill-actual" style="height:${percent}%"></div>
-                </div>
-                <div class="stat-val" style="color:var(--green)">${present}</div>
-                <div class="stat-lbl">ACTUAL</div>
-            </div>
-        `;
-
-        // 3. RENDER TABLE
-        if(list.length === 0) {
-            document.getElementById('registryBody').innerHTML = `<tr><td colspan="4" style="text-align:center; padding:30px;">Database Empty.</td></tr>`;
-            return;
+            `).join('');
+        } else {
+            notesDiv.innerHTML = "<p style='text-align:center; opacity:0.5; padding:20px;'>No specific challenges recorded.</p>";
         }
 
-        document.getElementById('registryBody').innerHTML = list.map(item => `
+        // 4. RENDER TABLE
+        const regBody = document.getElementById('registryBody');
+        if(registry.length === 0) {
+            regBody.innerHTML = `<tr><td colspan="4" style="text-align:center;">No Data</td></tr>`;
+            return;
+        }
+        regBody.innerHTML = registry.map(r => `
             <tr>
-                <td>
-                    <b>${item.name}</b><br>
-                    <span class="badge badge-${item.type}">${item.type}</span>
-                </td>
-                <td>
-                    <span class="effort-tag">${item.effort}</span>
-                </td>
-                <td>
-                    <div class="status-pill ${item.present ? 'pill-present' : 'pill-absent'}">
-                        <span class="status-dot"></span>
-                        ${item.present ? 'PRESENT' : 'ABSENT'}
-                    </div>
-                </td>
-                <td>
-                    ${item.note 
-                        ? `<span class="reason-text">"${item.note}"</span>` 
-                        : '<span style="opacity:0.2; font-size:0.8rem;">-</span>'}
-                </td>
+                <td><b>${r.name}</b><br><span class="badge badge-${r.type}">${r.type}</span></td>
+                <td><span style="font-family:monospace; font-size:0.8rem; background:rgba(255,255,255,0.05); padding:3px 6px; border-radius:4px;">${r.effort}</span></td>
+                <td><div class="status-pill ${r.present?'pill-present':'pill-absent'}"><span class="status-dot"></span>${r.present?'PRESENT':'ABSENT'}</div></td>
+                <td><span style="font-size:0.8rem; color:${r.present?'#ccc':'#ffcccb'}; font-style:${r.present?'normal':'italic'}">${r.note}</span></td>
             </tr>
         `).join('');
     }
