@@ -137,20 +137,46 @@
 
     async function init() {
         try {
-            const eventSnap = await getDocs(query(collection(db, "events"), orderBy("date", "desc"), limit(6)));
+            // 1. Fetch slightly more events (10) to ensure we have enough after filtering
+            const eventSnap = await getDocs(query(collection(db, "events"), orderBy("date", "desc"), limit(10)));
             
             if (eventSnap.empty) {
                 document.getElementById('eventLabel').innerText = "No Service Data.";
                 return;
             }
 
-            let events = eventSnap.docs.map(d => ({ id: d.id, ...d.data() })).reverse(); 
-            const latestEvent = events[events.length - 1];
+            // 2. Convert to Objects
+            let allEvents = eventSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+            // 3. FILTER: Only keep events that are <= NOW (Current Date/Time)
+            const now = new Date();
+            // Set 'now' to end of day to include an event happening TODAY
+            now.setHours(23, 59, 59, 999); 
+
+            let pastEvents = allEvents.filter(e => {
+                const eDate = e.date && e.date.toDate ? e.date.toDate() : new Date(e.date);
+                return eDate <= now;
+            });
+
+            // 4. Sort Oldest -> Newest and take the LAST 5
+            // (Reverse first because 'allEvents' came in Descending order)
+            pastEvents.reverse(); 
+            
+            // Slice the last 5
+            const relevantEvents = pastEvents.slice(-5);
+
+            if (relevantEvents.length === 0) {
+                document.getElementById('eventLabel').innerText = "No Past Services Found.";
+                return;
+            }
+
+            // The very last one is the "Current" or "Latest" service
+            const latestEvent = relevantEvents[relevantEvents.length - 1];
             
             const dateString = latestEvent.date && latestEvent.date.toDate ? latestEvent.date.toDate() : new Date(latestEvent.date || Date.now());
             document.getElementById('eventLabel').innerText = `Focus: ${latestEvent.title || 'Service'} • ${dateString.toLocaleDateString()}`;
 
-            await processAnalytics(events, latestEvent);
+            await processAnalytics(relevantEvents, latestEvent);
         } catch (error) {
             console.error("Init Error:", error);
             document.getElementById('registryBody').innerHTML = `<tr><td colspan="4" style="text-align:center; color:red">Error: ${error.message}</td></tr>`;
@@ -170,7 +196,7 @@
         let allNotes = [];
         let latestRegistry = [];
 
-        // --- 1. BUILD GRAPH DATA ---
+        // --- 1. BUILD GRAPH DATA (Using the 5 Filtered Events) ---
         events.forEach(evt => {
             const eDate = evt.date && evt.date.toDate ? evt.date.toDate() : new Date(evt.date);
             const dayStart = new Date(eDate); dayStart.setHours(0,0,0,0);
@@ -181,6 +207,7 @@
             let presentCount = 0;
             let expectedCount = 0;
 
+            // Members Count
             attSnap.forEach(doc => {
                 const d = doc.data();
                 const t = d.timestamp ? d.timestamp.toDate() : new Date(d.date || 0);
@@ -190,16 +217,19 @@
                 }
             });
 
+            // Invitee Count
             invSnap.forEach(doc => {
                 const inv = doc.data();
                 const lastUp = inv.lastUpdated ? inv.lastUpdated.toDate() : new Date(0);
                 
-                const isFresh = lastUp > dayStart && lastUp < dayEnd;
-                if(isFresh) {
+                // Fresh on that specific day?
+                const isFreshForEvent = lastUp > dayStart && lastUp < dayEnd;
+                if(isFreshForEvent) {
                     expectedCount++;
                     if(inv.status === 'honoured') presentCount++;
                 }
-
+                
+                // Archived History?
                 if(inv.history && Array.isArray(inv.history)) {
                     inv.history.forEach(h => {
                         const hDate = h.period ? h.period.toDate() : new Date(0);
@@ -216,11 +246,10 @@
             graphActual.push(presentCount);
         });
 
-        // --- 2. BUILD TABLE DATA (Latest Event) ---
+        // --- 2. BUILD TABLE DATA (Latest of the 5) ---
         const latestDate = latestEvent.date && latestEvent.date.toDate ? latestEvent.date.toDate() : new Date(latestEvent.date || Date.now());
         const startDay = new Date(latestDate); startDay.setHours(0,0,0,0);
         const endDay = new Date(latestDate); endDay.setHours(23,59,59,999);
-        const freshWindow = new Date(latestDate); freshWindow.setDate(freshWindow.getDate() - 6);
 
         let attMap = {};
         attSnap.forEach(doc => {
@@ -232,19 +261,12 @@
             }
         });
 
-        // --- PROCESS MEMBERS (FIXED NAME LOGIC) ---
+        // MEMBERS
         memSnap.forEach(doc => {
             const m = doc.data();
             const rec = attMap[doc.id];
             
-            // *** THE FIX: COMBINE FIRST AND LAST NAME ***
-            let fullName = "Unknown Member";
-            if (m.full_name) {
-                fullName = m.full_name;
-            } else if (m.first_name || m.last_name) {
-                // Combine them, trimming extra spaces if one is missing
-                fullName = `${m.first_name || ''} ${m.last_name || ''}`.trim();
-            }
+            let fullName = m.full_name || `${m.first_name || ''} ${m.last_name || ''}`.trim() || "Unknown Member";
             
             const isPresent = rec && rec.status && rec.status.toLowerCase().includes('present');
             const note = (rec && rec.notes) ? rec.notes : "";
@@ -252,37 +274,30 @@
             if(note && !isPresent) allNotes.push({ name: fullName, note: note, type: 'Member' });
 
             latestRegistry.push({
-                name: fullName,
-                type: 'member',
-                present: isPresent,
-                effort: "—",
-                note: isPresent ? "" : (note || "Absent")
+                name: fullName, type: 'member', present: isPresent,
+                effort: "—", note: isPresent ? "" : (note || "Absent")
             });
         });
 
-        // --- PROCESS INVITEES ---
+        // INVITEES
         invSnap.forEach(doc => {
             const i = doc.data();
             if(i.status === 'graduated') return;
 
-            // Invitees usually use 'fullName'
             const name = i.fullName || i.name || "Unknown Invitee";
+            
+            // Direct Data (No time filter, just show what's in DB)
+            const calls = i.calls || 0;
+            const visits = i.visits || 0;
+            const notes = i.notes || "";
+            const isPresent = i.status === 'honoured';
 
-            const lastUp = i.lastUpdated ? i.lastUpdated.toDate() : new Date(0);
-            const isRelevant = lastUp > freshWindow;
-
-            const isPresent = isRelevant && i.status === 'honoured';
-            const note = (isRelevant && i.notes) ? i.notes : "";
-            const effort = isRelevant ? `📞 ${i.calls||0} | 🏠 ${i.visits||0}` : "—";
-
-            if(note && !isPresent) allNotes.push({ name: name, note: note, type: 'Invitee' });
+            if(notes && !isPresent) allNotes.push({ name: name, note: notes, type: 'Invitee' });
 
             latestRegistry.push({
-                name: name,
-                type: 'invitee',
-                present: isPresent,
-                effort: effort,
-                note: isPresent ? "" : (note || (isRelevant ? "Absent" : "-"))
+                name: name, type: 'invitee', present: isPresent,
+                effort: `📞 ${calls} | 🏠 ${visits}`,
+                note: isPresent ? "" : (notes || "No Report")
             });
         });
 
@@ -290,7 +305,7 @@
     }
 
     function renderDashboard(labels, expected, actual, notes, registry) {
-        // Render Chart
+        // Chart
         const ctx = document.getElementById('trendChart');
         if(ctx) {
             const chartStatus = Chart.getChart("trendChart"); 
@@ -313,14 +328,14 @@
             });
         }
 
-        // Render KPIS
+        // KPIS
         const avgExp = Math.round(expected.reduce((a,b)=>a+b,0) / (expected.length||1));
         const avgAct = Math.round(actual.reduce((a,b)=>a+b,0) / (actual.length||1));
         document.getElementById('avgExpected').innerText = avgExp;
         document.getElementById('avgActual').innerText = avgAct;
         document.getElementById('retentionRate').innerText = avgExp > 0 ? Math.round((avgAct/avgExp)*100)+"%" : "0%";
 
-        // Render Notes
+        // Notes
         const notesDiv = document.getElementById('notesArea');
         if(notes.length > 0) {
             notesDiv.innerHTML = notes.map(n => `
@@ -333,7 +348,7 @@
             notesDiv.innerHTML = "<p style='text-align:center; opacity:0.5; font-size:0.8rem; padding:20px;'>No challenges recorded.</p>";
         }
 
-        // Render Table
+        // Table
         const regBody = document.getElementById('registryBody');
         if(registry.length === 0) {
             regBody.innerHTML = `<tr><td colspan="4" style="text-align:center;">No Data Available</td></tr>`;
