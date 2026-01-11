@@ -123,39 +123,47 @@
     const auth = getAuth(app);
 
     let GLOBAL_EVENTS = []; let GLOBAL_ATT = []; let GLOBAL_MEM = []; let GLOBAL_INV = [];
-    let SHEPHERD_MAP = {}; // Store names of leaders
+    let LEADER_MAP = {}; // Unified list of all leaders
 
     onAuthStateChanged(auth, (user) => { if (user) init(); });
 
     async function init() {
         try {
-            // 1. FETCH EVERYTHING
-            const eventSnap = await getDocs(query(collection(db, "events"), orderBy("date", "desc"), limit(100)));
-            const attSnap = await getDocs(collection(db, "attendance"));
-            const memSnap = await getDocs(collection(db, "members"));
-            const invSnap = await getDocs(collection(db, "invitees"));
-            const shepSnap = await getDocs(collection(db, "shepherds")); // Fetch Leaders
+            // 1. FETCH ALL LEADERSHIP COLLECTIONS (The Fix for "Unknown Leader")
+            const [shepSnap, pastSnap, adminSnap] = await Promise.all([
+                getDocs(collection(db, "shepherds")),
+                getDocs(collection(db, "pastors")),
+                getDocs(collection(db, "master_admin"))
+            ]);
 
-            // Map Shepherd IDs to Names
-            shepSnap.forEach(doc => {
-                const d = doc.data();
-                SHEPHERD_MAP[doc.id] = d.full_name || `${d.first_name||''} ${d.last_name||''}`.trim() || "Unknown Leader";
+            // Build Unified Leader Phonebook
+            const addToMap = (snap) => snap.forEach(d => {
+                const data = d.data();
+                LEADER_MAP[d.id] = data.full_name || `${data.first_name||''} ${data.last_name||''}`.trim() || "Unknown";
             });
+            addToMap(shepSnap); addToMap(pastSnap); addToMap(adminSnap);
 
+            // 2. FETCH EVENTS
+            const eventSnap = await getDocs(query(collection(db, "events"), orderBy("date", "desc"), limit(100)));
             if (eventSnap.empty) { document.getElementById('eventLabel').innerText = "Database Empty."; return; }
 
-            // 2. PROCESS EVENTS (Filter out Dawn Prayers & Future)
-            const now = new Date(); now.setHours(23, 59, 59, 999);
+            // Filter Dawn Prayers
             GLOBAL_EVENTS = eventSnap.docs.map(d => {
                 const data = d.data();
                 const jsDate = (data.date && data.date.toDate) ? data.date.toDate() : new Date(data.date);
                 const title = data.name || data.title || "Service";
                 return { id: d.id, ...data, title: title, jsDate: jsDate };
-            }).filter(e => !e.title.toLowerCase().includes("dawn prayer")); // Only filter Dawn Prayer initially
+            }).filter(e => !e.title.toLowerCase().includes("dawn prayer"));
 
             GLOBAL_EVENTS.sort((a, b) => a.jsDate - b.jsDate);
 
-            // 3. STORE DATA
+            // 3. FETCH DATA
+            const [attSnap, memSnap, invSnap] = await Promise.all([
+                getDocs(collection(db, "attendance")),
+                getDocs(collection(db, "members")),
+                getDocs(collection(db, "invitees"))
+            ]);
+            
             GLOBAL_ATT = attSnap.docs.map(d => ({id:d.id, ...d.data()}));
             GLOBAL_MEM = memSnap.docs.map(d => ({id:d.id, ...d.data()}));
             GLOBAL_INV = invSnap.docs.map(d => ({id:d.id, ...d.data()}));
@@ -170,9 +178,8 @@
         }
     }
 
-    // --- NEW: GROUPED TARGETS ---
+    // --- GROUPED TARGETS BY LEADER ---
     function renderGroupedTargets() {
-        // Date
         const d = new Date(); d.setDate(d.getDate() + (7 - d.getDay()) % 7);
         document.getElementById('nextSundayDate').innerText = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
 
@@ -184,7 +191,7 @@
             return;
         }
 
-        // Group by Shepherd ID
+        // Group by shepherdId
         const groups = {};
         activeTargets.forEach(t => {
             const sId = t.shepherdId || 'unknown';
@@ -193,22 +200,16 @@
         });
 
         let fullHtml = "";
-
-        // Iterate through groups
-        // Sort keys to make 'Unknown' last or sort by name if desired
-        const leaderIds = Object.keys(groups);
         
-        leaderIds.forEach(leaderId => {
-            const leaderName = SHEPHERD_MAP[leaderId] || "Unknown Leader";
+        // Loop through leaders
+        Object.keys(groups).forEach(leaderId => {
+            const leaderName = LEADER_MAP[leaderId] || "Unassigned / Unknown Leader";
             const targets = groups[leaderId];
 
-            // Build grid for this leader
             const cardsHtml = targets.map(t => {
                 const effort = (t.calls || 0) + (t.visits || 0);
                 let color = "#ff4b5c"; 
-                if(effort > 2) color = "#00ff88"; 
-                else if(effort > 0) color = "#ffd700"; 
-
+                if(effort > 2) color = "#00ff88"; else if(effort > 0) color = "#ffd700"; 
                 return `
                 <div class="target-card">
                     <span class="target-name">${t.fullName}</span>
@@ -218,7 +219,6 @@
                 </div>`;
             }).join('');
 
-            // Append Section
             fullHtml += `
                 <div class="leader-section">
                     <div class="leader-header">👤 ${leaderName} (${targets.length})</div>
@@ -232,16 +232,26 @@
         container.innerHTML = fullHtml;
     }
 
-    // --- ANALYTICS ---
+    // --- ANALYTICS (With Fail-Safe) ---
     window.updateTimeframe = () => {
         const filterVal = document.getElementById('timeFilter').value;
         const endOfToday = new Date(); endOfToday.setHours(23,59,59,999);
-        const pastEvents = GLOBAL_EVENTS.filter(e => e.jsDate <= endOfToday); // Remove future
+        
+        // 1. Try to find strictly past events
+        let pastEvents = GLOBAL_EVENTS.filter(e => e.jsDate <= endOfToday);
 
-        if (pastEvents.length === 0) { document.getElementById('eventLabel').innerText = "Waiting for first service..."; return; }
+        // FAIL-SAFE: If no "past" events found (maybe timezone or date issues), use ALL events.
+        // This ensures the graph never stays blank.
+        if (pastEvents.length === 0) pastEvents = GLOBAL_EVENTS;
+
+        if (pastEvents.length === 0) { 
+            document.getElementById('eventLabel').innerText = "Waiting for first service..."; 
+            return; 
+        }
 
         let eventsToRender = [];
         if (filterVal === 'auto') {
+            // Auto = Absolute last 5 events we have
             eventsToRender = pastEvents.slice(-5);
         } else {
             const cutoffDate = new Date();
@@ -251,7 +261,8 @@
             eventsToRender = pastEvents.filter(e => e.jsDate >= cutoffDate);
         }
 
-        if (eventsToRender.length === 0) eventsToRender = [pastEvents[pastEvents.length-1]];
+        // Double check we have something to show
+        if (eventsToRender.length === 0) eventsToRender = pastEvents.slice(-5);
 
         const latestEvent = eventsToRender[eventsToRender.length - 1];
         document.getElementById('eventLabel').innerText = `Focus: ${latestEvent.title} • ${latestEvent.jsDate.toLocaleDateString()}`;
