@@ -6,64 +6,42 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
-        :root { 
-            --primary: #4facfe; 
-            --bg: #0f172a; 
-            --glass: rgba(255, 255, 255, 0.05); 
-            --border: rgba(255, 255, 255, 0.1); 
-            --red: #ff4b5c; 
-            --green: #00ff88; 
-        }
-        body { background: var(--bg); color: white; font-family: 'Poppins', sans-serif; padding: 20px; margin: 0; }
-        .container { max-width: 1000px; margin: 0 auto; padding-bottom: 50px; }
+        :root { --primary: #4facfe; --bg: #0f172a; --glass: rgba(255, 255, 255, 0.05); --border: rgba(255, 255, 255, 0.1); --green: #00ff88; --red: #ff4b5c; }
+        body { background: var(--bg); color: white; font-family: 'Poppins', sans-serif; padding: 20px; }
+        .container { max-width: 900px; margin: 0 auto; padding-bottom: 50px; }
         
-        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
-        h1 { margin: 0; font-size: 1.5rem; }
+        /* HEADER */
+        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
+        h1 { margin: 0; font-size: 1.4rem; }
         
-        .analytics-card { 
-            background: var(--glass); border: 1px solid var(--border); 
-            border-radius: 24px; padding: 25px; margin-bottom: 30px; 
-        }
-        .graph-container { 
-            display: flex; align-items: flex-end; gap: 40px; 
-            height: 150px; margin-top: 20px; justify-content: center; 
-        }
-        .bar-group { display: flex; flex-direction: column; align-items: center; gap: 8px; width: 80px; }
-        .bar { 
-            width: 50px; border-radius: 8px 8px 0 0; 
-            transition: height 1s ease; min-height: 4px; position: relative; 
-        }
-        .bar-expected { background: rgba(255,255,255,0.15); }
-        .bar-present { background: var(--primary); box-shadow: 0 0 15px rgba(79, 172, 254, 0.5); }
-        .bar-label { font-size: 0.75rem; font-weight: 600; text-align: center; color: #ccc; }
+        /* ANALYTICS GRAPH CARD */
+        .analytics-card { background: var(--glass); border: 1px solid var(--border); border-radius: 20px; padding: 20px; margin-bottom: 25px; display: flex; flex-direction: column; align-items: center; }
+        .graph-wrapper { display: flex; align-items: flex-end; gap: 50px; height: 160px; margin-top: 15px; }
+        .bar-container { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+        .bar-track { width: 50px; height: 130px; background: rgba(255,255,255,0.05); border-radius: 25px; position: relative; overflow: hidden; }
+        .bar-fill { width: 100%; position: absolute; bottom: 0; transition: height 1s ease; }
+        .fill-target { background: linear-gradient(to top, #4facfe, #00f2fe); opacity: 0.4; }
+        .fill-actual { background: linear-gradient(to top, #00ff88, #00b09b); }
+        .stat-val { font-size: 1.1rem; font-weight: bold; }
+        .stat-lbl { font-size: 0.65rem; opacity: 0.6; letter-spacing: 1px; }
 
-        .list-section { background: var(--glass); border: 1px solid var(--border); border-radius: 20px; padding: 20px; }
-        .table-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px; }
+        /* TABLE STYLES */
+        .table-card { background: var(--glass); border: 1px solid var(--border); border-radius: 15px; overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; min-width: 600px; }
+        th { text-align: left; opacity: 0.5; padding: 15px; border-bottom: 1px solid var(--border); font-size: 0.7rem; letter-spacing: 1px; }
+        td { padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.02); font-size: 0.85rem; vertical-align: middle; }
         
-        table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
-        th { text-align: left; opacity: 0.5; padding: 12px; border-bottom: 1px solid var(--border); font-size: 0.75rem; letter-spacing: 1px; }
-        td { padding: 14px 12px; border-bottom: 1px solid rgba(255,255,255,0.02); }
-        
-        .btn-sort { 
-            background: var(--primary); color: #0f172a; border: none; 
-            padding: 8px 16px; border-radius: 8px; font-size: 0.75rem; 
-            cursor: pointer; font-weight: 600; transition: 0.2s; 
-        }
-        .btn-sort:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(79, 172, 254, 0.3); }
-
-        .badge { padding: 4px 10px; border-radius: 6px; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.5px; }
-        .badge-invitee { background: rgba(255, 193, 7, 0.15); color: #ffc107; }
+        /* BADGES */
+        .badge { padding: 3px 8px; border-radius: 6px; font-size: 0.6rem; font-weight: 700; text-transform: uppercase; }
         .badge-member { background: rgba(79, 172, 254, 0.15); color: var(--primary); }
+        .badge-invitee { background: rgba(255, 215, 0, 0.15); color: #ffd700; }
         
-        .status-tag { padding: 4px 12px; border-radius: 6px; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.5px; }
-        .status-present { background: rgba(0, 255, 136, 0.15); color: var(--green); border: 1px solid rgba(0, 255, 136, 0.3); }
-        .status-absent { background: rgba(255, 75, 92, 0.15); color: var(--red); border: 1px solid rgba(255, 75, 92, 0.3); }
-
-        /* Responsive Fixes */
-        @media (max-width: 600px) {
-            .table-header { flex-direction: column; align-items: flex-start; }
-            th:nth-child(2), td:nth-child(2) { display: none; } /* Hide Rank on mobile */
-        }
+        /* STATUS & NOTES */
+        .status-dot { height: 8px; width: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+        .dot-green { background: var(--green); box-shadow: 0 0 8px var(--green); }
+        .dot-red { background: var(--red); box-shadow: 0 0 8px var(--red); }
+        .note-text { font-size: 0.75rem; color: #ff4b5c; font-style: italic; display: block; margin-top: 4px; opacity: 0.9; }
+        .effort-text { font-size: 0.7rem; font-family: monospace; color: #ccc; background: rgba(255,255,255,0.05); padding: 2px 6px; border-radius: 4px; }
     </style>
 </head>
 <body>
@@ -71,34 +49,30 @@
 <div class="container">
     <header>
         <div>
-            <h1>Global Intelligence</h1>
-            <p id="eventStatus" style="opacity:0.6; font-size: 0.8rem; margin-top:5px;">Verifying Identity...</p>
+            <h1>Mission Report</h1>
+            <p id="eventLabel" style="opacity:0.6; font-size: 0.8rem; margin-top:4px;">Connecting...</p>
         </div>
-        <a href="index.html" style="color: var(--primary); text-decoration: none; font-size: 0.85rem; border:1px solid var(--border); padding:8px 15px; border-radius:10px;">&larr; Exit</a>
+        <a href="index.html" style="color:var(--primary); text-decoration:none; border:1px solid var(--border); padding:6px 14px; border-radius:8px; font-size:0.8rem;">Exit</a>
     </header>
 
     <div class="analytics-card">
-        <h3 style="font-size: 0.9rem; margin:0; opacity:0.8; text-transform:uppercase; letter-spacing:1px;">Service Attendance Dynamics</h3>
-        <div class="graph-container" id="graphArea">
+        <h3 style="margin:0; font-size:0.9rem; opacity:0.8; letter-spacing:1px;">ATTENDANCE YIELD</h3>
+        <div class="graph-wrapper" id="graphArea">
             </div>
     </div>
 
-    <div class="list-section">
-        <div class="table-header">
-            <h3 style="margin:0; font-size: 1rem;">Personnel Registry (Expected Today)</h3>
-            <button class="btn-sort" onclick="sortDataByInviter()">Sort by Inviter</button>
-        </div>
+    <div class="table-card">
         <table>
             <thead>
                 <tr>
-                    <th>NAME</th>
-                    <th>RANK</th>
-                    <th>INVITED BY / SHEPHERD</th>
-                    <th>STATUS</th>
+                    <th width="30%">NAME / ROLE</th>
+                    <th width="20%">EFFORT (Calls/Visits)</th>
+                    <th width="15%">STATUS</th>
+                    <th width="35%">CHALLENGES / NOTES</th>
                 </tr>
             </thead>
             <tbody id="registryBody">
-                <tr><td colspan="4" style="text-align:center; padding:40px; opacity:0.5;">Syncing...</td></tr>
+                <tr><td colspan="4" style="text-align:center; padding:30px; opacity:0.5;">Gathering Intelligence...</td></tr>
             </tbody>
         </table>
     </div>
@@ -119,66 +93,150 @@
     });
 
     async function init() {
-        const eventSnap = await getDocs(query(collection(db, "events"), limit(5)));
-        // (Simplified event fetching for brevity - assumes same logic as before)
-        const latestEvent = eventSnap.docs[0]?.data(); 
-        if(latestEvent) fetchData(latestEvent.date.toDate ? latestEvent.date.toDate() : new Date(latestEvent.date));
+        // 1. Get Latest Event
+        const eventSnap = await getDocs(query(collection(db, "events"), limit(10)));
+        // Filter out "Dawn Prayers" or other non-service events if needed
+        const events = eventSnap.docs.map(d => d.data());
+        // Sort by date descending
+        const latest = events.sort((a,b) => new Date(b.date) - new Date(a.date))[0];
+
+        if(!latest) {
+            document.getElementById('eventLabel').innerText = "No upcoming events found.";
+            return;
+        }
+
+        const eventDate = new Date(latest.date);
+        document.getElementById('eventLabel').innerText = `Target: ${latest.title} (${eventDate.toLocaleDateString()})`;
+        
+        loadData(eventDate);
     }
 
-    async function fetchData(eventDate) {
-        // Define "This Week" window to match effort counts
+    async function loadData(eventDate) {
+        // Define timeframe for "Fresh" invitee data (This week)
         const startWeek = new Date(eventDate);
         startWeek.setDate(startWeek.getDate() - 6); 
-
+        
+        // Fetch all necessary collections
         const [attSnap, memSnap, invSnap] = await Promise.all([
             getDocs(collection(db, "attendance")),
             getDocs(collection(db, "members")),
             getDocs(collection(db, "invitees"))
         ]);
 
+        // 1. Map Attendance (Who was marked present/absent for this specific date?)
+        // Key: MemberID, Value: { status, notes }
+        let attendanceMap = {};
+        
+        // Define day range for matching attendance timestamps
+        const dayStart = new Date(eventDate); dayStart.setHours(0,0,0,0);
+        const dayEnd = new Date(eventDate); dayEnd.setHours(23,59,59,999);
+
+        attSnap.forEach(doc => {
+            const d = doc.data();
+            const attTime = d.timestamp ? d.timestamp.toDate() : new Date(d.date);
+            
+            if(attTime >= dayStart && attTime <= dayEnd) {
+                // attendanceMap[memberId] = data
+                attendanceMap[d.memberId || doc.id] = { 
+                    status: (d.status || "").toLowerCase(), 
+                    notes: d.notes || "" 
+                };
+            }
+        });
+
         let masterList = [];
 
-        // 1. Process Invitees (Rich Data)
-        invSnap.forEach(d => {
-            const data = d.data();
-            // Check if data is relevant to this week
-            const lastUpdate = data.lastUpdated ? data.lastUpdated.toDate() : new Date(0);
-            const isFresh = lastUpdate > startWeek;
+        // 2. PROCESS MEMBERS
+        memSnap.forEach(doc => {
+            const m = doc.data();
+            const attRecord = attendanceMap[doc.id]; // Check if they have an attendance record for today
             
+            const isPresent = attRecord && attRecord.status.includes('present');
+            const isAbsentMarked = attRecord && attRecord.status.includes('absent');
+            
+            // If explicitly marked absent, show note. If no record, just "Absent".
+            const note = isAbsentMarked ? attRecord.notes : (isPresent ? "" : "No attendance record");
+
             masterList.push({
-                name: data.fullName,
-                type: 'invitee',
-                inviter: "Shepherd", // Simplified
-                present: data.status === 'honoured',
-                // HERE IS THE NEW INFO:
-                effort: isFresh ? `📞 ${data.calls || 0}  |  🏠 ${data.visits || 0}` : "No effort recorded",
-                notes: (data.status === 'declined' && isFresh) ? `Reason: ${data.notes}` : ""
+                name: m.full_name || m.first_name,
+                type: 'member',
+                present: isPresent,
+                effort: "—", // Members don't track calls/visits usually, or you can add if needed
+                note: isPresent ? "" : note
             });
         });
 
-        // 2. Process Members (Standard Attendance)
-        // (Logic remains similar to before, just focusing on Invitees for this snippet request)
-        
+        // 3. PROCESS INVITEES
+        invSnap.forEach(doc => {
+            const i = doc.data();
+            
+            // Check if invitee data is "Fresh" (updated this week)
+            const lastUpdate = i.lastUpdated ? i.lastUpdated.toDate() : new Date(0);
+            const isFresh = lastUpdate > startWeek;
+
+            const calls = isFresh ? (i.calls || 0) : 0;
+            const visits = isFresh ? (i.visits || 0) : 0;
+            const status = isFresh ? (i.status || 'unmarked') : 'unmarked';
+            const note = isFresh ? (i.notes || "") : "";
+
+            const isPresent = status === 'honoured';
+
+            masterList.push({
+                name: i.fullName,
+                type: 'invitee',
+                present: isPresent,
+                effort: `📞 ${calls} | 🏠 ${visits}`,
+                note: (!isPresent && note) ? note : ""
+            });
+        });
+
         render(masterList);
     }
 
     function render(list) {
-        document.getElementById('registryBody').innerHTML = list.map(p => `
+        // --- GRAPHS ---
+        const total = list.length;
+        const present = list.filter(x => x.present).length;
+        const percent = total > 0 ? (present/total)*100 : 0;
+
+        document.getElementById('graphArea').innerHTML = `
+            <div class="bar-container">
+                <div class="bar-track"><div class="bar-fill fill-target" style="height:100%"></div></div>
+                <div class="stat-val">${total}</div>
+                <div class="stat-lbl">EXPECTED</div>
+            </div>
+            <div class="bar-container">
+                <div class="bar-track"><div class="bar-fill fill-actual" style="height:${percent}%"></div></div>
+                <div class="stat-val" style="color:var(--green)">${present}</div>
+                <div class="stat-lbl">ACTUAL</div>
+            </div>
+        `;
+
+        // --- TABLE ---
+        if(total === 0) {
+            document.getElementById('registryBody').innerHTML = `<tr><td colspan="4" style="text-align:center;">No data found.</td></tr>`;
+            return;
+        }
+
+        document.getElementById('registryBody').innerHTML = list.map(item => `
             <tr>
                 <td>
-                    <b>${p.name}</b><br>
-                    <span class="badge badge-${p.type}">${p.type.toUpperCase()}</span>
+                    <b>${item.name}</b><br>
+                    <span class="badge badge-${item.type}">${item.type}</span>
                 </td>
                 <td>
-                    <span style="font-size:0.8rem; color:var(--primary); font-family:monospace;">${p.effort}</span>
+                    <span class="effort-text">${item.effort}</span>
                 </td>
                 <td>
-                    <span class="status-tag ${p.present ? 'status-present' : 'status-absent'}">
-                        ${p.present ? 'PRESENT' : 'ABSENT'}
-                    </span>
+                    <div style="display:flex; align-items:center;">
+                        <span class="status-dot ${item.present ? 'dot-green' : 'dot-red'}"></span>
+                        <span style="font-size:0.75rem; font-weight:bold; color:${item.present ? 'var(--green)' : 'var(--red)'}">
+                            ${item.present ? 'PRESENT' : 'ABSENT'}
+                        </span>
+                    </div>
                 </td>
                 <td>
-                    <span style="color:var(--red); font-size:0.8rem; font-style:italic;">${p.notes}</span>
+                    <span class="note-text">${item.note ? `"${item.note}"` : ''}</span>
                 </td>
             </tr>
         `).join('');
