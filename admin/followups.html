@@ -1,6 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Network Intelligence | ShepherdNet</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        :root { 
+            --primary: #4facfe; 
+            --bg: #0f172a; 
+            --glass: rgba(255, 255, 255, 0.05); 
+            --border: rgba(255, 255, 255, 0.1); 
+            --red: #ff4b5c; 
+            --green: #00ff88; 
+        }
+        body { background: var(--bg); color: white; font-family: 'Poppins', sans-serif; padding: 20px; margin: 0; }
+        .container { max-width: 1000px; margin: 0 auto; padding-bottom: 50px; }
+        
+        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+        h1 { margin: 0; font-size: 1.5rem; }
+        
+        .analytics-card { 
+            background: var(--glass); border: 1px solid var(--border); 
+            border-radius: 24px; padding: 25px; margin-bottom: 30px; 
+        }
+        .graph-container { 
+            display: flex; align-items: flex-end; gap: 40px; 
+            height: 150px; margin-top: 20px; justify-content: center; 
+        }
+        .bar-group { display: flex; flex-direction: column; align-items: center; gap: 8px; width: 80px; }
+        .bar { 
+            width: 50px; border-radius: 8px 8px 0 0; 
+            transition: height 1s ease; min-height: 4px; position: relative; 
+        }
+        .bar-expected { background: rgba(255,255,255,0.15); }
+        .bar-present { background: var(--primary); box-shadow: 0 0 15px rgba(79, 172, 254, 0.5); }
+        .bar-label { font-size: 0.75rem; font-weight: 600; text-align: center; color: #ccc; }
+
+        .list-section { background: var(--glass); border: 1px solid var(--border); border-radius: 20px; padding: 20px; }
+        .table-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px; }
+        
+        table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+        th { text-align: left; opacity: 0.5; padding: 12px; border-bottom: 1px solid var(--border); font-size: 0.75rem; letter-spacing: 1px; }
+        td { padding: 14px 12px; border-bottom: 1px solid rgba(255,255,255,0.02); }
+        
+        .btn-sort { 
+            background: var(--primary); color: #0f172a; border: none; 
+            padding: 8px 16px; border-radius: 8px; font-size: 0.75rem; 
+            cursor: pointer; font-weight: 600; transition: 0.2s; 
+        }
+        .btn-sort:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(79, 172, 254, 0.3); }
+
+        .badge { padding: 4px 10px; border-radius: 6px; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.5px; }
+        .badge-invitee { background: rgba(255, 193, 7, 0.15); color: #ffc107; }
+        .badge-member { background: rgba(79, 172, 254, 0.15); color: var(--primary); }
+        
+        .status-tag { padding: 4px 12px; border-radius: 6px; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.5px; }
+        .status-present { background: rgba(0, 255, 136, 0.15); color: var(--green); border: 1px solid rgba(0, 255, 136, 0.3); }
+        .status-absent { background: rgba(255, 75, 92, 0.15); color: var(--red); border: 1px solid rgba(255, 75, 92, 0.3); }
+
+        /* Responsive Fixes */
+        @media (max-width: 600px) {
+            .table-header { flex-direction: column; align-items: flex-start; }
+            th:nth-child(2), td:nth-child(2) { display: none; } /* Hide Rank on mobile */
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <div>
+            <h1>Global Intelligence</h1>
+            <p id="eventStatus" style="opacity:0.6; font-size: 0.8rem; margin-top:5px;">Verifying Identity...</p>
+        </div>
+        <a href="index.html" style="color: var(--primary); text-decoration: none; font-size: 0.85rem; border:1px solid var(--border); padding:8px 15px; border-radius:10px;">&larr; Exit</a>
+    </header>
+
+    <div class="analytics-card">
+        <h3 style="font-size: 0.9rem; margin:0; opacity:0.8; text-transform:uppercase; letter-spacing:1px;">Service Attendance Dynamics</h3>
+        <div class="graph-container" id="graphArea">
+            </div>
+    </div>
+
+    <div class="list-section">
+        <div class="table-header">
+            <h3 style="margin:0; font-size: 1rem;">Personnel Registry (Expected Today)</h3>
+            <button class="btn-sort" onclick="sortDataByInviter()">Sort by Inviter</button>
+        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th>NAME</th>
+                    <th>RANK</th>
+                    <th>INVITED BY / SHEPHERD</th>
+                    <th>STATUS</th>
+                </tr>
+            </thead>
+            <tbody id="registryBody">
+                <tr><td colspan="4" style="text-align:center; padding:40px; opacity:0.5;">Syncing...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
-    import { getFirestore, collection, getDocs, query, where, limit } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+    import { getFirestore, collection, getDocs, query, limit } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
 
     const firebaseConfig = { 
@@ -17,11 +123,12 @@
 
     let masterList = [];
 
+    // --- STEP 1: AUTH CHECK (CRITICAL FIX) ---
     onAuthStateChanged(auth, (user) => {
         if (user) {
-            init();
+            init(); // Only start if user is logged in
         } else {
-            window.location.href = "index.html";
+            window.location.href = "index.html"; // Redirect if not
         }
     });
 
@@ -29,11 +136,13 @@
         try {
             document.getElementById('eventStatus').innerText = "Syncing database...";
             
-            // Get latest event
+            // Get latest 10 events to find the most recent valid one
             const eventSnap = await getDocs(query(collection(db, "events"), limit(10)));
+            
+            // Find latest event (ignoring 'Dawn Prayers' if you wish, or remove filter)
             const latestEvent = eventSnap.docs
                 .map(d => d.data())
-                .filter(e => e.title !== "Dawn Prayers")
+                .filter(e => e.title !== "Dawn Prayers") 
                 .sort((a, b) => {
                     const dateA = a.date.toDate ? a.date.toDate() : new Date(a.date);
                     const dateB = b.date.toDate ? b.date.toDate() : new Date(b.date);
@@ -42,22 +151,25 @@
 
             if(latestEvent) {
                 const eventDateObj = latestEvent.date.toDate ? latestEvent.date.toDate() : new Date(latestEvent.date);
-                document.getElementById('eventStatus').innerText = `Current Event: ${latestEvent.title} (${eventDateObj.toLocaleDateString()})`;
+                document.getElementById('eventStatus').innerText = `Live View: ${latestEvent.title} • ${eventDateObj.toLocaleDateString()}`;
                 await fetchData(eventDateObj);
             } else {
-                document.getElementById('eventStatus').innerText = "No Event Found.";
+                document.getElementById('eventStatus').innerText = "No Event Found in Database.";
+                document.getElementById('registryBody').innerHTML = `<tr><td colspan="4" style="text-align:center; padding:20px;">No events found in Calendar.</td></tr>`;
             }
         } catch (e) {
             console.error(e);
-            document.getElementById('registryBody').innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--red);">Error: ${e.message}</td></tr>`;
+            document.getElementById('registryBody').innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--red);">Connection Error: ${e.message}</td></tr>`;
         }
     }
 
     async function fetchData(eventDate) {
+        // Set time range for the event day (00:00 to 23:59)
         const start = new Date(eventDate); start.setHours(0,0,0,0);
         const end = new Date(eventDate); end.setHours(23,59,59,999);
 
         try {
+            // Fetch everything in parallel
             const [attSnap, memSnap, invSnap, pastorsSnap] = await Promise.all([
                 getDocs(collection(db, "attendance")),
                 getDocs(collection(db, "members")),
@@ -65,9 +177,11 @@
                 getDocs(collection(db, "pastors"))
             ]);
 
+            // Create a lookup map for Pastors (ID -> Name)
             const pastorsMap = {};
             pastorsSnap.forEach(d => pastorsMap[d.id] = d.data().full_name);
 
+            // Filter Attendance for this specific day
             const attendedIds = new Set();
             attSnap.forEach(doc => {
                 const data = doc.data();
@@ -75,10 +189,9 @@
                 if(data.timestamp && data.timestamp.toDate) attDate = data.timestamp.toDate();
                 else if(data.date) attDate = new Date(data.date);
 
-                // Use loose date matching (same day)
+                // If timestamp matches the event day AND status is present
                 if (attDate && attDate >= start && attDate <= end) {
-                    // Check if status is present
-                    if(data.status && data.status.toLowerCase() === 'present') {
+                    if(data.status && data.status.toLowerCase().includes('present')) {
                         attendedIds.add(data.memberId || doc.id.split('_')[0]);
                     }
                 }
@@ -86,26 +199,30 @@
 
             masterList = [];
 
+            // --- PROCESS MEMBERS ---
             memSnap.forEach(d => {
                 const data = d.data();
-                // --- THE FIX: Combine First + Last Name if Full Name is missing ---
+                // Name Fallback Logic: Full Name -> First+Last -> "Unknown"
                 const combinedName = `${data.first_name || ''} ${data.last_name || ''}`.trim();
-                const displayName = data.full_name || combinedName || "Unnamed Member";
+                const finalName = data.full_name || combinedName || "Unknown Member";
 
                 masterList.push({
-                    name: displayName,
+                    name: finalName,
                     type: 'member',
                     inviter: data.shepherd_name || pastorsMap[data.pastorId] || "Station Pastor",
                     present: attendedIds.has(d.id)
                 });
             });
 
+            // --- PROCESS INVITEES ---
             invSnap.forEach(d => {
                 const data = d.data();
-                const displayName = data.full_name || `${data.first_name || ''} ${data.last_name || ''}`.trim() || "Unnamed Invitee";
+                // Same Name Fallback Logic
+                const combinedName = `${data.first_name || ''} ${data.last_name || ''}`.trim();
+                const finalName = data.full_name || combinedName || "New Invitee";
                 
                 masterList.push({
-                    name: displayName,
+                    name: finalName,
                     type: 'invitee',
                     inviter: data.invited_by || pastorsMap[data.pastorId] || "N/A",
                     present: attendedIds.has(d.id)
@@ -113,8 +230,9 @@
             });
 
             render();
+
         } catch (err) {
-            console.error(err);
+            console.error("Data Fetch Error:", err);
         }
     }
 
@@ -123,16 +241,23 @@
         const total = masterList.length;
         const percent = total > 0 ? (present / total) * 100 : 0;
 
+        // Render Graph
         document.getElementById('graphArea').innerHTML = `
             <div class="bar-group">
                 <div class="bar bar-expected" style="height: 100%"></div>
-                <span class="bar-label">TARGET: ${total}</span>
+                <span class="bar-label">TARGET<br>${total}</span>
             </div>
             <div class="bar-group">
-                <div class="bar bar-present" style="height: ${percent}%"></div>
-                <span class="bar-label" style="color:var(--primary)">PRESENT: ${present}</span>
+                <div class="bar bar-present" style="height: ${Math.max(5, percent)}%"></div>
+                <span class="bar-label" style="color:var(--primary)">ACTUAL<br>${present}</span>
             </div>
         `;
+
+        // Render Table
+        if(masterList.length === 0) {
+            document.getElementById('registryBody').innerHTML = `<tr><td colspan="4" style="text-align:center; padding:30px; opacity:0.5;">Database is empty.</td></tr>`;
+            return;
+        }
 
         document.getElementById('registryBody').innerHTML = masterList.map(p => `
             <tr>
@@ -148,8 +273,11 @@
         `).join('');
     }
 
+    // Sort Function
     window.sortDataByInviter = () => {
         masterList.sort((a, b) => (a.inviter || "").localeCompare(b.inviter || ""));
         render();
     };
 </script>
+</body>
+</html>
