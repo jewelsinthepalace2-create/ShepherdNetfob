@@ -2,357 +2,343 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Invitee Mandate | ShepherdNet</title>
+    <title>Network Intelligence | ShepherdNet</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
     <style>
-        :root { --primary: #4facfe; --bg: #0f172a; --glass: rgba(255, 255, 255, 0.05); --border: rgba(255, 255, 255, 0.1); --green: #00ff88; --red: #ff4b5c; }
+        :root { 
+            --primary: #4facfe; --bg: #0f172a; --glass: rgba(255, 255, 255, 0.05); 
+            --border: rgba(255, 255, 255, 0.1); --green: #00ff88; --red: #ff4b5c; --gold: #ffd700;
+        }
         body { background: var(--bg); color: white; font-family: 'Poppins', sans-serif; padding: 20px; padding-bottom: 80px; }
-        .container { max-width: 600px; margin: 0 auto; }
+        .container { max-width: 1000px; margin: 0 auto; }
         
         /* HEADER */
-        .header-flex { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        h1 { margin: 0; font-size: 1.5rem; }
+        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
+        h1 { margin: 0; font-size: 1.4rem; }
 
-        /* CARD STYLES */
-        .card { background: var(--glass); padding: 20px; border-radius: 20px; border: 1px solid var(--border); margin-bottom: 20px; backdrop-filter: blur(10px); }
-        input, select { width: 100%; padding: 12px; border-radius: 10px; background: rgba(0,0,0,0.3); color: white; border: 1px solid var(--border); box-sizing: border-box; font-family: inherit; font-size: 0.9rem; outline: none; margin-bottom: 10px; }
-        input:focus { border-color: var(--primary); }
+        /* GRID LAYOUT */
+        .dashboard-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; margin-bottom: 30px; }
+        @media (max-width: 768px) { .dashboard-grid { grid-template-columns: 1fr; } }
 
-        /* INVITEE ITEM */
-        .invitee-item { background: #1e293b; border: 1px solid var(--border); border-radius: 16px; padding: 16px; margin-bottom: 16px; }
+        /* CARDS */
+        .card { background: var(--glass); border: 1px solid var(--border); border-radius: 20px; padding: 20px; backdrop-filter: blur(10px); }
+        .card-title { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; opacity: 0.7; margin-bottom: 15px; display: block; }
+
+        /* KPI BOXES */
+        .kpi-row { display: flex; gap: 15px; margin-bottom: 20px; }
+        .kpi-box { flex: 1; background: rgba(255,255,255,0.03); padding: 15px; border-radius: 12px; text-align: center; }
+        .kpi-val { font-size: 1.5rem; font-weight: bold; display: block; }
+        .kpi-lbl { font-size: 0.7rem; opacity: 0.6; }
+
+        /* NOTES LIST */
+        .notes-list { max-height: 300px; overflow-y: auto; }
+        .note-item { background: rgba(255, 75, 92, 0.05); border-left: 3px solid var(--red); padding: 10px; margin-bottom: 8px; border-radius: 4px; }
+        .note-text { font-size: 0.8rem; color: #ffcccb; font-style: italic; }
+        .note-author { font-size: 0.7rem; opacity: 0.6; margin-top: 4px; display: block; }
+
+        /* TABLE */
+        .table-card { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; min-width: 700px; }
+        th { text-align: left; opacity: 0.5; padding: 15px; border-bottom: 1px solid var(--border); font-size: 0.7rem; letter-spacing: 1px; }
+        td { padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.02); font-size: 0.85rem; vertical-align: top; }
+
+        /* BADGES */
+        .badge { padding: 4px 8px; border-radius: 6px; font-size: 0.6rem; font-weight: 700; text-transform: uppercase; }
+        .badge-member { background: rgba(79, 172, 254, 0.15); color: var(--primary); }
+        .badge-invitee { background: rgba(255, 215, 0, 0.15); color: var(--gold); }
         
-        /* EFFORT GRID */
-        .effort-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 15px 0; }
-        .effort-box { background: rgba(255,255,255,0.03); padding: 10px; border-radius: 10px; text-align: center; }
-        .effort-label { font-size: 0.65rem; text-transform: uppercase; opacity: 0.6; letter-spacing: 1px; display: block; margin-bottom: 5px; }
-        .counter-controls { display: flex; justify-content: space-between; align-items: center; padding: 0 5px; }
-        .btn-count { background: var(--primary); color: #0f172a; border: none; width: 32px; height: 32px; border-radius: 8px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; }
-        .count-val { font-size: 1.2rem; font-weight: 600; }
-
-        /* ACTION BUTTONS */
-        .action-row { display: flex; gap: 10px; margin-top: 10px; }
-        .btn-action { flex: 1; padding: 12px; border-radius: 10px; border: none; font-weight: 600; cursor: pointer; font-size: 0.8rem; transition: 0.2s; }
-        .btn-present { background: rgba(0, 255, 136, 0.1); color: var(--green); border: 1px solid rgba(0, 255, 136, 0.3); }
-        .btn-absent { background: rgba(255, 75, 92, 0.1); color: var(--red); border: 1px solid rgba(255, 75, 92, 0.3); }
-        
-        /* TOP CONTROLS */
-        .top-controls { display: flex; justify-content: space-between; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.05); }
-        .btn-promote { background: none; border: 1px solid var(--primary); color: var(--primary); padding: 4px 12px; border-radius: 6px; font-size: 0.7rem; cursor: pointer; font-weight: bold; }
-        .btn-delete { background: none; border: 1px solid var(--red); color: var(--red); padding: 4px 12px; border-radius: 6px; font-size: 0.7rem; cursor: pointer; opacity: 0.7; transition: 0.2s; }
-        .btn-delete:hover { opacity: 1; background: rgba(255, 75, 92, 0.1); }
-
-        /* REASON BOX */
-        .reason-box { display: none; margin-top: 15px; background: rgba(255, 75, 92, 0.05); padding: 15px; border-radius: 12px; border: 1px solid rgba(255, 75, 92, 0.3); }
-        
-        /* MODAL */
-        #promoModal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15, 23, 42, 0.95); z-index:1000; padding:20px; box-sizing:border-box; overflow-y: auto; }
-        .modal-content { max-width:500px; margin:20px auto; background: #1e293b; border: 1px solid var(--primary); padding: 25px; border-radius: 20px; }
+        .status-pill { padding: 4px 10px; border-radius: 20px; font-size: 0.7rem; font-weight: bold; display: inline-flex; align-items: center; gap: 6px; }
+        .pill-present { background: rgba(0, 255, 136, 0.1); color: var(--green); border: 1px solid rgba(0, 255, 136, 0.2); }
+        .pill-absent { background: rgba(255, 75, 92, 0.1); color: var(--red); border: 1px solid rgba(255, 75, 92, 0.2); }
+        .status-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <div class="header-flex">
+    <header>
         <div>
-            <h1>Invitee Mandate</h1>
-            <p id="roleDisplay" style="opacity:0.6; font-size: 0.8rem; margin-top:5px;">Identifying Role...</p>
+            <h1>Global Intelligence</h1>
+            <p id="eventLabel" style="opacity:0.6; font-size: 0.8rem; margin-top:4px;">Connecting to HQ...</p>
         </div>
-        <a id="dashLink" href="#" style="color:var(--primary); text-decoration:none; border:1px solid var(--primary); padding:6px 14px; border-radius:8px; font-size:0.8rem;">Dashboard</a>
-    </div>
+        <a href="index.html" style="color:var(--primary); text-decoration:none; border:1px solid var(--border); padding:8px 16px; border-radius:8px; font-size:0.8rem;">Back to Dashboard</a>
+    </header>
 
-    <div class="card">
-        <h3 style="margin:0 0 15px 0; color:var(--primary); font-size:1rem;">Target New Soul</h3>
-        <input type="text" id="invName" placeholder="Full Name">
-        <div style="display:flex; gap:10px;">
-            <input type="text" id="invHostel" placeholder="Residence/Hostel">
-            <input type="tel" id="invPhone" placeholder="Phone Number">
-        </div>
-        <button onclick="addInvitee()" style="width:100%; padding:14px; background:var(--primary); border:none; border-radius:10px; font-weight:bold; cursor:pointer; margin-top:5px;">+ Add to Watchlist</button>
-    </div>
-
-    <div id="listArea">
-        <p style="text-align:center; opacity:0.5; padding:40px;">Syncing with database...</p>
-    </div>
-</div>
-
-<div id="promoModal">
-    <div class="modal-content">
-        <h2 style="color:var(--primary); margin-top:0;">Soul Conversion</h2>
-        <p style="font-size:0.8rem; opacity:0.7; margin-bottom: 20px;">Move this soul to the permanent Member Database.</p>
-        <input type="hidden" id="promoId">
+    <div class="dashboard-grid">
         
-        <div style="display:flex; gap:10px;">
-            <input type="text" id="promoFirstname" placeholder="First Name">
-            <input type="text" id="promoSurname" placeholder="Surname">
+        <div class="card">
+            <span class="card-title">Attendance Trends (Last 5 Events)</span>
+            <div class="kpi-row">
+                <div class="kpi-box">
+                    <span class="kpi-val" id="avgExpected">-</span>
+                    <span class="kpi-lbl">AVG EXPECTED</span>
+                </div>
+                <div class="kpi-box">
+                    <span class="kpi-val" id="avgActual" style="color:var(--green)">-</span>
+                    <span class="kpi-lbl">AVG ACTUAL</span>
+                </div>
+                <div class="kpi-box">
+                    <span class="kpi-val" id="retentionRate">-</span>
+                    <span class="kpi-lbl">RETENTION</span>
+                </div>
+            </div>
+            <canvas id="trendChart" height="120"></canvas>
         </div>
-        <div style="display:flex; gap:10px;">
-            <select id="promoGender"><option value="Male">Male</option><option value="Female">Female</option></select>
-            <input type="date" id="promoBirthday">
-        </div>
-        <select id="promoLevel">
-            <option value="Level 100">Level 100</option>
-            <option value="Level 200">Level 200</option>
-            <option value="Level 300">Level 300</option>
-            <option value="Level 400">Level 400</option>
-            <option value="Non-Student">Non-Student</option>
-        </select>
-        <input type="text" id="promoCourse" placeholder="Course">
-        <input type="text" id="promoEmergencyName" placeholder="Guardian Name">
-        <input type="tel" id="promoEmergencyPhone" placeholder="Guardian Phone">
 
-        <div style="display:flex; gap:10px; margin-top:20px;">
-            <button onclick="document.getElementById('promoModal').style.display='none'" style="flex:1; padding:12px; background:transparent; border:1px solid var(--border); color:white; border-radius:10px;">Cancel</button>
-            <button id="promoSaveBtn" onclick="finalSubmitPromotion()" style="flex:2; padding:12px; background:var(--green); border:none; color:#0f172a; font-weight:bold; border-radius:10px;">Confirm Membership</button>
+        <div class="card">
+            <span class="card-title">Why they missed (Intelligence)</span>
+            <div class="notes-list" id="notesArea">
+                <p style="text-align:center; opacity:0.5; font-size:0.8rem; padding:20px;">No issues reported.</p>
+            </div>
         </div>
+    </div>
+
+    <div class="card table-card">
+        <span class="card-title">Live Registry: Latest Event</span>
+        <table>
+            <thead>
+                <tr>
+                    <th width="30%">NAME / ROLE</th>
+                    <th width="20%">EFFORT (Calls/Visits)</th>
+                    <th width="15%">STATUS</th>
+                    <th width="35%">NOTE</th>
+                </tr>
+            </thead>
+            <tbody id="registryBody">
+                <tr><td colspan="4" style="text-align:center; padding:40px; opacity:0.5;">Analyzing Database...</td></tr>
+            </tbody>
+        </table>
     </div>
 </div>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
-    import { getFirestore, collection, addDoc, getDocs, query, where, doc, updateDoc, serverTimestamp, getDoc, arrayUnion, deleteDoc } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+    import { getFirestore, collection, getDocs, query, limit, orderBy } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
 
     const firebaseConfig = { apiKey: "AIzaSyCBv60eRCO0e4dFBMKGKnIATouxTuk1Bcc", authDomain: "fob-database-139d1.firebaseapp.com", projectId: "fob-database-139d1", storageBucket: "fob-database-139d1.firebasestorage.app", appId: "1:375165731354:web:b5fa57dcb2d71ee0d8c7a3" };
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app, "fobrealdbase");
     const auth = getAuth(app);
-    
-    let currentUser = null;
-    let myRole = null; 
-    let myPastorId = null; 
 
-    onAuthStateChanged(auth, async (user) => {
-        if(user) { 
-            currentUser = user; 
-            await determineRole(user.uid);
-            loadInvitees(); 
-        } else { location.href = "index.html"; }
+    onAuthStateChanged(auth, (user) => {
+        if (user) init(); else location.href = "index.html";
     });
 
-    async function determineRole(uid) {
-        const link = document.getElementById('dashLink');
-        const roleText = document.getElementById('roleDisplay');
+    async function init() {
+        // 1. Fetch Last 6 Events for Trends
+        const eventSnap = await getDocs(query(collection(db, "events"), orderBy("date", "desc"), limit(6)));
+        let events = eventSnap.docs.map(d => ({ id: d.id, ...d.data() })).reverse(); // Reverse to show oldest -> newest
 
-        const aSnap = await getDoc(doc(db, "master_admin", uid));
-        const pSnap = await getDoc(doc(db, "pastors", uid));
-        const sSnap = await getDoc(doc(db, "shepherds", uid));
-        
-        if (aSnap.exists()) {
-            myRole = 'master_admin'; myPastorId = uid;
-            link.href = "../admin/index.html"; roleText.innerText = "Master Admin Oversight";
-        } else if (pSnap.exists()) {
-            myRole = 'pastor'; myPastorId = uid;
-            link.href = "../pastor/index.html"; roleText.innerText = "Pastor's Mandate";
-        } else if (sSnap.exists()) {
-            myRole = 'shepherd';
-            myPastorId = sSnap.data().assigned_pastor_id || sSnap.data().pastorId; 
-            link.href = "../shepherd/index.html"; roleText.innerText = "Shepherd's Watch";
-        } else {
-            link.href = "index.html"; roleText.innerText = "Unassigned User";
-        }
-    }
-
-    window.addInvitee = async () => {
-        const name = document.getElementById('invName').value;
-        const phone = document.getElementById('invPhone').value;
-        const hostel = document.getElementById('invHostel').value;
-        if(!name) return alert("Name is required");
-
-        const shepherdId = currentUser.uid; 
-        const pastorId = (myRole === 'master_admin' || myRole === 'pastor') ? currentUser.uid : myPastorId;
-
-        await addDoc(collection(db, "invitees"), {
-            fullName: name, phone, hostel,
-            shepherdId: shepherdId,
-            pastorId: pastorId,
-            calls: 0, visits: 0, status: 'unmarked', notes: "",
-            lastUpdated: serverTimestamp(),
-            history: [] 
-        });
-        location.reload();
-    };
-
-    window.deleteInvitee = async (id) => {
-        if(confirm("Are you sure you want to permanently remove this invitee?")) {
-            await deleteDoc(doc(db, "invitees", id));
-            loadInvitees();
-        }
-    };
-
-    async function loadInvitees() {
-        const listDiv = document.getElementById('listArea');
-        let q;
-        if(myRole === 'shepherd') q = query(collection(db, "invitees"), where("shepherdId", "==", currentUser.uid));
-        else q = query(collection(db, "invitees"), where("pastorId", "==", currentUser.uid));
-
-        const snap = await getDocs(q);
-        let html = "";
-        
-        const lastMonday = new Date();
-        lastMonday.setDate(lastMonday.getDate() - (lastMonday.getDay() + 6) % 7);
-        lastMonday.setHours(0,0,0,0);
-
-        if(snap.empty) {
-            listDiv.innerHTML = "<p style='text-align:center; opacity:0.5; padding:30px;'>No active invitees.</p>";
+        if(events.length === 0) {
+            document.getElementById('eventLabel').innerText = "No Service Data.";
             return;
         }
 
-        snap.forEach(d => {
-            const data = d.data();
-            const id = d.id;
-            if(data.status === 'graduated') return;
+        // The LAST event is the "Live" one we show the table for
+        const latestEvent = events[events.length - 1];
+        const eventDate = new Date(latestEvent.date);
+        document.getElementById('eventLabel').innerText = `Focus: ${latestEvent.title} • ${eventDate.toLocaleDateString()}`;
 
-            const lastUpdate = data.lastUpdated ? data.lastUpdated.toDate() : new Date(0);
-            const isFresh = lastUpdate > lastMonday;
-
-            const dCalls = isFresh ? (data.calls || 0) : 0;
-            const dVisits = isFresh ? (data.visits || 0) : 0;
-            const dStatus = isFresh ? (data.status || 'unmarked') : 'unmarked';
-
-            const pStyle = dStatus === 'honoured' ? 'background:var(--green); color:#0f172a;' : '';
-            const aStyle = dStatus === 'declined' ? 'background:var(--red); color:white;' : '';
-
-            html += `
-            <div class="invitee-item">
-                <div class="top-controls">
-                    <button class="btn-delete" onclick="deleteInvitee('${id}')">🗑️ Remove</button>
-                    <button class="btn-promote" onclick="openPromo('${id}')">Promote 🎓</button>
-                </div>
-
-                <div style="margin-bottom:15px;">
-                    <span style="font-size:1.1rem; font-weight:600;">${data.fullName}</span><br>
-                    <span style="opacity:0.6; font-size:0.8rem;">📍 ${data.hostel || 'No Addr'} | 📱 ${data.phone}</span>
-                </div>
-                
-                <div class="effort-grid">
-                    <div class="effort-box">
-                        <span class="effort-label">CALLS</span>
-                        <div class="counter-controls">
-                            <button class="btn-count" onclick="modifyEffort('${id}', 'calls', -1, ${isFresh})">-</button>
-                            <span class="count-val" id="c-${id}">${dCalls}</span>
-                            <button class="btn-count" onclick="modifyEffort('${id}', 'calls', 1, ${isFresh})">+</button>
-                        </div>
-                    </div>
-                    <div class="effort-box">
-                        <span class="effort-label">VISITS</span>
-                        <div class="counter-controls">
-                            <button class="btn-count" onclick="modifyEffort('${id}', 'visits', -1, ${isFresh})">-</button>
-                            <span class="count-val" id="v-${id}">${dVisits}</span>
-                            <button class="btn-count" onclick="modifyEffort('${id}', 'visits', 1, ${isFresh})">+</button>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="action-row" id="btns-${id}">
-                    <button class="btn-action btn-absent" style="${aStyle}" onclick="toggleReason('${id}', true)">Did Not Come</button>
-                    <button class="btn-action btn-present" style="${pStyle}" onclick="setStatus('${id}', 'honoured', ${isFresh})">Honoured</button>
-                </div>
-
-                <div id="reason-box-${id}" class="reason-box">
-                    <label style="color:var(--red); font-size:0.7rem; font-weight:bold;">WHY DID THEY MISS CHURCH?</label>
-                    <input type="text" id="reason-${id}" placeholder="e.g. Sick, Traveled..." style="background:#0f172a; border-color:var(--red);">
-                    <div style="display:flex; gap:10px;">
-                        <button class="btn-action" style="background:rgba(255,255,255,0.1); color:white;" onclick="toggleReason('${id}', false)">Cancel</button>
-                        <button class="btn-action btn-absent" onclick="saveAbsence('${id}', ${isFresh})">Save Reason</button>
-                    </div>
-                </div>
-            </div>`;
-        });
-        listDiv.innerHTML = html;
+        await processAnalytics(events, latestEvent);
     }
 
-    async function handleFreshness(docRef, isFresh) {
-        if (isFresh) return;
-        const snap = await getDoc(docRef);
-        const old = snap.data();
-        const entry = {
-            period: old.lastUpdated || new Date(),
-            calls: old.calls || 0,
-            visits: old.visits || 0,
-            status: old.status || 'unmarked',
-            notes: old.notes || ""
-        };
-        await updateDoc(docRef, {
-            history: arrayUnion(entry),
-            calls: 0, visits: 0, status: 'unmarked', notes: "",
-            lastUpdated: serverTimestamp()
-        });
-    }
+    async function processAnalytics(events, latestEvent) {
+        // Fetch All Data needed
+        const [attSnap, memSnap, invSnap] = await Promise.all([
+            getDocs(collection(db, "attendance")),
+            getDocs(collection(db, "members")),
+            getDocs(collection(db, "invitees"))
+        ]);
 
-    window.modifyEffort = async (id, field, change, isFresh) => {
-        const docRef = doc(db, "invitees", id);
-        if(!isFresh) await handleFreshness(docRef, false);
-        const snap = await getDoc(docRef); 
-        let val = (snap.data()[field] || 0) + change;
-        if(val < 0) val = 0;
-        await updateDoc(docRef, { [field]: val, lastUpdated: serverTimestamp() });
-        document.getElementById(field === 'calls' ? `c-${id}` : `v-${id}`).innerText = val;
-    };
+        let graphLabels = [];
+        let graphExpected = [];
+        let graphActual = [];
+        let allNotes = [];
+        let latestRegistry = [];
 
-    window.setStatus = async (id, status, isFresh) => {
-        const docRef = doc(db, "invitees", id);
-        if(!isFresh) await handleFreshness(docRef, false);
-        await updateDoc(docRef, { status: status, lastUpdated: serverTimestamp() });
-        loadInvitees();
-    };
+        // --- 1. BUILD HISTORICAL DATA (For Graph) ---
+        events.forEach(evt => {
+            const eDate = new Date(evt.date);
+            const dayStart = new Date(eDate); dayStart.setHours(0,0,0,0);
+            const dayEnd = new Date(eDate); dayEnd.setHours(23,59,59,999);
+            
+            graphLabels.push(eDate.toLocaleDateString(undefined, {month:'short', day:'numeric'}));
 
-    window.saveAbsence = async (id, isFresh) => {
-        const docRef = doc(db, "invitees", id);
-        if(!isFresh) await handleFreshness(docRef, false);
-        const reason = document.getElementById(`reason-${id}`).value;
-        if(!reason) return alert("Please type a reason.");
-        await updateDoc(docRef, { status: 'declined', notes: reason, lastUpdated: serverTimestamp() });
-        loadInvitees();
-    };
+            // Calculate Attendance for this specific event day
+            let presentCount = 0;
+            let expectedCount = 0; // Invitees active at that time + Members
 
-    window.toggleReason = (id, show) => {
-        document.getElementById(`btns-${id}`).style.display = show ? 'none' : 'flex';
-        document.getElementById(`reason-box-${id}`).style.display = show ? 'block' : 'none';
-    };
-
-    window.openPromo = async (id) => {
-        const snap = await getDoc(doc(db, "invitees", id));
-        const d = snap.data();
-        const names = d.fullName.split(' ');
-        document.getElementById('promoId').value = id;
-        document.getElementById('promoFirstname').value = names[0];
-        document.getElementById('promoSurname').value = names.slice(1).join(' ');
-        document.getElementById('promoModal').style.display = 'block';
-    };
-
-    window.finalSubmitPromotion = async () => {
-        const id = document.getElementById('promoId').value;
-        const btn = document.getElementById('promoSaveBtn');
-        btn.disabled = true; btn.innerText = "Processing...";
-        try {
-            const invSnap = await getDoc(doc(db, "invitees", id));
-            const invData = invSnap.data();
-            await addDoc(collection(db, "members"), {
-                first_name: document.getElementById('promoFirstname').value,
-                last_name: document.getElementById('promoSurname').value,
-                full_name: `${document.getElementById('promoFirstname').value} ${document.getElementById('promoSurname').value}`,
-                gender: document.getElementById('promoGender').value,
-                dob: document.getElementById('promoBirthday').value,
-                level: document.getElementById('promoLevel').value,
-                course: document.getElementById('promoCourse').value,
-                emergency_name: document.getElementById('promoEmergencyName').value,
-                emergency_phone: document.getElementById('promoEmergencyPhone').value,
-                phone: invData.phone,
-                hostel: invData.hostel,
-                status: "New Convert",
-                pastorId: invData.pastorId,
-                shepherdId: invData.shepherdId,
-                timestamp: serverTimestamp()
+            // A. Check Members Attendance
+            attSnap.forEach(doc => {
+                const d = doc.data();
+                const t = d.timestamp ? d.timestamp.toDate() : new Date(d.date);
+                if(t >= dayStart && t <= dayEnd) {
+                    expectedCount++; // Every attendance record implies an expectation
+                    if(d.status && d.status.toLowerCase().includes('present')) presentCount++;
+                }
             });
-            await updateDoc(doc(db, "invitees", id), { status: 'graduated' });
-            alert("Success! Member Promoted.");
-            location.reload();
-        } catch(e) {
-            alert("Error: " + e.message);
-            btn.disabled = false; btn.innerText = "Try Again";
+
+            // B. Check Invitee History (The "Archive" we built)
+            invSnap.forEach(doc => {
+                const inv = doc.data();
+                // Check current status (if fresh)
+                const lastUp = inv.lastUpdated ? inv.lastUpdated.toDate() : new Date(0);
+                const isFresh = lastUp > dayStart && lastUp < dayEnd;
+                
+                if(isFresh) {
+                    expectedCount++;
+                    if(inv.status === 'honoured') presentCount++;
+                }
+
+                // Check History Array (Past services)
+                if(inv.history && Array.isArray(inv.history)) {
+                    inv.history.forEach(h => {
+                        const hDate = h.period ? h.period.toDate() : new Date(0);
+                        // If history entry matches this event date
+                        if(hDate >= dayStart && hDate <= dayEnd) {
+                            expectedCount++;
+                            if(h.status === 'honoured') presentCount++;
+                        }
+                    });
+                }
+            });
+
+            // Fallback: If expected is 0 (no data), dont tank the graph
+            if(expectedCount === 0) expectedCount = presentCount; 
+
+            graphExpected.push(expectedCount);
+            graphActual.push(presentCount);
+        });
+
+        // --- 2. BUILD LATEST REGISTRY (For Table & Notes) ---
+        const latestStart = new Date(latestEvent.date); latestStart.setHours(0,0,0,0);
+        const latestEnd = new Date(latestEvent.date); latestEnd.setHours(23,59,59,999);
+        const freshWindow = new Date(latestEvent.date); freshWindow.setDate(freshWindow.getDate() - 6);
+
+        // Map Attendance for quick lookup
+        let attMap = {};
+        attSnap.forEach(doc => {
+            const d = doc.data();
+            const t = d.timestamp ? d.timestamp.toDate() : new Date(d.date);
+            if(t >= latestStart && t <= latestEnd) {
+                attMap[d.memberId || doc.id.split('_')[0]] = d;
+            }
+        });
+
+        // Process Members
+        memSnap.forEach(doc => {
+            const m = doc.data();
+            const rec = attMap[doc.id];
+            const isPresent = rec && rec.status.toLowerCase().includes('present');
+            const note = (rec && rec.notes) ? rec.notes : "";
+            
+            if(note && !isPresent) allNotes.push({ name: m.full_name, note: note, type: 'Member' });
+
+            latestRegistry.push({
+                name: m.full_name, type: 'member',
+                present: isPresent, effort: "—",
+                note: isPresent ? "" : (note || "Absent")
+            });
+        });
+
+        // Process Invitees
+        invSnap.forEach(doc => {
+            const i = doc.data();
+            if(i.status === 'graduated') return;
+
+            // Is data relevant to this latest event?
+            const lastUp = i.lastUpdated ? i.lastUpdated.toDate() : new Date(0);
+            const isRelevant = lastUp > freshWindow;
+
+            const isPresent = isRelevant && i.status === 'honoured';
+            const note = (isRelevant && i.notes) ? i.notes : "";
+            const effort = isRelevant ? `📞 ${i.calls||0} | 🏠 ${i.visits||0}` : "—";
+
+            if(note && !isPresent) allNotes.push({ name: i.fullName, note: note, type: 'Invitee' });
+
+            latestRegistry.push({
+                name: i.fullName, type: 'invitee',
+                present: isPresent, effort: effort,
+                note: isPresent ? "" : (note || (isRelevant ? "Absent" : "-"))
+            });
+        });
+
+        renderDashboard(graphLabels, graphExpected, graphActual, allNotes, latestRegistry);
+    }
+
+    function renderDashboard(labels, expected, actual, notes, registry) {
+        // 1. RENDER GRAPH
+        const ctx = document.getElementById('trendChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Expected',
+                        data: expected,
+                        borderColor: '#4facfe',
+                        backgroundColor: 'rgba(79, 172, 254, 0.1)',
+                        fill: true, tension: 0.4
+                    },
+                    {
+                        label: 'Actual Attendance',
+                        data: actual,
+                        borderColor: '#00ff88',
+                        backgroundColor: 'rgba(0, 255, 136, 0.1)',
+                        fill: true, tension: 0.4
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { labels: { color: 'white' } } },
+                scales: {
+                    y: { grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { color: '#ccc' } },
+                    x: { grid: { display: false }, ticks: { color: '#ccc' } }
+                }
+            }
+        });
+
+        // 2. RENDER KPIS
+        const avgExp = Math.round(expected.reduce((a,b)=>a+b,0) / expected.length) || 0;
+        const avgAct = Math.round(actual.reduce((a,b)=>a+b,0) / actual.length) || 0;
+        document.getElementById('avgExpected').innerText = avgExp;
+        document.getElementById('avgActual').innerText = avgAct;
+        document.getElementById('retentionRate').innerText = avgExp > 0 ? Math.round((avgAct/avgExp)*100)+"%" : "0%";
+
+        // 3. RENDER NOTES
+        const notesDiv = document.getElementById('notesArea');
+        if(notes.length > 0) {
+            notesDiv.innerHTML = notes.map(n => `
+                <div class="note-item">
+                    <span class="note-text">"${n.note}"</span>
+                    <span class="note-author">${n.name} (${n.type})</span>
+                </div>
+            `).join('');
+        } else {
+            notesDiv.innerHTML = "<p style='text-align:center; opacity:0.5; padding:20px;'>No specific challenges recorded.</p>";
         }
-    };
+
+        // 4. RENDER TABLE
+        const regBody = document.getElementById('registryBody');
+        if(registry.length === 0) {
+            regBody.innerHTML = `<tr><td colspan="4" style="text-align:center;">No Data</td></tr>`;
+            return;
+        }
+        regBody.innerHTML = registry.map(r => `
+            <tr>
+                <td><b>${r.name}</b><br><span class="badge badge-${r.type}">${r.type}</span></td>
+                <td><span style="font-family:monospace; font-size:0.8rem; background:rgba(255,255,255,0.05); padding:3px 6px; border-radius:4px;">${r.effort}</span></td>
+                <td><div class="status-pill ${r.present?'pill-present':'pill-absent'}"><span class="status-dot"></span>${r.present?'PRESENT':'ABSENT'}</div></td>
+                <td><span style="font-size:0.8rem; color:${r.present?'#ccc':'#ffcccb'}; font-style:${r.present?'normal':'italic'}">${r.note}</span></td>
+            </tr>
+        `).join('');
+    }
 </script>
 </body>
 </html>
