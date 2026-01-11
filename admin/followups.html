@@ -139,53 +139,63 @@
     const db = getFirestore(app, "fobrealdbase");
     const auth = getAuth(app);
 
-    let GLOBAL_EVENTS = []; let GLOBAL_ATT = []; let GLOBAL_MEM = []; let GLOBAL_INV = [];
+    let GLOBAL_EVENTS = []; 
+    let GLOBAL_ATT = [];
+    let GLOBAL_MEM = [];
+    let GLOBAL_INV = [];
 
     onAuthStateChanged(auth, (user) => { if (user) init(); });
 
     async function init() {
         try {
-            // 1. FETCH ALL DATA
+            // 1. FETCH RAW DATA
             const eventSnap = await getDocs(query(collection(db, "events"), orderBy("date", "desc"), limit(100)));
             const attSnap = await getDocs(collection(db, "attendance"));
             const memSnap = await getDocs(collection(db, "members"));
             const invSnap = await getDocs(collection(db, "invitees"));
 
-            if (eventSnap.empty) { document.getElementById('eventLabel').innerText = "No Events."; return; }
+            if (eventSnap.empty) {
+                document.getElementById('eventLabel').innerText = "Database Empty.";
+                return;
+            }
 
             // 2. PROCESS EVENTS
+            const now = new Date();
+            now.setHours(23, 59, 59, 999);
+
             GLOBAL_EVENTS = eventSnap.docs.map(d => {
                 const data = d.data();
                 const jsDate = (data.date && data.date.toDate) ? data.date.toDate() : new Date(data.date);
-                return { id: d.id, ...data, jsDate: jsDate };
-            }).sort((a, b) => a.jsDate - b.jsDate);
+                // FIX: Standardize name property
+                const eventName = data.name || data.title || "Service";
+                return { id: d.id, ...data, title: eventName, jsDate: jsDate };
+            }).filter(e => e.jsDate <= now); 
+
+            GLOBAL_EVENTS.sort((a, b) => a.jsDate - b.jsDate);
 
             // 3. STORE DATA
             GLOBAL_ATT = attSnap.docs.map(d => ({id:d.id, ...d.data()}));
             GLOBAL_MEM = memSnap.docs.map(d => ({id:d.id, ...d.data()}));
             GLOBAL_INV = invSnap.docs.map(d => ({id:d.id, ...d.data()}));
 
-            // 4. RENDER ALL SECTIONS
+            // 4. RENDER
             window.updateTimeframe(); 
-            renderNextSundayTargets(); // <--- NEW FUNCTION
+            renderNextSundayTargets();
 
         } catch (error) {
             console.error(error);
-            document.getElementById('eventLabel').innerText = "Error: " + error.message;
+            document.getElementById('eventLabel').innerText = "Error Loading Data.";
         }
     }
 
-    // --- NEW: NEXT SUNDAY LOGIC ---
+    // --- NEXT SUNDAY TARGETS ---
     function renderNextSundayTargets() {
-        // Calculate Next Sunday
         const d = new Date();
         d.setDate(d.getDate() + (7 - d.getDay()) % 7);
         const dateStr = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
         document.getElementById('nextSundayDate').innerText = dateStr;
 
         const container = document.getElementById('targetArea');
-        
-        // Filter active invitees
         const targets = GLOBAL_INV.filter(i => i.status !== 'graduated');
         
         if(targets.length === 0) {
@@ -195,9 +205,9 @@
 
         container.innerHTML = targets.map(t => {
             const effort = (t.calls || 0) + (t.visits || 0);
-            let color = "#ff4b5c"; // Red (Low)
-            if(effort > 2) color = "#00ff88"; // Green (High)
-            else if(effort > 0) color = "#ffd700"; // Gold (Medium)
+            let color = "#ff4b5c"; 
+            if(effort > 2) color = "#00ff88"; 
+            else if(effort > 0) color = "#ffd700"; 
 
             return `
             <div class="target-card">
@@ -209,7 +219,7 @@
         }).join('');
     }
 
-    // --- EXISTING DASHBOARD LOGIC ---
+    // --- FILTER LOGIC ---
     window.updateTimeframe = () => {
         const filterVal = document.getElementById('timeFilter').value;
         const endOfToday = new Date(); endOfToday.setHours(23,59,59,999);
@@ -232,6 +242,7 @@
         if (filteredEvents.length === 0) return;
 
         const latestEvent = filteredEvents[filteredEvents.length - 1];
+        // FIX: Using standardized 'title' (mapped from 'name' in init)
         document.getElementById('eventLabel').innerText = `Focus: ${latestEvent.title} • ${latestEvent.jsDate.toLocaleDateString()}`;
         
         calculateStats(filteredEvents, latestEvent);
@@ -277,7 +288,7 @@
             graphActual.push(presentCount);
         });
 
-        // TABLE LOGIC
+        // TABLE DATA
         const startDay = new Date(latestEvent.jsDate); startDay.setHours(0,0,0,0);
         const endDay = new Date(latestEvent.jsDate); endDay.setHours(23,59,59,999);
         let attMap = {};
@@ -297,7 +308,7 @@
 
         GLOBAL_INV.forEach(i => {
             if(i.status === 'graduated') return;
-            const name = i.fullName || "Unknown";
+            const name = i.fullName || i.name || "Unknown";
             const isPresent = i.status === 'honoured'; 
             const note = i.notes || "";
             if(note && !isPresent) allNotes.push({name, note, type:'Invitee'});
