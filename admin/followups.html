@@ -2,406 +2,336 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Invitee Mandate | ShepherdNet</title>
+    <title>Global Intelligence | ShepherdNet</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root { --primary: #4facfe; --bg: #0f172a; --glass: rgba(255, 255, 255, 0.05); --border: rgba(255, 255, 255, 0.1); --green: #00ff88; --red: #ff4b5c; --gold: #ffd700; }
         body { background: var(--bg); color: white; font-family: 'Poppins', sans-serif; padding: 20px; padding-bottom: 80px; }
-        .container { max-width: 800px; margin: 0 auto; }
+        .container { max-width: 1000px; margin: 0 auto; }
         
-        .header-flex { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        h1 { margin: 0; font-size: 1.5rem; }
-        
-        .event-banner { background: rgba(79, 172, 254, 0.1); border: 1px solid var(--primary); color: var(--primary); padding: 10px; border-radius: 12px; text-align: center; margin-bottom: 20px; font-size: 0.9rem; font-weight: 600; }
+        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; flex-wrap: wrap; gap: 15px; }
+        h1 { margin: 0; font-size: 1.4rem; }
+        select { background: #1e293b; color: white; border: 1px solid var(--primary); padding: 8px 12px; border-radius: 8px; font-family: inherit; cursor: pointer; outline: none; font-size: 0.9rem; }
 
-        /* GROUP HEADERS */
-        .shepherd-group { margin-top: 30px; border-top: 1px solid var(--border); padding-top: 15px; }
-        .shepherd-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; background: rgba(255,255,255,0.05); padding: 10px 15px; border-radius: 8px; border-left: 4px solid var(--gold); }
-        .shepherd-name { font-weight: bold; color: var(--gold); font-size: 1rem; }
-        .shepherd-stats { font-size: 0.75rem; opacity: 0.7; font-family: monospace; }
+        .dashboard-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; margin-bottom: 30px; }
+        @media (max-width: 768px) { .dashboard-grid { grid-template-columns: 1fr; } }
 
-        .card { background: var(--glass); padding: 20px; border-radius: 20px; border: 1px solid var(--border); margin-bottom: 20px; backdrop-filter: blur(10px); }
-        input, select { width: 100%; padding: 12px; border-radius: 10px; background: rgba(0,0,0,0.3); color: white; border: 1px solid var(--border); box-sizing: border-box; font-family: inherit; font-size: 0.9rem; outline: none; margin-bottom: 10px; }
-        
-        .invitee-item { background: #1e293b; border: 1px solid var(--border); border-radius: 16px; padding: 16px; margin-bottom: 16px; }
-        .effort-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 15px 0; }
-        .effort-box { background: rgba(255,255,255,0.03); padding: 10px; border-radius: 10px; text-align: center; }
-        .effort-label { font-size: 0.65rem; text-transform: uppercase; opacity: 0.6; letter-spacing: 1px; display: block; margin-bottom: 5px; }
-        .counter-controls { display: flex; justify-content: space-between; align-items: center; padding: 0 5px; }
-        .btn-count { background: var(--primary); color: #0f172a; border: none; width: 32px; height: 32px; border-radius: 8px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; }
-        .count-val { font-size: 1.2rem; font-weight: 600; }
+        .card { background: var(--glass); border: 1px solid var(--border); border-radius: 20px; padding: 20px; backdrop-filter: blur(10px); margin-bottom: 25px; }
+        .card-title { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; opacity: 0.7; margin-bottom: 15px; display: block; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px; }
 
-        .action-row { display: flex; gap: 10px; margin-top: 10px; }
-        .btn-action { flex: 1; padding: 12px; border-radius: 10px; border: none; font-weight: 600; cursor: pointer; font-size: 0.8rem; transition: 0.2s; }
-        .btn-present { background: rgba(0, 255, 136, 0.1); color: var(--green); border: 1px solid rgba(0, 255, 136, 0.3); }
-        .btn-absent { background: rgba(255, 75, 92, 0.1); color: var(--red); border: 1px solid rgba(255, 75, 92, 0.3); }
-        .top-controls { display: flex; justify-content: space-between; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.05); }
-        .btn-promote { background: none; border: 1px solid var(--primary); color: var(--primary); padding: 4px 12px; border-radius: 6px; font-size: 0.7rem; cursor: pointer; font-weight: bold; }
-        .btn-delete { background: none; border: 1px solid var(--red); color: var(--red); padding: 4px 12px; border-radius: 6px; font-size: 0.7rem; cursor: pointer; opacity: 0.7; transition: 0.2s; }
-        .reason-box { display: none; margin-top: 15px; background: rgba(255, 75, 92, 0.05); padding: 15px; border-radius: 12px; border: 1px solid rgba(255, 75, 92, 0.3); }
+        .kpi-row { display: flex; gap: 15px; margin-bottom: 20px; }
+        .kpi-box { flex: 1; background: rgba(255,255,255,0.03); padding: 15px; border-radius: 12px; text-align: center; }
+        .kpi-val { font-size: 1.5rem; font-weight: bold; display: block; }
+        .kpi-lbl { font-size: 0.6rem; opacity: 0.6; }
+
+        /* GROUPED TARGETS STYLES */
+        .leader-section { margin-top: 20px; margin-bottom: 10px; }
+        .leader-header { color: var(--gold); font-weight: bold; font-size: 0.9rem; margin-bottom: 10px; border-left: 3px solid var(--gold); padding-left: 10px; }
         
-        #promoModal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15, 23, 42, 0.95); z-index:1000; padding:20px; box-sizing:border-box; overflow-y: auto; }
-        .modal-content { max-width:500px; margin:20px auto; background: #1e293b; border: 1px solid var(--primary); padding: 25px; border-radius: 20px; }
+        .target-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
+        .target-card { background: rgba(255,255,255,0.03); border: 1px solid var(--border); padding: 12px; border-radius: 10px; position: relative; }
+        .target-name { font-weight: 600; font-size: 0.9rem; display: block; margin-bottom: 4px; }
+        .target-meta { font-size: 0.7rem; opacity: 0.6; display: block; margin-bottom: 8px; }
+        .effort-badge { font-size: 0.65rem; padding: 3px 6px; border-radius: 4px; background: rgba(0,0,0,0.3); color: var(--gold); font-family: monospace; display: inline-block; }
+        .probability-dot { height: 6px; width: 6px; border-radius: 50%; position: absolute; top: 12px; right: 12px; }
+
+        .table-card { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; min-width: 700px; }
+        th { text-align: left; opacity: 0.5; padding: 15px; border-bottom: 1px solid var(--border); font-size: 0.7rem; letter-spacing: 1px; }
+        td { padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.02); font-size: 0.85rem; vertical-align: top; }
+        .status-pill { padding: 4px 10px; border-radius: 20px; font-size: 0.7rem; font-weight: bold; display: inline-flex; align-items: center; gap: 6px; }
+        .pill-present { background: rgba(0, 255, 136, 0.1); color: var(--green); }
+        .pill-absent { background: rgba(255, 75, 92, 0.1); color: var(--red); }
+        .status-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+        
+        .notes-list { max-height: 300px; overflow-y: auto; }
+        .note-item { background: rgba(255, 75, 92, 0.05); border-left: 3px solid var(--red); padding: 10px; margin-bottom: 8px; border-radius: 4px; }
+        .note-text { font-size: 0.8rem; color: #ffcccb; font-style: italic; }
+        .note-author { font-size: 0.7rem; opacity: 0.6; margin-top: 4px; display: block; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <div class="header-flex">
+    <header>
         <div>
-            <h1>Invitee Mandate</h1>
-            <p id="roleDisplay" style="opacity:0.6; font-size: 0.8rem; margin-top:5px;">Connecting...</p>
+            <h1>Global Intelligence</h1>
+            <p id="eventLabel" style="opacity:0.6; font-size: 0.8rem; margin-top:4px;">Connecting...</p>
         </div>
-        <a id="dashLink" href="#" style="color:var(--primary); text-decoration:none; border:1px solid var(--primary); padding:6px 14px; border-radius:8px; font-size:0.8rem;">Dashboard</a>
+        <div style="display:flex; gap:10px; align-items:center;">
+            <select id="timeFilter" onchange="window.updateTimeframe()">
+                <option value="auto" selected>Auto (Past 5 Events)</option>
+                <option value="week">Last 1 Week</option>
+                <option value="1">Last 1 Month</option>
+                <option value="3">Last 3 Months</option>
+                <option value="6">Last 6 Months</option>
+                <option value="12">Last 1 Year</option>
+            </select>
+            <a href="index.html" style="color:var(--primary); text-decoration:none; border:1px solid var(--border); padding:8px 16px; border-radius:8px; font-size:0.8rem;">Exit</a>
+        </div>
+    </header>
+
+    <div class="dashboard-grid">
+        <div class="card">
+            <span class="card-title">Growth & Retention Trends</span>
+            <div class="kpi-row">
+                <div class="kpi-box"><span class="kpi-val" id="avgExpected">-</span><span class="kpi-lbl">AVG EXPECTED</span></div>
+                <div class="kpi-box"><span class="kpi-val" id="avgActual" style="color:var(--green)">-</span><span class="kpi-lbl">AVG ACTUAL</span></div>
+                <div class="kpi-box"><span class="kpi-val" id="retentionRate">-</span><span class="kpi-lbl">RETENTION</span></div>
+            </div>
+            <div style="height:200px; width:100%;"><canvas id="trendChart"></canvas></div>
+        </div>
+
+        <div class="card">
+            <span class="card-title">Challenge Log</span>
+            <div class="notes-list" id="notesArea">
+                <p style="text-align:center; opacity:0.5; padding:20px;">Loading...</p>
+            </div>
+        </div>
     </div>
 
-    <div id="eventBanner" class="event-banner">Finding next service...</div>
-
-    <div class="card">
-        <h3 style="margin:0 0 15px 0; color:var(--primary); font-size:1rem;">Target New Soul</h3>
-        <input type="text" id="invName" placeholder="Full Name">
-        <div style="display:flex; gap:10px;">
-            <input type="text" id="invHostel" placeholder="Residence/Hostel">
-            <input type="tel" id="invPhone" placeholder="Phone Number">
+    <div class="card" style="border-color:var(--primary);">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <span class="card-title" style="color:var(--primary); border:none; margin:0;">🎯 TARGETS FOR NEXT SERVICE (<span id="nextSundayDate">...</span>)</span>
+            <button onclick="window.print()" style="background:none; border:1px solid var(--border); color:white; cursor:pointer; padding:4px 10px; border-radius:5px; font-size:0.7rem;">Print</button>
         </div>
-        <button onclick="addInvitee()" style="width:100%; padding:14px; background:var(--primary); border:none; border-radius:10px; font-weight:bold; cursor:pointer; margin-top:5px;">+ Add to Watchlist</button>
+        
+        <div style="margin-top:15px;" id="targetArea">
+            <p style="opacity:0.5;">Loading targets...</p>
+        </div>
     </div>
 
-    <div id="listArea">
-        <p style="text-align:center; opacity:0.5; padding:40px;">Syncing...</p>
-    </div>
-</div>
-
-<div id="promoModal">
-    <div class="modal-content">
-        <h2 style="color:var(--primary); margin-top:0;">Soul Conversion</h2>
-        <input type="hidden" id="promoId">
-        <div style="display:flex; gap:10px; margin-bottom:10px;">
-            <input type="text" id="promoFirstname" placeholder="First Name">
-            <input type="text" id="promoSurname" placeholder="Surname">
-        </div>
-        <div style="display:flex; gap:10px; margin-bottom:10px;">
-            <select id="promoGender"><option value="Male">Male</option><option value="Female">Female</option></select>
-            <input type="date" id="promoBirthday">
-        </div>
-        <select id="promoLevel" style="margin-bottom:10px;">
-            <option value="Level 100">Level 100</option>
-            <option value="Level 200">Level 200</option>
-            <option value="Level 300">Level 300</option>
-            <option value="Level 400">Level 400</option>
-            <option value="Non-Student">Non-Student</option>
-        </select>
-        <input type="text" id="promoCourse" placeholder="Course" style="margin-bottom:10px;">
-        <input type="text" id="promoEmergencyName" placeholder="Guardian Name" style="margin-bottom:10px;">
-        <input type="tel" id="promoEmergencyPhone" placeholder="Guardian Phone">
-        <div style="display:flex; gap:10px; margin-top:20px;">
-            <button onclick="document.getElementById('promoModal').style.display='none'" style="flex:1; padding:12px; background:transparent; border:1px solid var(--border); color:white; border-radius:10px;">Cancel</button>
-            <button id="promoSaveBtn" onclick="finalSubmitPromotion()" style="flex:2; padding:12px; background:var(--green); border:none; color:#0f172a; font-weight:bold; border-radius:10px;">Confirm Membership</button>
-        </div>
+    <div class="card table-card">
+        <span class="card-title">Registry History: Most Recent Service</span>
+        <table>
+            <thead><tr><th width="30%">NAME / ROLE</th><th width="20%">EFFORT</th><th width="15%">STATUS</th><th width="35%">NOTE</th></tr></thead>
+            <tbody id="registryBody"><tr><td colspan="4" style="text-align:center; padding:40px; opacity:0.5;">Waiting for data...</td></tr></tbody>
+        </table>
     </div>
 </div>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, collection, addDoc, getDocs, query, where, doc, updateDoc, serverTimestamp, getDoc, arrayUnion, deleteDoc, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getFirestore, collection, getDocs, query, limit, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
     const firebaseConfig = { apiKey: "AIzaSyCBv60eRCO0e4dFBMKGKnIATouxTuk1Bcc", authDomain: "fob-database-139d1.firebaseapp.com", projectId: "fob-database-139d1", storageBucket: "fob-database-139d1.firebasestorage.app", appId: "1:375165731354:web:b5fa57dcb2d71ee0d8c7a3" };
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app, "fobrealdbase");
     const auth = getAuth(app);
-    
-    let currentUser = null;
-    let myRole = null; 
-    let myPastorId = null;
-    let SHEPHERD_MAP = {}; 
 
-    onAuthStateChanged(auth, async (user) => {
-        if(user) { 
-            currentUser = user; 
-            try {
-                await determineRole(user.uid);
-                await fetchShepherdNames();
-                fetchNextEvent(); 
-                loadInvitees(); 
-            } catch(e) {
-                console.error("Critical Init Error:", e);
-                document.getElementById('listArea').innerHTML = "<p style='text-align:center;color:red'>Error loading profile. Check internet.</p>";
-            }
-        } else { location.href = "index.html"; }
-    });
+    let GLOBAL_EVENTS = []; let GLOBAL_ATT = []; let GLOBAL_MEM = []; let GLOBAL_INV = [];
+    let SHEPHERD_MAP = {}; // Store names of leaders
 
-    async function fetchShepherdNames() {
+    onAuthStateChanged(auth, (user) => { if (user) init(); });
+
+    async function init() {
         try {
-            const snap = await getDocs(collection(db, "shepherds"));
-            snap.forEach(d => {
+            // 1. FETCH EVERYTHING
+            const eventSnap = await getDocs(query(collection(db, "events"), orderBy("date", "desc"), limit(100)));
+            const attSnap = await getDocs(collection(db, "attendance"));
+            const memSnap = await getDocs(collection(db, "members"));
+            const invSnap = await getDocs(collection(db, "invitees"));
+            const shepSnap = await getDocs(collection(db, "shepherds")); // Fetch Leaders
+
+            // Map Shepherd IDs to Names
+            shepSnap.forEach(doc => {
+                const d = doc.data();
+                SHEPHERD_MAP[doc.id] = d.full_name || `${d.first_name||''} ${d.last_name||''}`.trim() || "Unknown Leader";
+            });
+
+            if (eventSnap.empty) { document.getElementById('eventLabel').innerText = "Database Empty."; return; }
+
+            // 2. PROCESS EVENTS (Filter out Dawn Prayers & Future)
+            const now = new Date(); now.setHours(23, 59, 59, 999);
+            GLOBAL_EVENTS = eventSnap.docs.map(d => {
                 const data = d.data();
-                SHEPHERD_MAP[d.id] = data.full_name || `${data.first_name||''} ${data.last_name||''}`.trim() || "Unknown Shepherd";
-            });
-        } catch(e) { console.log("Non-fatal: Could not load shepherd names."); }
+                const jsDate = (data.date && data.date.toDate) ? data.date.toDate() : new Date(data.date);
+                const title = data.name || data.title || "Service";
+                return { id: d.id, ...data, title: title, jsDate: jsDate };
+            }).filter(e => !e.title.toLowerCase().includes("dawn prayer")); // Only filter Dawn Prayer initially
+
+            GLOBAL_EVENTS.sort((a, b) => a.jsDate - b.jsDate);
+
+            // 3. STORE DATA
+            GLOBAL_ATT = attSnap.docs.map(d => ({id:d.id, ...d.data()}));
+            GLOBAL_MEM = memSnap.docs.map(d => ({id:d.id, ...d.data()}));
+            GLOBAL_INV = invSnap.docs.map(d => ({id:d.id, ...d.data()}));
+
+            // 4. RENDER
+            renderGroupedTargets();
+            window.updateTimeframe(); 
+
+        } catch (error) {
+            console.error(error);
+            document.getElementById('eventLabel').innerText = "Error Loading Data.";
+        }
     }
 
-    async function fetchNextEvent() {
-        const todayStr = new Date().toISOString().split('T')[0];
-        try {
-            const q = query(collection(db, "events"), where("date", ">=", todayStr), orderBy("date", "asc"), limit(10));
-            const snap = await getDocs(q);
-            const banner = document.getElementById('eventBanner');
-            if (!snap.empty) {
-                const validEvent = snap.docs.find(d => !((d.data().name||d.data().title||"").toLowerCase().includes("dawn prayer")));
-                if (validEvent) {
-                    const evt = validEvent.data();
-                    const d = evt.date && evt.date.toDate ? evt.date.toDate() : new Date(evt.date);
-                    const eventName = evt.name || evt.title || "Upcoming Service";
-                    banner.innerText = `🎯 Target: ${eventName} (${d.toLocaleDateString()})`;
-                } else { banner.innerText = "Target: Upcoming Sunday Service"; }
-            } else { banner.innerText = "No upcoming service scheduled."; }
-        } catch(e) { banner.innerText = "Target: Upcoming Sunday Service"; }
-    }
+    // --- NEW: GROUPED TARGETS ---
+    function renderGroupedTargets() {
+        // Date
+        const d = new Date(); d.setDate(d.getDate() + (7 - d.getDay()) % 7);
+        document.getElementById('nextSundayDate').innerText = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
 
-    async function determineRole(uid) {
-        const link = document.getElementById('dashLink');
-        const roleText = document.getElementById('roleDisplay');
-        const aSnap = await getDoc(doc(db, "master_admin", uid));
-        const pSnap = await getDoc(doc(db, "pastors", uid));
-        const sSnap = await getDoc(doc(db, "shepherds", uid));
+        const container = document.getElementById('targetArea');
+        const activeTargets = GLOBAL_INV.filter(i => i.status !== 'graduated');
         
-        if (aSnap.exists()) {
-            myRole = 'master_admin'; myPastorId = uid;
-            link.href = "../admin/index.html"; roleText.innerText = "Master Admin Oversight";
-        } else if (pSnap.exists()) {
-            myRole = 'pastor'; myPastorId = uid;
-            link.href = "../pastor/index.html"; roleText.innerText = "Senior Pastor Mandate";
-        } else if (sSnap.exists()) {
-            myRole = 'shepherd';
-            myPastorId = sSnap.data().assigned_pastor_id || sSnap.data().pastorId; 
-            link.href = "../shepherd/index.html"; roleText.innerText = "Shepherd's Watch";
+        if(activeTargets.length === 0) {
+            container.innerHTML = "<p style='text-align:center; opacity:0.5'>No active targets found.</p>";
+            return;
+        }
+
+        // Group by Shepherd ID
+        const groups = {};
+        activeTargets.forEach(t => {
+            const sId = t.shepherdId || 'unknown';
+            if(!groups[sId]) groups[sId] = [];
+            groups[sId].push(t);
+        });
+
+        let fullHtml = "";
+
+        // Iterate through groups
+        // Sort keys to make 'Unknown' last or sort by name if desired
+        const leaderIds = Object.keys(groups);
+        
+        leaderIds.forEach(leaderId => {
+            const leaderName = SHEPHERD_MAP[leaderId] || "Unknown Leader";
+            const targets = groups[leaderId];
+
+            // Build grid for this leader
+            const cardsHtml = targets.map(t => {
+                const effort = (t.calls || 0) + (t.visits || 0);
+                let color = "#ff4b5c"; 
+                if(effort > 2) color = "#00ff88"; 
+                else if(effort > 0) color = "#ffd700"; 
+
+                return `
+                <div class="target-card">
+                    <span class="target-name">${t.fullName}</span>
+                    <span class="target-meta">📍 ${t.hostel || 'No Addr'}</span>
+                    <span class="effort-badge">Calls: ${t.calls||0} | Visits: ${t.visits||0}</span>
+                    <div class="probability-dot" style="background:${color}; box-shadow:0 0 5px ${color}"></div>
+                </div>`;
+            }).join('');
+
+            // Append Section
+            fullHtml += `
+                <div class="leader-section">
+                    <div class="leader-header">👤 ${leaderName} (${targets.length})</div>
+                    <div class="target-grid">
+                        ${cardsHtml}
+                    </div>
+                </div>
+            `;
+        });
+
+        container.innerHTML = fullHtml;
+    }
+
+    // --- ANALYTICS ---
+    window.updateTimeframe = () => {
+        const filterVal = document.getElementById('timeFilter').value;
+        const endOfToday = new Date(); endOfToday.setHours(23,59,59,999);
+        const pastEvents = GLOBAL_EVENTS.filter(e => e.jsDate <= endOfToday); // Remove future
+
+        if (pastEvents.length === 0) { document.getElementById('eventLabel').innerText = "Waiting for first service..."; return; }
+
+        let eventsToRender = [];
+        if (filterVal === 'auto') {
+            eventsToRender = pastEvents.slice(-5);
         } else {
-            link.href = "index.html"; roleText.innerText = "Unassigned User";
-        }
-    }
-
-    // --- MAIN LOADING LOGIC ---
-    async function loadInvitees() {
-        const listDiv = document.getElementById('listArea');
-        let q;
-
-        // CRITICAL FIX: Master Admin sees EVERYTHING. Pastor sees OWN BRANCH. Shepherd sees OWN GROUP.
-        if (myRole === 'master_admin') {
-            q = query(collection(db, "invitees")); // No filter = fetch all
-        } else if (myRole === 'pastor') {
-            q = query(collection(db, "invitees"), where("pastorId", "==", currentUser.uid));
-        } else {
-            q = query(collection(db, "invitees"), where("shepherdId", "==", currentUser.uid));
+            const cutoffDate = new Date();
+            if(filterVal === 'week') cutoffDate.setDate(cutoffDate.getDate() - 7);
+            else cutoffDate.setMonth(cutoffDate.getMonth() - parseInt(filterVal));
+            cutoffDate.setHours(0,0,0,0);
+            eventsToRender = pastEvents.filter(e => e.jsDate >= cutoffDate);
         }
 
-        try {
-            const snap = await getDocs(q);
-            const lastMonday = new Date();
-            lastMonday.setDate(lastMonday.getDate() - (lastMonday.getDay() + 6) % 7); lastMonday.setHours(0,0,0,0);
+        if (eventsToRender.length === 0) eventsToRender = [pastEvents[pastEvents.length-1]];
 
-            if(snap.empty) {
-                listDiv.innerHTML = "<p style='text-align:center; opacity:0.5; padding:30px;'>No active invitees found.</p>";
-                return;
-            }
-
-            // Filter out graduated in memory
-            const allDocs = snap.docs.map(d => ({id: d.id, ...d.data()})).filter(d => d.status !== 'graduated');
-
-            if (myRole === 'shepherd') {
-                // SHEPHERD VIEW: Simple list
-                listDiv.innerHTML = allDocs.map(d => renderInviteeCard(d, lastMonday)).join('');
-            } else {
-                // ADMIN/PASTOR VIEW: Group by Chapel Leader (Shepherd)
-                const groups = {};
-                allDocs.forEach(d => {
-                    const sId = d.shepherdId || 'unknown';
-                    if (!groups[sId]) groups[sId] = [];
-                    groups[sId].push(d);
-                });
-
-                let fullHtml = "";
-                // Sort groups by Shepherd Name (optional, looks nicer)
-                const sortedKeys = Object.keys(groups).sort((a,b) => (SHEPHERD_MAP[a]||"").localeCompare(SHEPHERD_MAP[b]||""));
-
-                for (const sId of sortedKeys) {
-                    const items = groups[sId];
-                    const sName = SHEPHERD_MAP[sId] || "Unknown Leader";
-                    
-                    // Calc stats for header
-                    let calls = 0;
-                    items.forEach(d => {
-                        const fresh = (d.lastUpdated && d.lastUpdated.toDate() > lastMonday);
-                        if(fresh) calls += (d.calls || 0);
-                    });
-
-                    fullHtml += `
-                        <div class="shepherd-group">
-                            <div class="shepherd-header">
-                                <span class="shepherd-name">👤 ${sName}</span>
-                                <span class="shepherd-stats">${items.length} Targets | ${calls} Calls Made</span>
-                            </div>
-                            ${items.map(d => renderInviteeCard(d, lastMonday)).join('')}
-                        </div>
-                    `;
-                }
-                listDiv.innerHTML = fullHtml || "<p style='text-align:center;opacity:0.5'>No active targets.</p>";
-            }
-        } catch(e) {
-            console.error(e);
-            listDiv.innerHTML = `<p style='text-align:center;color:red'>Error loading list: ${e.message}</p>`;
-        }
-    }
-
-    function renderInviteeCard(data, lastMonday) {
-        const id = data.id;
-        const lastUpdate = data.lastUpdated ? data.lastUpdated.toDate() : new Date(0);
-        const isFresh = lastUpdate > lastMonday;
-
-        const dCalls = isFresh ? (data.calls || 0) : 0;
-        const dVisits = isFresh ? (data.visits || 0) : 0;
-        const dStatus = isFresh ? (data.status || 'unmarked') : 'unmarked';
-
-        const pStyle = dStatus === 'honoured' ? 'background:var(--green); color:#0f172a;' : '';
-        const aStyle = dStatus === 'declined' ? 'background:var(--red); color:white;' : '';
-
-        return `
-            <div class="invitee-item">
-                <div class="top-controls">
-                    <button class="btn-delete" onclick="deleteInvitee('${id}')">🗑️</button>
-                    <button class="btn-promote" onclick="openPromo('${id}')">Promote 🎓</button>
-                </div>
-                <div style="margin-bottom:15px;">
-                    <span style="font-size:1.1rem; font-weight:600;">${data.fullName}</span><br>
-                    <span style="opacity:0.6; font-size:0.8rem;">📍 ${data.hostel || 'No Addr'} | 📱 ${data.phone}</span>
-                </div>
-                <div class="effort-grid">
-                    <div class="effort-box">
-                        <span class="effort-label">CALLS</span>
-                        <div class="counter-controls">
-                            <button class="btn-count" onclick="modifyEffort('${id}', 'calls', -1, ${isFresh})">-</button>
-                            <span class="count-val" id="c-${id}">${dCalls}</span>
-                            <button class="btn-count" onclick="modifyEffort('${id}', 'calls', 1, ${isFresh})">+</button>
-                        </div>
-                    </div>
-                    <div class="effort-box">
-                        <span class="effort-label">VISITS</span>
-                        <div class="counter-controls">
-                            <button class="btn-count" onclick="modifyEffort('${id}', 'visits', -1, ${isFresh})">-</button>
-                            <span class="count-val" id="v-${id}">${dVisits}</span>
-                            <button class="btn-count" onclick="modifyEffort('${id}', 'visits', 1, ${isFresh})">+</button>
-                        </div>
-                    </div>
-                </div>
-                <div class="action-row" id="btns-${id}">
-                    <button class="btn-action btn-absent" style="${aStyle}" onclick="toggleReason('${id}', true)">Did Not Come</button>
-                    <button class="btn-action btn-present" style="${pStyle}" onclick="setStatus('${id}', 'honoured', ${isFresh})">Honoured</button>
-                </div>
-                <div id="reason-box-${id}" class="reason-box">
-                    <label style="color:var(--red); font-size:0.7rem; font-weight:bold;">REASON FOR ABSENCE?</label>
-                    <input type="text" id="reason-${id}" placeholder="e.g. Sick, Traveled..." style="background:#0f172a; border-color:var(--red);">
-                    <div style="display:flex; gap:10px;">
-                        <button class="btn-action" style="background:rgba(255,255,255,0.1); color:white;" onclick="toggleReason('${id}', false)">Cancel</button>
-                        <button class="btn-action btn-absent" onclick="saveAbsence('${id}', ${isFresh})">Save Reason</button>
-                    </div>
-                </div>
-            </div>`;
-    }
-
-    // --- STANDARD UTILS ---
-    window.addInvitee = async () => {
-        const name = document.getElementById('invName').value;
-        const phone = document.getElementById('invPhone').value;
-        const hostel = document.getElementById('invHostel').value;
-        if(!name) return alert("Name is required");
-        const shepherdId = currentUser.uid; 
-        const pastorId = (myRole === 'master_admin' || myRole === 'pastor') ? currentUser.uid : myPastorId;
-        await addDoc(collection(db, "invitees"), { fullName: name, phone, hostel, shepherdId, pastorId, calls: 0, visits: 0, status: 'unmarked', notes: "", lastUpdated: serverTimestamp(), history: [] });
-        location.reload();
+        const latestEvent = eventsToRender[eventsToRender.length - 1];
+        document.getElementById('eventLabel').innerText = `Focus: ${latestEvent.title} • ${latestEvent.jsDate.toLocaleDateString()}`;
+        
+        calculateStats(eventsToRender, latestEvent);
     };
 
-    window.deleteInvitee = async (id) => { if(confirm("Permanently delete?")) { await deleteDoc(doc(db, "invitees", id)); loadInvitees(); } };
+    function calculateStats(events, latestEvent) {
+        let graphLabels = [], graphExpected = [], graphActual = [], allNotes = [], latestRegistry = [];
 
-    async function handleFreshness(docRef, isFresh) {
-        if (isFresh) return;
-        const snap = await getDoc(docRef);
-        const old = snap.data();
-        const entry = { period: old.lastUpdated || new Date(), calls: old.calls||0, visits: old.visits||0, status: old.status||'unmarked', notes: old.notes||"" };
-        await updateDoc(docRef, { history: arrayUnion(entry), calls: 0, visits: 0, status: 'unmarked', notes: "", lastUpdated: serverTimestamp() });
-    }
+        events.forEach(evt => {
+            const eDate = evt.jsDate;
+            const dayStart = new Date(eDate); dayStart.setHours(0,0,0,0);
+            const dayEnd = new Date(eDate); dayEnd.setHours(23,59,59,999);
+            graphLabels.push(eDate.toLocaleDateString(undefined, {month:'short', day:'numeric'}));
 
-    window.modifyEffort = async (id, field, change, isFresh) => {
-        const docRef = doc(db, "invitees", id);
-        if(!isFresh) await handleFreshness(docRef, false);
-        const snap = await getDoc(docRef); 
-        let val = (snap.data()[field] || 0) + change;
-        if(val < 0) val = 0;
-        await updateDoc(docRef, { [field]: val, lastUpdated: serverTimestamp() });
-        document.getElementById(field === 'calls' ? `c-${id}` : `v-${id}`).innerText = val;
-    };
+            let activeInvitees = 0;
+            GLOBAL_INV.forEach(inv => { if ((inv.lastUpdated ? inv.lastUpdated.toDate() : new Date(0)) <= dayEnd) activeInvitees++; });
+            let expectedCount = GLOBAL_MEM.length + activeInvitees;
 
-    window.setStatus = async (id, status, isFresh) => {
-        const docRef = doc(db, "invitees", id);
-        if(!isFresh) await handleFreshness(docRef, false);
-        await updateDoc(docRef, { status: status, lastUpdated: serverTimestamp() });
-        loadInvitees();
-    };
-
-    window.saveAbsence = async (id, isFresh) => {
-        const docRef = doc(db, "invitees", id);
-        if(!isFresh) await handleFreshness(docRef, false);
-        const reason = document.getElementById(`reason-${id}`).value;
-        if(!reason) return alert("Reason required.");
-        await updateDoc(docRef, { status: 'declined', notes: reason, lastUpdated: serverTimestamp() });
-        loadInvitees();
-    };
-
-    window.toggleReason = (id, show) => {
-        document.getElementById(`btns-${id}`).style.display = show ? 'none' : 'flex';
-        document.getElementById(`reason-box-${id}`).style.display = show ? 'block' : 'none';
-    };
-
-    window.openPromo = async (id) => {
-        const snap = await getDoc(doc(db, "invitees", id));
-        const d = snap.data();
-        const names = d.fullName.split(' ');
-        document.getElementById('promoId').value = id;
-        document.getElementById('promoFirstname').value = names[0];
-        document.getElementById('promoSurname').value = names.slice(1).join(' ');
-        document.getElementById('promoModal').style.display = 'block';
-    };
-
-    window.finalSubmitPromotion = async () => {
-        const id = document.getElementById('promoId').value;
-        const btn = document.getElementById('promoSaveBtn');
-        btn.disabled = true; btn.innerText = "Processing...";
-        try {
-            const invSnap = await getDoc(doc(db, "invitees", id));
-            const invData = invSnap.data();
-            await addDoc(collection(db, "members"), {
-                first_name: document.getElementById('promoFirstname').value,
-                last_name: document.getElementById('promoSurname').value,
-                full_name: `${document.getElementById('promoFirstname').value} ${document.getElementById('promoSurname').value}`,
-                gender: document.getElementById('promoGender').value,
-                dob: document.getElementById('promoBirthday').value,
-                level: document.getElementById('promoLevel').value,
-                course: document.getElementById('promoCourse').value,
-                emergency_name: document.getElementById('promoEmergencyName').value,
-                emergency_phone: document.getElementById('promoEmergencyPhone').value,
-                phone: invData.phone,
-                hostel: invData.hostel,
-                status: "New Convert",
-                pastorId: invData.pastorId,
-                shepherdId: invData.shepherdId,
-                timestamp: serverTimestamp()
+            let presentCount = 0;
+            GLOBAL_ATT.forEach(d => {
+                const t = d.timestamp ? d.timestamp.toDate() : new Date(d.date || 0);
+                if(t >= dayStart && t <= dayEnd && d.status && d.status.toLowerCase().includes('present')) presentCount++;
             });
-            await updateDoc(doc(db, "invitees", id), { status: 'graduated' });
-            alert("Success! Member Promoted.");
-            location.reload();
-        } catch(e) {
-            alert("Error: " + e.message);
-            btn.disabled = false; btn.innerText = "Try Again";
-        }
-    };
+            GLOBAL_INV.forEach(inv => {
+                const lastUp = inv.lastUpdated ? inv.lastUpdated.toDate() : new Date(0);
+                const isFresh = lastUp > dayStart && lastUp < dayEnd;
+                if((isFresh && inv.status === 'honoured') || (inv.history && inv.history.some(h => {
+                       const hDate = h.period.toDate(); return hDate >= dayStart && hDate <= dayEnd && h.status === 'honoured';
+                   }))) presentCount++;
+            });
+            if(expectedCount===0) expectedCount=presentCount;
+            graphExpected.push(expectedCount); graphActual.push(presentCount);
+        });
+
+        const startDay = new Date(latestEvent.jsDate); startDay.setHours(0,0,0,0);
+        const endDay = new Date(latestEvent.jsDate); endDay.setHours(23,59,59,999);
+        let attMap = {};
+        GLOBAL_ATT.forEach(d => {
+            const t = d.timestamp ? d.timestamp.toDate() : new Date(d.date||0);
+            if(t >= startDay && t <= endDay) attMap[d.memberId || d.id.split('_')[0]] = d;
+        });
+
+        GLOBAL_MEM.forEach(m => {
+            const rec = attMap[m.id];
+            let name = m.full_name || `${m.first_name||''} ${m.last_name||''}`.trim() || "Unknown";
+            const isPresent = rec && rec.status && rec.status.toLowerCase().includes('present');
+            const note = (rec && rec.notes) ? rec.notes : "";
+            if(note && !isPresent) allNotes.push({name, note, type:'Member'});
+            latestRegistry.push({name, type:'member', present:isPresent, effort:"—", note:isPresent?"":(note||"Absent")});
+        });
+
+        GLOBAL_INV.forEach(i => {
+            if(i.status === 'graduated') return;
+            const name = i.fullName || "Unknown";
+            const isPresent = i.status === 'honoured';
+            const note = i.notes || "";
+            if(note && !isPresent) allNotes.push({name, note, type:'Invitee'});
+            latestRegistry.push({name, type:'invitee', present:isPresent, effort:`📞${i.calls||0}|🏠${i.visits||0}`, note:isPresent?"":(note||"No Report")});
+        });
+
+        renderUI(graphLabels, graphExpected, graphActual, allNotes, latestRegistry);
+    }
+
+    function renderUI(labels, expected, actual, notes, registry) {
+        const ctx = document.getElementById('trendChart');
+        const chartStatus = Chart.getChart("trendChart"); 
+        if (chartStatus != undefined) chartStatus.destroy();
+        new Chart(ctx.getContext('2d'), { type: 'line', data: { labels, datasets: [{ label: 'Expected', data: expected, borderColor: '#4facfe', backgroundColor: 'rgba(79, 172, 254, 0.1)', fill: true, tension: 0.4 }, { label: 'Actual', data: actual, borderColor: '#00ff88', backgroundColor: 'rgba(0, 255, 136, 0.1)', fill: true, tension: 0.4 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: 'white' } } }, scales: { y: { grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { color: '#ccc' }, beginAtZero: true }, x: { display: false } } } });
+
+        const avgExp = Math.round(expected.reduce((a,b)=>a+b,0)/(expected.length||1));
+        const avgAct = Math.round(actual.reduce((a,b)=>a+b,0)/(actual.length||1));
+        document.getElementById('avgExpected').innerText = avgExp;
+        document.getElementById('avgActual').innerText = avgAct;
+        document.getElementById('retentionRate').innerText = avgExp>0 ? Math.round((avgAct/avgExp)*100)+"%" : "0%";
+
+        document.getElementById('notesArea').innerHTML = notes.length ? notes.map(n => `<div class="note-item"><span class="note-text">"${n.note}"</span><span class="note-author">${n.name} (${n.type})</span></div>`).join('') : "<p style='text-align:center; opacity:0.5; padding:20px;'>No challenges.</p>";
+        document.getElementById('registryBody').innerHTML = registry.length ? registry.map(r => `<tr><td><b>${r.name}</b><br><span class="badge badge-${r.type}">${r.type}</span></td><td><span style="font-family:monospace; font-size:0.8rem; background:rgba(255,255,255,0.05); padding:3px 6px; border-radius:4px;">${r.effort}</span></td><td><div class="status-pill ${r.present?'pill-present':'pill-absent'}"><span class="status-dot"></span>${r.present?'PRESENT':'ABSENT'}</div></td><td><span style="font-size:0.8rem; color:${r.present?'#ccc':'#ffcccb'}; font-style:${r.present?'normal':'italic'}">${r.note}</span></td></tr>`).join('') : `<tr><td colspan="4" style="text-align:center;">No Data</td></tr>`;
+    }
 </script>
+</body>
+</html>
