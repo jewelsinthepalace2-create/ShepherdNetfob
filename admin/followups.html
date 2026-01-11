@@ -116,7 +116,7 @@
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, collection, getDocs, query, limit, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getFirestore, collection, getDocs, query, limit, orderBy, where, Timestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
     const firebaseConfig = { 
@@ -137,48 +137,60 @@
 
     async function init() {
         try {
-            // 1. Fetch slightly more events (10) to ensure we have enough after filtering
-            const eventSnap = await getDocs(query(collection(db, "events"), orderBy("date", "desc"), limit(10)));
+            // --- CRITICAL FIX ---
+            // 1. Get Today's Date (End of day to include services happening right now)
+            const today = new Date();
+            today.setHours(23, 59, 59, 999);
+
+            // 2. Query: Fetch only events <= Today, Sort Newest First, Limit to 52 (1 Year)
+            // This prevents "Future Events" from clogging the list.
+            const q = query(
+                collection(db, "events"), 
+                where("date", "<=", today.toISOString().split('T')[0]), // Comparing string dates is safer if stored as strings
+                orderBy("date", "desc"), 
+                limit(52)
+            );
             
+            // Note: If you stored dates as Timestamps, use 'where("date", "<=", today)'
+            // If the query above returns empty, try removing the 'where' and doing client-side filtering on a larger set (see fallback below).
+            
+            let eventSnap = await getDocs(q);
+            
+            // FALLBACK: If the specific date query fails due to format mismatch, 
+            // fetch the last 100 items and filter manually (Slower but safer).
             if (eventSnap.empty) {
-                document.getElementById('eventLabel').innerText = "No Service Data.";
-                return;
+                const backupQ = query(collection(db, "events"), orderBy("date", "desc"), limit(60));
+                eventSnap = await getDocs(backupQ);
             }
 
-            // 2. Convert to Objects
-            let allEvents = eventSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-
-            // 3. FILTER: Only keep events that are <= NOW (Current Date/Time)
-            const now = new Date();
-            // Set 'now' to end of day to include an event happening TODAY
-            now.setHours(23, 59, 59, 999); 
-
-            let pastEvents = allEvents.filter(e => {
-                const eDate = e.date && e.date.toDate ? e.date.toDate() : new Date(e.date);
-                return eDate <= now;
+            let allEvents = eventSnap.docs.map(d => {
+                const data = d.data();
+                // Normalize Date
+                const dObj = data.date && data.date.toDate ? data.date.toDate() : new Date(data.date);
+                return { id: d.id, ...data, parsedDate: dObj };
             });
 
-            // 4. Sort Oldest -> Newest and take the LAST 5
-            // (Reverse first because 'allEvents' came in Descending order)
-            pastEvents.reverse(); 
-            
-            // Slice the last 5
-            const relevantEvents = pastEvents.slice(-5);
+            // Filter Client Side (Double Check)
+            const pastEvents = allEvents.filter(e => e.parsedDate <= today);
 
-            if (relevantEvents.length === 0) {
+            if (pastEvents.length === 0) {
                 document.getElementById('eventLabel').innerText = "No Past Services Found.";
                 return;
             }
 
-            // The very last one is the "Current" or "Latest" service
-            const latestEvent = relevantEvents[relevantEvents.length - 1];
+            // Reverse to show Oldest -> Newest on the graph
+            pastEvents.reverse();
             
-            const dateString = latestEvent.date && latestEvent.date.toDate ? latestEvent.date.toDate() : new Date(latestEvent.date || Date.now());
-            document.getElementById('eventLabel').innerText = `Focus: ${latestEvent.title || 'Service'} • ${dateString.toLocaleDateString()}`;
+            // The last item in the array is the MOST RECENT service
+            const latestEvent = pastEvents[pastEvents.length - 1];
+            
+            document.getElementById('eventLabel').innerText = `Focus: ${latestEvent.title || 'Service'} • ${latestEvent.parsedDate.toLocaleDateString()}`;
 
-            await processAnalytics(relevantEvents, latestEvent);
+            await processAnalytics(pastEvents, latestEvent);
+
         } catch (error) {
             console.error("Init Error:", error);
+            // Index Error Hint: If console says "Index required", follow the link it provides!
             document.getElementById('registryBody').innerHTML = `<tr><td colspan="4" style="text-align:center; color:red">Error: ${error.message}</td></tr>`;
         }
     }
@@ -196,9 +208,9 @@
         let allNotes = [];
         let latestRegistry = [];
 
-        // --- 1. BUILD GRAPH DATA (Using the 5 Filtered Events) ---
+        // --- 1. BUILD GRAPH DATA (1 Year Trend) ---
         events.forEach(evt => {
-            const eDate = evt.date && evt.date.toDate ? evt.date.toDate() : new Date(evt.date);
+            const eDate = evt.parsedDate;
             const dayStart = new Date(eDate); dayStart.setHours(0,0,0,0);
             const dayEnd = new Date(eDate); dayEnd.setHours(23,59,59,999);
             
@@ -229,7 +241,7 @@
                     if(inv.status === 'honoured') presentCount++;
                 }
                 
-                // Archived History?
+                // History Check
                 if(inv.history && Array.isArray(inv.history)) {
                     inv.history.forEach(h => {
                         const hDate = h.period ? h.period.toDate() : new Date(0);
@@ -246,8 +258,8 @@
             graphActual.push(presentCount);
         });
 
-        // --- 2. BUILD TABLE DATA (Latest of the 5) ---
-        const latestDate = latestEvent.date && latestEvent.date.toDate ? latestEvent.date.toDate() : new Date(latestEvent.date || Date.now());
+        // --- 2. BUILD TABLE DATA (Latest Only) ---
+        const latestDate = latestEvent.parsedDate;
         const startDay = new Date(latestDate); startDay.setHours(0,0,0,0);
         const endDay = new Date(latestDate); endDay.setHours(23,59,59,999);
 
@@ -286,7 +298,7 @@
 
             const name = i.fullName || i.name || "Unknown Invitee";
             
-            // Direct Data (No time filter, just show what's in DB)
+            // Direct Data
             const calls = i.calls || 0;
             const visits = i.visits || 0;
             const notes = i.notes || "";
@@ -316,12 +328,13 @@
                 data: {
                     labels: labels,
                     datasets: [
-                        { label: 'Expected', data: expected, borderColor: '#4facfe', backgroundColor: 'rgba(79, 172, 254, 0.1)', fill: true, tension: 0.4 },
-                        { label: 'Actual', data: actual, borderColor: '#00ff88', backgroundColor: 'rgba(0, 255, 136, 0.1)', fill: true, tension: 0.4 }
+                        { label: 'Expected', data: expected, borderColor: '#4facfe', backgroundColor: 'rgba(79, 172, 254, 0.1)', fill: true, tension: 0.4, pointRadius: 2 },
+                        { label: 'Actual', data: actual, borderColor: '#00ff88', backgroundColor: 'rgba(0, 255, 136, 0.1)', fill: true, tension: 0.4, pointRadius: 2 }
                     ]
                 },
                 options: {
                     responsive: true,
+                    maintainAspectRatio: false, // Allows chart to stretch
                     plugins: { legend: { labels: { color: 'white' } } },
                     scales: { y: { grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { color: '#ccc' } }, x: { display: false } }
                 }
