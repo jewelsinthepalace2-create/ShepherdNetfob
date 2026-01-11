@@ -6,50 +6,50 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
     <style>
-        :root { 
-            --primary: #4facfe; --bg: #0f172a; --glass: rgba(255, 255, 255, 0.05); 
-            --border: rgba(255, 255, 255, 0.1); --green: #00ff88; --red: #ff4b5c; --gold: #ffd700;
-        }
+        :root { --primary: #4facfe; --bg: #0f172a; --glass: rgba(255, 255, 255, 0.05); --border: rgba(255, 255, 255, 0.1); --green: #00ff88; --red: #ff4b5c; --gold: #ffd700; }
         body { background: var(--bg); color: white; font-family: 'Poppins', sans-serif; padding: 20px; padding-bottom: 80px; }
         .container { max-width: 1000px; margin: 0 auto; }
         
-        /* HEADER */
-        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
+        /* HEADER & FILTER */
+        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; flex-wrap: wrap; gap: 15px; }
         h1 { margin: 0; font-size: 1.4rem; }
+        
+        /* THE FILTER DROPDOWN */
+        select {
+            background: #1e293b; color: white; border: 1px solid var(--primary);
+            padding: 8px 12px; border-radius: 8px; font-family: inherit; cursor: pointer;
+            outline: none; font-size: 0.9rem;
+        }
 
-        /* GRID LAYOUT */
+        /* DASHBOARD GRID */
         .dashboard-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; margin-bottom: 30px; }
         @media (max-width: 768px) { .dashboard-grid { grid-template-columns: 1fr; } }
 
-        /* CARDS */
         .card { background: var(--glass); border: 1px solid var(--border); border-radius: 20px; padding: 20px; backdrop-filter: blur(10px); }
         .card-title { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; opacity: 0.7; margin-bottom: 15px; display: block; }
 
-        /* KPI BOXES */
+        /* KPI STATS */
         .kpi-row { display: flex; gap: 15px; margin-bottom: 20px; }
         .kpi-box { flex: 1; background: rgba(255,255,255,0.03); padding: 15px; border-radius: 12px; text-align: center; }
         .kpi-val { font-size: 1.5rem; font-weight: bold; display: block; }
         .kpi-lbl { font-size: 0.7rem; opacity: 0.6; }
 
-        /* NOTES LIST */
+        /* NOTES AREA */
         .notes-list { max-height: 300px; overflow-y: auto; }
         .note-item { background: rgba(255, 75, 92, 0.05); border-left: 3px solid var(--red); padding: 10px; margin-bottom: 8px; border-radius: 4px; }
         .note-text { font-size: 0.8rem; color: #ffcccb; font-style: italic; }
         .note-author { font-size: 0.7rem; opacity: 0.6; margin-top: 4px; display: block; }
 
-        /* TABLE */
+        /* REGISTRY TABLE */
         .table-card { overflow-x: auto; }
         table { width: 100%; border-collapse: collapse; min-width: 700px; }
         th { text-align: left; opacity: 0.5; padding: 15px; border-bottom: 1px solid var(--border); font-size: 0.7rem; letter-spacing: 1px; }
         td { padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.02); font-size: 0.85rem; vertical-align: top; }
-
-        /* BADGES */
+        
         .badge { padding: 4px 8px; border-radius: 6px; font-size: 0.6rem; font-weight: 700; text-transform: uppercase; }
         .badge-member { background: rgba(79, 172, 254, 0.15); color: var(--primary); }
         .badge-invitee { background: rgba(255, 215, 0, 0.15); color: var(--gold); }
-        
         .status-pill { padding: 4px 10px; border-radius: 20px; font-size: 0.7rem; font-weight: bold; display: inline-flex; align-items: center; gap: 6px; }
         .pill-present { background: rgba(0, 255, 136, 0.1); color: var(--green); border: 1px solid rgba(0, 255, 136, 0.2); }
         .pill-absent { background: rgba(255, 75, 92, 0.1); color: var(--red); border: 1px solid rgba(255, 75, 92, 0.2); }
@@ -62,15 +62,23 @@
     <header>
         <div>
             <h1>Global Intelligence</h1>
-            <p id="eventLabel" style="opacity:0.6; font-size: 0.8rem; margin-top:4px;">Connecting to HQ...</p>
+            <p id="eventLabel" style="opacity:0.6; font-size: 0.8rem; margin-top:4px;">Connecting...</p>
         </div>
-        <a href="index.html" style="color:var(--primary); text-decoration:none; border:1px solid var(--border); padding:8px 16px; border-radius:8px; font-size:0.8rem;">Back to Dashboard</a>
+        
+        <div style="display:flex; gap:10px; align-items:center;">
+            <select id="timeFilter" onchange="window.updateTimeframe()">
+                <option value="1">Last 1 Month</option>
+                <option value="3">Last 3 Months</option>
+                <option value="6" selected>Last 6 Months</option>
+                <option value="12">Last 1 Year</option>
+            </select>
+            <a href="index.html" style="color:var(--primary); text-decoration:none; border:1px solid var(--border); padding:8px 16px; border-radius:8px; font-size:0.8rem;">Exit</a>
+        </div>
     </header>
 
     <div class="dashboard-grid">
-        
         <div class="card">
-            <span class="card-title">Attendance Trends (Last 5 Events)</span>
+            <span class="card-title">Attendance Trends (Actual vs Expected)</span>
             <div class="kpi-row">
                 <div class="kpi-box">
                     <span class="kpi-val" id="avgExpected">-</span>
@@ -85,30 +93,32 @@
                     <span class="kpi-lbl">RETENTION</span>
                 </div>
             </div>
-            <canvas id="trendChart" height="120"></canvas>
+            <div style="height:200px; width:100%;">
+                <canvas id="trendChart"></canvas>
+            </div>
         </div>
 
         <div class="card">
             <span class="card-title">Why they missed (Intelligence)</span>
             <div class="notes-list" id="notesArea">
-                <p style="text-align:center; opacity:0.5; font-size:0.8rem; padding:20px;">No issues reported.</p>
+                <p style="text-align:center; opacity:0.5; padding:20px;">Loading Intelligence...</p>
             </div>
         </div>
     </div>
 
     <div class="card table-card">
-        <span class="card-title">Live Registry: Latest Event</span>
+        <span class="card-title">Registry: Most Recent Service</span>
         <table>
             <thead>
                 <tr>
                     <th width="30%">NAME / ROLE</th>
-                    <th width="20%">EFFORT (Calls/Visits)</th>
+                    <th width="20%">EFFORT</th>
                     <th width="15%">STATUS</th>
                     <th width="35%">NOTE</th>
                 </tr>
             </thead>
             <tbody id="registryBody">
-                <tr><td colspan="4" style="text-align:center; padding:40px; opacity:0.5;">Analyzing Database...</td></tr>
+                <tr><td colspan="4" style="text-align:center; padding:40px; opacity:0.5;">Waiting for filter...</td></tr>
             </tbody>
         </table>
     </div>
@@ -116,90 +126,97 @@
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, collection, getDocs, query, limit } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getFirestore, collection, getDocs, query, limit, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
-    const firebaseConfig = { 
-        apiKey: "AIzaSyCBv60eRCO0e4dFBMKGKnIATouxTuk1Bcc", 
-        authDomain: "fob-database-139d1.firebaseapp.com", 
-        projectId: "fob-database-139d1", 
-        storageBucket: "fob-database-139d1.firebasestorage.app", 
-        appId: "1:375165731354:web:b5fa57dcb2d71ee0d8c7a3" 
-    };
-    
+    const firebaseConfig = { apiKey: "AIzaSyCBv60eRCO0e4dFBMKGKnIATouxTuk1Bcc", authDomain: "fob-database-139d1.firebaseapp.com", projectId: "fob-database-139d1", storageBucket: "fob-database-139d1.firebasestorage.app", appId: "1:375165731354:web:b5fa57dcb2d71ee0d8c7a3" };
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app, "fobrealdbase");
     const auth = getAuth(app);
 
-    onAuthStateChanged(auth, (user) => {
-        if (user) init();
-    });
+    // Global Stores (To allow filtering without re-fetching)
+    let GLOBAL_EVENTS = []; 
+    let GLOBAL_ATT = [];
+    let GLOBAL_MEM = [];
+    let GLOBAL_INV = [];
+
+    onAuthStateChanged(auth, (user) => { if (user) init(); });
 
     async function init() {
         try {
-            // 1. BRUTE FORCE FETCH
-            // We fetch the last 100 events regardless of date. This avoids "Index" errors.
-            const q = query(collection(db, "events"), limit(100));
-            const eventSnap = await getDocs(q);
-            
+            // 1. FETCH RAW DATA (One Time Load)
+            // Fetch 100 events to cover at least 2 years of history safely
+            const eventSnap = await getDocs(query(collection(db, "events"), orderBy("date", "desc"), limit(100)));
+            const attSnap = await getDocs(collection(db, "attendance"));
+            const memSnap = await getDocs(collection(db, "members"));
+            const invSnap = await getDocs(collection(db, "invitees"));
+
             if (eventSnap.empty) {
-                document.getElementById('eventLabel').innerText = "Database has 0 events.";
+                document.getElementById('eventLabel').innerText = "Database Empty.";
                 return;
             }
 
-            // 2. PARSE & SORT IN JAVASCRIPT (Safer)
-            const todayEnd = new Date();
-            todayEnd.setHours(23, 59, 59, 999); // Include anything happening today
+            // 2. PROCESS EVENTS (Remove Future Dates)
+            const now = new Date();
+            now.setHours(23, 59, 59, 999);
 
-            let allEvents = eventSnap.docs.map(d => {
+            GLOBAL_EVENTS = eventSnap.docs.map(d => {
                 const data = d.data();
-                // Handle Timestamp OR String date
-                const rawDate = data.date; 
-                const jsDate = (rawDate && rawDate.toDate) ? rawDate.toDate() : new Date(rawDate);
+                const jsDate = (data.date && data.date.toDate) ? data.date.toDate() : new Date(data.date);
                 return { id: d.id, ...data, jsDate: jsDate };
-            });
+            }).filter(e => e.jsDate <= now); // STRICT FILTER: No future events
 
-            // 3. FILTER: Keep only events that are <= Today
-            let pastEvents = allEvents.filter(e => e.jsDate <= todayEnd);
+            // Sort Oldest -> Newest for easy graphing
+            GLOBAL_EVENTS.sort((a, b) => a.jsDate - b.jsDate);
 
-            if (pastEvents.length === 0) {
-                document.getElementById('eventLabel').innerText = "Events found, but all are in the future.";
-                return;
-            }
+            // 3. STORE OTHER DATA
+            GLOBAL_ATT = attSnap.docs.map(d => ({id:d.id, ...d.data()}));
+            GLOBAL_MEM = memSnap.docs.map(d => ({id:d.id, ...d.data()}));
+            GLOBAL_INV = invSnap.docs.map(d => ({id:d.id, ...d.data()}));
 
-            // 4. SORT: Oldest -> Newest (Jan 1, Jan 4, Jan 11...)
-            pastEvents.sort((a, b) => a.jsDate - b.jsDate);
-
-            // 5. TAKE LAST 5 (Most recent)
-            // If we have Jan 1, Jan 4, Jan 11 -> We want all of them.
-            const recentEvents = pastEvents.slice(-5);
-            const latestEvent = recentEvents[recentEvents.length - 1]; // The very last one is today/latest
-
-            document.getElementById('eventLabel').innerText = `Focus: ${latestEvent.title} • ${latestEvent.jsDate.toLocaleDateString()}`;
-
-            await processAnalytics(recentEvents, latestEvent);
+            // 4. TRIGGER INITIAL RENDER
+            window.updateTimeframe(); // Defaults to 6 months per HTML select
 
         } catch (error) {
-            console.error("Init Error:", error);
-            document.getElementById('registryBody').innerHTML = `<tr><td colspan="4" style="text-align:center; color:red">Error: ${error.message}</td></tr>`;
+            console.error(error);
+            document.getElementById('eventLabel').innerText = "Error Loading Data.";
         }
     }
 
-    async function processAnalytics(events, latestEvent) {
-        // Fetch ALL Data to be safe
-        const [attSnap, memSnap, invSnap] = await Promise.all([
-            getDocs(collection(db, "attendance")),
-            getDocs(collection(db, "members")),
-            getDocs(collection(db, "invitees"))
-        ]);
+    // --- FILTER LOGIC ---
+    window.updateTimeframe = () => {
+        const months = parseInt(document.getElementById('timeFilter').value);
+        
+        // Calculate Cutoff Date
+        const cutoffDate = new Date();
+        cutoffDate.setMonth(cutoffDate.getMonth() - months);
+        cutoffDate.setHours(0,0,0,0);
 
+        // Filter Events based on Cutoff
+        const filteredEvents = GLOBAL_EVENTS.filter(e => e.jsDate >= cutoffDate);
+
+        if (filteredEvents.length === 0) {
+            alert("No events found in this timeframe.");
+            return;
+        }
+
+        // The latest event is simply the last one in our filtered list
+        const latestEvent = filteredEvents[filteredEvents.length - 1];
+
+        // Update UI
+        document.getElementById('eventLabel').innerText = `Focus: ${latestEvent.title} • ${latestEvent.jsDate.toLocaleDateString()}`;
+        
+        calculateStats(filteredEvents, latestEvent);
+    };
+
+    function calculateStats(events, latestEvent) {
         let graphLabels = [];
         let graphExpected = [];
         let graphActual = [];
         let allNotes = [];
         let latestRegistry = [];
 
-        // --- 1. BUILD GRAPH DATA ---
+        // --- GRAPH DATA ---
         events.forEach(evt => {
             const eDate = evt.jsDate;
             const dayStart = new Date(eDate); dayStart.setHours(0,0,0,0);
@@ -210,9 +227,8 @@
             let presentCount = 0;
             let expectedCount = 0;
 
-            // Members
-            attSnap.forEach(doc => {
-                const d = doc.data();
+            // Check Members
+            GLOBAL_ATT.forEach(d => {
                 const t = d.timestamp ? d.timestamp.toDate() : new Date(d.date || 0);
                 if(t >= dayStart && t <= dayEnd) {
                     expectedCount++;
@@ -220,19 +236,15 @@
                 }
             });
 
-            // Invitees
-            invSnap.forEach(doc => {
-                const inv = doc.data();
+            // Check Invitees
+            GLOBAL_INV.forEach(inv => {
                 const lastUp = inv.lastUpdated ? inv.lastUpdated.toDate() : new Date(0);
-                
-                // Active on day?
-                const isFresh = lastUp > dayStart && lastUp < dayEnd;
-                if(isFresh) {
+                // Was active on that day?
+                if(lastUp > dayStart && lastUp < dayEnd) {
                     expectedCount++;
                     if(inv.status === 'honoured') presentCount++;
                 }
-
-                // History
+                // Was active in history?
                 if(inv.history && Array.isArray(inv.history)) {
                     inv.history.forEach(h => {
                         const hDate = h.period ? h.period.toDate() : new Date(0);
@@ -249,121 +261,89 @@
             graphActual.push(presentCount);
         });
 
-        // --- 2. BUILD TABLE DATA ---
+        // --- TABLE DATA (Latest Event Only) ---
         const latestDate = latestEvent.jsDate;
         const startDay = new Date(latestDate); startDay.setHours(0,0,0,0);
         const endDay = new Date(latestDate); endDay.setHours(23,59,59,999);
 
+        // Map Attendance
         let attMap = {};
-        attSnap.forEach(doc => {
-            const d = doc.data();
+        GLOBAL_ATT.forEach(d => {
             const t = d.timestamp ? d.timestamp.toDate() : new Date(d.date || 0);
             if(t >= startDay && t <= endDay) {
-                const cleanId = d.memberId || doc.id.split('_')[0];
+                const cleanId = d.memberId || d.id.split('_')[0];
                 attMap[cleanId] = d;
             }
         });
 
-        // MEMBERS
-        memSnap.forEach(doc => {
-            const m = doc.data();
-            const rec = attMap[doc.id];
-            let fullName = m.full_name || `${m.first_name || ''} ${m.last_name || ''}`.trim() || "Unknown Member";
-            
+        // Members
+        GLOBAL_MEM.forEach(m => {
+            const rec = attMap[m.id];
+            let fullName = m.full_name || `${m.first_name||''} ${m.last_name||''}`.trim() || "Unknown";
             const isPresent = rec && rec.status && rec.status.toLowerCase().includes('present');
             const note = (rec && rec.notes) ? rec.notes : "";
 
             if(note && !isPresent) allNotes.push({ name: fullName, note: note, type: 'Member' });
-
-            latestRegistry.push({
-                name: fullName, type: 'member', present: isPresent,
-                effort: "—", note: isPresent ? "" : (note || "Absent")
-            });
+            latestRegistry.push({ name: fullName, type: 'member', present: isPresent, effort: "—", note: isPresent?"":(note||"Absent") });
         });
 
-        // INVITEES
-        invSnap.forEach(doc => {
-            const i = doc.data();
+        // Invitees
+        GLOBAL_INV.forEach(i => {
             if(i.status === 'graduated') return;
-
-            const name = i.fullName || i.name || "Unknown Invitee";
-            const calls = i.calls || 0;
-            const visits = i.visits || 0;
-            const notes = i.notes || "";
+            const name = i.fullName || i.name || "Unknown";
             const isPresent = i.status === 'honoured';
-
-            if(notes && !isPresent) allNotes.push({ name: name, note: notes, type: 'Invitee' });
-
-            latestRegistry.push({
-                name: name, type: 'invitee', present: isPresent,
-                effort: `📞 ${calls} | 🏠 ${visits}`,
-                note: isPresent ? "" : (notes || "No Report")
-            });
+            const note = i.notes || "";
+            
+            if(note && !isPresent) allNotes.push({ name: name, note: note, type: 'Invitee' });
+            latestRegistry.push({ name: name, type: 'invitee', present: isPresent, effort: `📞${i.calls||0}|🏠${i.visits||0}`, note: isPresent?"":(note||"No Report") });
         });
 
-        renderDashboard(graphLabels, graphExpected, graphActual, allNotes, latestRegistry);
+        renderUI(graphLabels, graphExpected, graphActual, allNotes, latestRegistry);
     }
 
-    function renderDashboard(labels, expected, actual, notes, registry) {
-        // Chart
+    function renderUI(labels, expected, actual, notes, registry) {
+        // Render Chart
         const ctx = document.getElementById('trendChart');
-        if(ctx) {
-            const chartStatus = Chart.getChart("trendChart"); 
-            if (chartStatus != undefined) chartStatus.destroy();
+        const chartStatus = Chart.getChart("trendChart"); 
+        if (chartStatus != undefined) chartStatus.destroy();
 
-            new Chart(ctx.getContext('2d'), {
-                type: 'line',
-                data: {
-                    labels: labels,
-                    datasets: [
-                        { label: 'Expected', data: expected, borderColor: '#4facfe', backgroundColor: 'rgba(79, 172, 254, 0.1)', fill: true, tension: 0.4 },
-                        { label: 'Actual', data: actual, borderColor: '#00ff88', backgroundColor: 'rgba(0, 255, 136, 0.1)', fill: true, tension: 0.4 }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { labels: { color: 'white' } } },
-                    scales: { y: { grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { color: '#ccc' } }, x: { display: false } }
-                }
-            });
-        }
+        new Chart(ctx.getContext('2d'), {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [
+                    { label: 'Expected', data: expected, borderColor: '#4facfe', backgroundColor: 'rgba(79, 172, 254, 0.1)', fill: true, tension: 0.4 },
+                    { label: 'Actual', data: actual, borderColor: '#00ff88', backgroundColor: 'rgba(0, 255, 136, 0.1)', fill: true, tension: 0.4 }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { labels: { color: 'white' } } },
+                scales: { y: { grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { color: '#ccc' }, beginAtZero: true }, x: { display: false } }
+            }
+        });
 
-        // KPIS
+        // Render KPIs
         const avgExp = Math.round(expected.reduce((a,b)=>a+b,0) / (expected.length||1));
         const avgAct = Math.round(actual.reduce((a,b)=>a+b,0) / (actual.length||1));
         document.getElementById('avgExpected').innerText = avgExp;
         document.getElementById('avgActual').innerText = avgAct;
         document.getElementById('retentionRate').innerText = avgExp > 0 ? Math.round((avgAct/avgExp)*100)+"%" : "0%";
 
-        // Notes
+        // Render Notes & Table
         const notesDiv = document.getElementById('notesArea');
-        if(notes.length > 0) {
-            notesDiv.innerHTML = notes.map(n => `
-                <div class="note-item">
-                    <span class="note-text">"${n.note}"</span>
-                    <span class="note-author">${n.name} (${n.type})</span>
-                </div>
-            `).join('');
-        } else {
-            notesDiv.innerHTML = "<p style='text-align:center; opacity:0.5; font-size:0.8rem; padding:20px;'>No challenges recorded.</p>";
-        }
+        notesDiv.innerHTML = notes.length ? notes.map(n => `<div class="note-item"><span class="note-text">"${n.note}"</span><span class="note-author">${n.name} (${n.type})</span></div>`).join('') : "<p style='text-align:center; opacity:0.5; padding:20px;'>No challenges.</p>";
 
-        // Table
         const regBody = document.getElementById('registryBody');
-        if(registry.length === 0) {
-            regBody.innerHTML = `<tr><td colspan="4" style="text-align:center;">No Data Available</td></tr>`;
-            return;
-        }
-        
-        regBody.innerHTML = registry.map(r => `
+        regBody.innerHTML = registry.length ? registry.map(r => `
             <tr>
                 <td><b>${r.name}</b><br><span class="badge badge-${r.type}">${r.type}</span></td>
                 <td><span style="font-family:monospace; font-size:0.8rem; background:rgba(255,255,255,0.05); padding:3px 6px; border-radius:4px;">${r.effort}</span></td>
                 <td><div class="status-pill ${r.present?'pill-present':'pill-absent'}"><span class="status-dot"></span>${r.present?'PRESENT':'ABSENT'}</div></td>
                 <td><span style="font-size:0.8rem; color:${r.present?'#ccc':'#ffcccb'}; font-style:${r.present?'normal':'italic'}">${r.note}</span></td>
             </tr>
-        `).join('');
+        `).join('') : `<tr><td colspan="4" style="text-align:center;">No Data</td></tr>`;
     }
 </script>
 </body>
