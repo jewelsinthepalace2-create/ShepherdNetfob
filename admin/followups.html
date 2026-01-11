@@ -6,42 +6,63 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
-        :root { --primary: #4facfe; --bg: #0f172a; --glass: rgba(255, 255, 255, 0.05); --border: rgba(255, 255, 255, 0.1); --green: #00ff88; --red: #ff4b5c; }
+        :root { 
+            --primary: #4facfe; 
+            --bg: #0f172a; 
+            --glass: rgba(255, 255, 255, 0.05); 
+            --border: rgba(255, 255, 255, 0.1); 
+            --green: #00ff88; 
+            --red: #ff4b5c; 
+            --gold: #ffd700;
+        }
         body { background: var(--bg); color: white; font-family: 'Poppins', sans-serif; padding: 20px; }
-        .container { max-width: 900px; margin: 0 auto; padding-bottom: 50px; }
+        .container { max-width: 1000px; margin: 0 auto; padding-bottom: 50px; }
         
         /* HEADER */
         header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
         h1 { margin: 0; font-size: 1.4rem; }
         
         /* ANALYTICS GRAPH CARD */
-        .analytics-card { background: var(--glass); border: 1px solid var(--border); border-radius: 20px; padding: 20px; margin-bottom: 25px; display: flex; flex-direction: column; align-items: center; }
-        .graph-wrapper { display: flex; align-items: flex-end; gap: 50px; height: 160px; margin-top: 15px; }
-        .bar-container { display: flex; flex-direction: column; align-items: center; gap: 8px; }
-        .bar-track { width: 50px; height: 130px; background: rgba(255,255,255,0.05); border-radius: 25px; position: relative; overflow: hidden; }
+        .analytics-card { 
+            background: var(--glass); border: 1px solid var(--border); 
+            border-radius: 20px; padding: 25px; margin-bottom: 25px; 
+            display: flex; flex-direction: column; align-items: center;
+        }
+        .graph-wrapper { 
+            display: flex; align-items: flex-end; gap: 60px; 
+            height: 160px; margin-top: 20px; 
+        }
+        .bar-container { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+        
+        .bar-track { 
+            width: 60px; height: 130px; background: rgba(255,255,255,0.05); 
+            border-radius: 15px; position: relative; overflow: hidden; 
+        }
         .bar-fill { width: 100%; position: absolute; bottom: 0; transition: height 1s ease; }
-        .fill-target { background: linear-gradient(to top, #4facfe, #00f2fe); opacity: 0.4; }
+        .fill-target { background: linear-gradient(to top, #4facfe, #00f2fe); opacity: 0.3; }
         .fill-actual { background: linear-gradient(to top, #00ff88, #00b09b); }
-        .stat-val { font-size: 1.1rem; font-weight: bold; }
-        .stat-lbl { font-size: 0.65rem; opacity: 0.6; letter-spacing: 1px; }
+        
+        .stat-val { font-size: 1.2rem; font-weight: bold; }
+        .stat-lbl { font-size: 0.7rem; opacity: 0.6; letter-spacing: 1px; }
 
-        /* TABLE STYLES */
+        /* DATA TABLE */
         .table-card { background: var(--glass); border: 1px solid var(--border); border-radius: 15px; overflow-x: auto; }
-        table { width: 100%; border-collapse: collapse; min-width: 600px; }
+        table { width: 100%; border-collapse: collapse; min-width: 700px; }
         th { text-align: left; opacity: 0.5; padding: 15px; border-bottom: 1px solid var(--border); font-size: 0.7rem; letter-spacing: 1px; }
-        td { padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.02); font-size: 0.85rem; vertical-align: middle; }
+        td { padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.02); font-size: 0.85rem; vertical-align: top; }
         
-        /* BADGES */
-        .badge { padding: 3px 8px; border-radius: 6px; font-size: 0.6rem; font-weight: 700; text-transform: uppercase; }
+        /* BADGES & TAGS */
+        .badge { padding: 4px 8px; border-radius: 6px; font-size: 0.6rem; font-weight: 700; text-transform: uppercase; display: inline-block; margin-top: 4px; }
         .badge-member { background: rgba(79, 172, 254, 0.15); color: var(--primary); }
-        .badge-invitee { background: rgba(255, 215, 0, 0.15); color: #ffd700; }
+        .badge-invitee { background: rgba(255, 215, 0, 0.15); color: var(--gold); }
         
-        /* STATUS & NOTES */
-        .status-dot { height: 8px; width: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; }
-        .dot-green { background: var(--green); box-shadow: 0 0 8px var(--green); }
-        .dot-red { background: var(--red); box-shadow: 0 0 8px var(--red); }
-        .note-text { font-size: 0.75rem; color: #ff4b5c; font-style: italic; display: block; margin-top: 4px; opacity: 0.9; }
-        .effort-text { font-size: 0.7rem; font-family: monospace; color: #ccc; background: rgba(255,255,255,0.05); padding: 2px 6px; border-radius: 4px; }
+        .status-pill { padding: 4px 10px; border-radius: 20px; font-size: 0.7rem; font-weight: bold; display: inline-flex; align-items: center; gap: 6px; }
+        .pill-present { background: rgba(0, 255, 136, 0.1); color: var(--green); border: 1px solid rgba(0, 255, 136, 0.2); }
+        .pill-absent { background: rgba(255, 75, 92, 0.1); color: var(--red); border: 1px solid rgba(255, 75, 92, 0.2); }
+        .status-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+        .effort-tag { font-family: monospace; font-size: 0.75rem; background: rgba(255,255,255,0.05); padding: 4px 8px; border-radius: 6px; color: #ccc; display: inline-block; }
+        .reason-text { color: var(--red); font-style: italic; font-size: 0.8rem; margin-top: 4px; display: block; opacity: 0.9; }
     </style>
 </head>
 <body>
@@ -49,14 +70,14 @@
 <div class="container">
     <header>
         <div>
-            <h1>Mission Report</h1>
-            <p id="eventLabel" style="opacity:0.6; font-size: 0.8rem; margin-top:4px;">Connecting...</p>
+            <h1>Global Intelligence</h1>
+            <p id="eventLabel" style="opacity:0.6; font-size: 0.8rem; margin-top:4px;">Connecting to HQ...</p>
         </div>
-        <a href="index.html" style="color:var(--primary); text-decoration:none; border:1px solid var(--border); padding:6px 14px; border-radius:8px; font-size:0.8rem;">Exit</a>
+        <a href="index.html" style="color:var(--primary); text-decoration:none; border:1px solid var(--border); padding:8px 16px; border-radius:8px; font-size:0.8rem;">Back to Dashboard</a>
     </header>
 
     <div class="analytics-card">
-        <h3 style="margin:0; font-size:0.9rem; opacity:0.8; letter-spacing:1px;">ATTENDANCE YIELD</h3>
+        <h3 style="margin:0; font-size:0.8rem; opacity:0.7; letter-spacing:1.5px;">SERVICE YIELD</h3>
         <div class="graph-wrapper" id="graphArea">
             </div>
     </div>
@@ -68,11 +89,11 @@
                     <th width="30%">NAME / ROLE</th>
                     <th width="20%">EFFORT (Calls/Visits)</th>
                     <th width="15%">STATUS</th>
-                    <th width="35%">CHALLENGES / NOTES</th>
+                    <th width="35%">REASON / NOTES</th>
                 </tr>
             </thead>
             <tbody id="registryBody">
-                <tr><td colspan="4" style="text-align:center; padding:30px; opacity:0.5;">Gathering Intelligence...</td></tr>
+                <tr><td colspan="4" style="text-align:center; padding:40px; opacity:0.5;">Analyzing Database...</td></tr>
             </tbody>
         </table>
     </div>
@@ -93,51 +114,55 @@
     });
 
     async function init() {
-        // 1. Get Latest Event
+        // 1. Find the most relevant upcoming or recent event
         const eventSnap = await getDocs(query(collection(db, "events"), limit(10)));
-        // Filter out "Dawn Prayers" or other non-service events if needed
         const events = eventSnap.docs.map(d => d.data());
-        // Sort by date descending
-        const latest = events.sort((a,b) => new Date(b.date) - new Date(a.date))[0];
+        
+        // Filter: Ignore 'Dawn Prayers' if preferred, Sort Descending by Date
+        const latest = events
+            .filter(e => e.title !== "Dawn Prayers")
+            .sort((a,b) => new Date(b.date) - new Date(a.date))[0];
 
         if(!latest) {
-            document.getElementById('eventLabel').innerText = "No upcoming events found.";
+            document.getElementById('eventLabel').innerText = "No Service Scheduled.";
+            document.getElementById('registryBody').innerHTML = `<tr><td colspan="4" style="text-align:center; padding:30px;">No events found.</td></tr>`;
             return;
         }
 
         const eventDate = new Date(latest.date);
-        document.getElementById('eventLabel').innerText = `Target: ${latest.title} (${eventDate.toLocaleDateString()})`;
+        document.getElementById('eventLabel').innerText = `Target: ${latest.title} • ${eventDate.toLocaleDateString()}`;
         
         loadData(eventDate);
     }
 
     async function loadData(eventDate) {
-        // Define timeframe for "Fresh" invitee data (This week)
-        const startWeek = new Date(eventDate);
-        startWeek.setDate(startWeek.getDate() - 6); 
+        // DEFINITION OF "FRESH DATA": 
+        // We look back 6 days from the event date to see if data is relevant to this service.
+        const startWindow = new Date(eventDate);
+        startWindow.setDate(startWindow.getDate() - 6); 
+        startWindow.setHours(0,0,0,0);
         
-        // Fetch all necessary collections
+        // Fetch All Collections in Parallel
         const [attSnap, memSnap, invSnap] = await Promise.all([
             getDocs(collection(db, "attendance")),
             getDocs(collection(db, "members")),
             getDocs(collection(db, "invitees"))
         ]);
 
-        // 1. Map Attendance (Who was marked present/absent for this specific date?)
-        // Key: MemberID, Value: { status, notes }
+        // --- PREPARE ATTENDANCE MAP (For Members) ---
+        // We map MemberID -> Attendance Document for the specific Event Day
         let attendanceMap = {};
-        
-        // Define day range for matching attendance timestamps
         const dayStart = new Date(eventDate); dayStart.setHours(0,0,0,0);
         const dayEnd = new Date(eventDate); dayEnd.setHours(23,59,59,999);
 
         attSnap.forEach(doc => {
             const d = doc.data();
-            const attTime = d.timestamp ? d.timestamp.toDate() : new Date(d.date);
+            const time = d.timestamp ? d.timestamp.toDate() : new Date(d.date);
             
-            if(attTime >= dayStart && attTime <= dayEnd) {
-                // attendanceMap[memberId] = data
-                attendanceMap[d.memberId || doc.id] = { 
+            if(time >= dayStart && time <= dayEnd) {
+                // Determine ID (Handles both formats)
+                const memberId = d.memberId || doc.id.split('_')[0]; 
+                attendanceMap[memberId] = { 
                     status: (d.status || "").toLowerCase(), 
                     notes: d.notes || "" 
                 };
@@ -146,34 +171,39 @@
 
         let masterList = [];
 
-        // 2. PROCESS MEMBERS
+        // --- A. PROCESS MEMBERS ---
         memSnap.forEach(doc => {
             const m = doc.data();
-            const attRecord = attendanceMap[doc.id]; // Check if they have an attendance record for today
+            const att = attendanceMap[doc.id]; // Check attendance map
             
-            const isPresent = attRecord && attRecord.status.includes('present');
-            const isAbsentMarked = attRecord && attRecord.status.includes('absent');
+            const isPresent = att && att.status.includes('present');
+            const isAbsentMarked = att && att.status.includes('absent');
             
-            // If explicitly marked absent, show note. If no record, just "Absent".
-            const note = isAbsentMarked ? attRecord.notes : (isPresent ? "" : "No attendance record");
+            // Logic: If marked absent, use note. If not marked at all, say "No Data".
+            let reason = "";
+            if(isAbsentMarked) reason = att.notes;
+            else if(!isPresent) reason = "Not marked in register";
 
             masterList.push({
                 name: m.full_name || m.first_name,
                 type: 'member',
                 present: isPresent,
-                effort: "—", // Members don't track calls/visits usually, or you can add if needed
-                note: isPresent ? "" : note
+                // Members usually don't have call/visit tracking in this system yet
+                effort: "—", 
+                note: isPresent ? "" : reason
             });
         });
 
-        // 3. PROCESS INVITEES
+        // --- B. PROCESS INVITEES ---
         invSnap.forEach(doc => {
             const i = doc.data();
-            
-            // Check if invitee data is "Fresh" (updated this week)
-            const lastUpdate = i.lastUpdated ? i.lastUpdated.toDate() : new Date(0);
-            const isFresh = lastUpdate > startWeek;
+            if(i.status === 'graduated') return; // Skip if they joined
 
+            // INTELLIGENCE CHECK: Is this data Fresh or Old?
+            const lastUpdate = i.lastUpdated ? i.lastUpdated.toDate() : new Date(0);
+            const isFresh = lastUpdate > startWindow;
+
+            // If fresh, show real numbers. If old, show 0.
             const calls = isFresh ? (i.calls || 0) : 0;
             const visits = isFresh ? (i.visits || 0) : 0;
             const status = isFresh ? (i.status || 'unmarked') : 'unmarked';
@@ -186,7 +216,7 @@
                 type: 'invitee',
                 present: isPresent,
                 effort: `📞 ${calls} | 🏠 ${visits}`,
-                note: (!isPresent && note) ? note : ""
+                note: (!isPresent && note) ? note : (status === 'unmarked' ? "No feedback yet" : "")
             });
         });
 
@@ -194,27 +224,33 @@
     }
 
     function render(list) {
-        // --- GRAPHS ---
+        // 1. CALCULATE STATS
         const total = list.length;
         const present = list.filter(x => x.present).length;
         const percent = total > 0 ? (present/total)*100 : 0;
 
+        // 2. RENDER GRAPHS
         document.getElementById('graphArea').innerHTML = `
             <div class="bar-container">
-                <div class="bar-track"><div class="bar-fill fill-target" style="height:100%"></div></div>
+                <div class="bar-track">
+                    <div class="bar-fill fill-target" style="height:100%"></div>
+                </div>
                 <div class="stat-val">${total}</div>
                 <div class="stat-lbl">EXPECTED</div>
             </div>
+
             <div class="bar-container">
-                <div class="bar-track"><div class="bar-fill fill-actual" style="height:${percent}%"></div></div>
+                <div class="bar-track">
+                    <div class="bar-fill fill-actual" style="height:${percent}%"></div>
+                </div>
                 <div class="stat-val" style="color:var(--green)">${present}</div>
                 <div class="stat-lbl">ACTUAL</div>
             </div>
         `;
 
-        // --- TABLE ---
-        if(total === 0) {
-            document.getElementById('registryBody').innerHTML = `<tr><td colspan="4" style="text-align:center;">No data found.</td></tr>`;
+        // 3. RENDER TABLE
+        if(list.length === 0) {
+            document.getElementById('registryBody').innerHTML = `<tr><td colspan="4" style="text-align:center; padding:30px;">Database Empty.</td></tr>`;
             return;
         }
 
@@ -225,18 +261,18 @@
                     <span class="badge badge-${item.type}">${item.type}</span>
                 </td>
                 <td>
-                    <span class="effort-text">${item.effort}</span>
+                    <span class="effort-tag">${item.effort}</span>
                 </td>
                 <td>
-                    <div style="display:flex; align-items:center;">
-                        <span class="status-dot ${item.present ? 'dot-green' : 'dot-red'}"></span>
-                        <span style="font-size:0.75rem; font-weight:bold; color:${item.present ? 'var(--green)' : 'var(--red)'}">
-                            ${item.present ? 'PRESENT' : 'ABSENT'}
-                        </span>
+                    <div class="status-pill ${item.present ? 'pill-present' : 'pill-absent'}">
+                        <span class="status-dot"></span>
+                        ${item.present ? 'PRESENT' : 'ABSENT'}
                     </div>
                 </td>
                 <td>
-                    <span class="note-text">${item.note ? `"${item.note}"` : ''}</span>
+                    ${item.note 
+                        ? `<span class="reason-text">"${item.note}"</span>` 
+                        : '<span style="opacity:0.2; font-size:0.8rem;">-</span>'}
                 </td>
             </tr>
         `).join('');
