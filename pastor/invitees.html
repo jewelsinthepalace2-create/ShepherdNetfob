@@ -35,7 +35,12 @@
         .btn-action { flex: 1; padding: 12px; border-radius: 10px; border: none; font-weight: 600; cursor: pointer; font-size: 0.8rem; transition: 0.2s; }
         .btn-present { background: rgba(0, 255, 136, 0.1); color: var(--green); border: 1px solid rgba(0, 255, 136, 0.3); }
         .btn-absent { background: rgba(255, 75, 92, 0.1); color: var(--red); border: 1px solid rgba(255, 75, 92, 0.3); }
-        .btn-promote { float: right; background: none; border: 1px solid var(--primary); color: var(--primary); padding: 4px 10px; border-radius: 6px; font-size: 0.7rem; cursor: pointer; }
+        
+        /* TOP CONTROLS */
+        .top-controls { display: flex; justify-content: space-between; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .btn-promote { background: none; border: 1px solid var(--primary); color: var(--primary); padding: 4px 12px; border-radius: 6px; font-size: 0.7rem; cursor: pointer; font-weight: bold; }
+        .btn-delete { background: none; border: 1px solid var(--red); color: var(--red); padding: 4px 12px; border-radius: 6px; font-size: 0.7rem; cursor: pointer; opacity: 0.7; transition: 0.2s; }
+        .btn-delete:hover { opacity: 1; background: rgba(255, 75, 92, 0.1); }
 
         /* REASON BOX */
         .reason-box { display: none; margin-top: 15px; background: rgba(255, 75, 92, 0.05); padding: 15px; border-radius: 12px; border: 1px solid rgba(255, 75, 92, 0.3); }
@@ -105,7 +110,7 @@
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
-    import { getFirestore, collection, addDoc, getDocs, query, where, doc, updateDoc, serverTimestamp, getDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, getDocs, query, where, doc, updateDoc, serverTimestamp, getDoc, arrayUnion, deleteDoc } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
 
     const firebaseConfig = { apiKey: "AIzaSyCBv60eRCO0e4dFBMKGKnIATouxTuk1Bcc", authDomain: "fob-database-139d1.firebaseapp.com", projectId: "fob-database-139d1", storageBucket: "fob-database-139d1.firebasestorage.app", appId: "1:375165731354:web:b5fa57dcb2d71ee0d8c7a3" };
@@ -125,54 +130,36 @@
         } else { location.href = "index.html"; }
     });
 
-    // --- 0. SMART ROLE DETECTION & LINKING ---
     async function determineRole(uid) {
         const link = document.getElementById('dashLink');
         const roleText = document.getElementById('roleDisplay');
 
-        // Check Collections
         const aSnap = await getDoc(doc(db, "master_admin", uid));
         const pSnap = await getDoc(doc(db, "pastors", uid));
         const sSnap = await getDoc(doc(db, "shepherds", uid));
         
         if (aSnap.exists()) {
-            myRole = 'master_admin';
-            myPastorId = uid; // Admin acts as their own Pastor
-            link.href = "../admin/index.html";
-            roleText.innerText = "Master Admin Oversight";
-        } 
-        else if (pSnap.exists()) {
-            myRole = 'pastor';
-            myPastorId = uid; // Pastor is self-governing
-            link.href = "../pastor/index.html";
-            roleText.innerText = "Pastor's Mandate";
-        } 
-        else if (sSnap.exists()) {
+            myRole = 'master_admin'; myPastorId = uid;
+            link.href = "../admin/index.html"; roleText.innerText = "Master Admin Oversight";
+        } else if (pSnap.exists()) {
+            myRole = 'pastor'; myPastorId = uid;
+            link.href = "../pastor/index.html"; roleText.innerText = "Pastor's Mandate";
+        } else if (sSnap.exists()) {
             myRole = 'shepherd';
-            // Shepherds must have a pastor assigned in their DB document
             myPastorId = sSnap.data().assigned_pastor_id || sSnap.data().pastorId; 
-            link.href = "../shepherd/index.html";
-            roleText.innerText = "Shepherd's Watch";
-        } 
-        else {
-            // Fallback (e.g. unassigned user)
-            link.href = "index.html"; 
-            roleText.innerText = "Unassigned User";
+            link.href = "../shepherd/index.html"; roleText.innerText = "Shepherd's Watch";
+        } else {
+            link.href = "index.html"; roleText.innerText = "Unassigned User";
         }
     }
 
-    // --- 1. ADD NEW INVITEE ---
     window.addInvitee = async () => {
         const name = document.getElementById('invName').value;
         const phone = document.getElementById('invPhone').value;
         const hostel = document.getElementById('invHostel').value;
         if(!name) return alert("Name is required");
 
-        // Logic: 
-        // If Shepherd -> shepherdId = Me, pastorId = My Boss
-        // If Pastor/Admin -> shepherdId = Me (direct oversight), pastorId = Me
-        
-        const shepherdId = currentUser.uid; // Whoever adds it is the "Shepherd" of that soul initially
+        const shepherdId = currentUser.uid; 
         const pastorId = (myRole === 'master_admin' || myRole === 'pastor') ? currentUser.uid : myPastorId;
 
         await addDoc(collection(db, "invitees"), {
@@ -186,26 +173,22 @@
         location.reload();
     };
 
-    // --- 2. LOAD LIST (Query Logic) ---
+    window.deleteInvitee = async (id) => {
+        if(confirm("Are you sure you want to permanently remove this invitee?")) {
+            await deleteDoc(doc(db, "invitees", id));
+            loadInvitees();
+        }
+    };
+
     async function loadInvitees() {
         const listDiv = document.getElementById('listArea');
         let q;
-
-        // QUERY RULES:
-        // 1. Shepherd -> See only my direct invitees (shepherdId == Me)
-        // 2. Pastor OR Admin -> See ALL invitees under my branch (pastorId == Me)
-        
-        if(myRole === 'shepherd') {
-            q = query(collection(db, "invitees"), where("shepherdId", "==", currentUser.uid));
-        } else {
-            // This covers both 'pastor' and 'master_admin'
-            q = query(collection(db, "invitees"), where("pastorId", "==", currentUser.uid));
-        }
+        if(myRole === 'shepherd') q = query(collection(db, "invitees"), where("shepherdId", "==", currentUser.uid));
+        else q = query(collection(db, "invitees"), where("pastorId", "==", currentUser.uid));
 
         const snap = await getDocs(q);
         let html = "";
         
-        // "Freshness" Window (Since last Monday)
         const lastMonday = new Date();
         lastMonday.setDate(lastMonday.getDate() - (lastMonday.getDay() + 6) % 7);
         lastMonday.setHours(0,0,0,0);
@@ -220,7 +203,6 @@
             const id = d.id;
             if(data.status === 'graduated') return;
 
-            // IS DATA FRESH?
             const lastUpdate = data.lastUpdated ? data.lastUpdated.toDate() : new Date(0);
             const isFresh = lastUpdate > lastMonday;
 
@@ -233,8 +215,12 @@
 
             html += `
             <div class="invitee-item">
-                <div style="margin-bottom:15px;">
+                <div class="top-controls">
+                    <button class="btn-delete" onclick="deleteInvitee('${id}')">🗑️ Remove</button>
                     <button class="btn-promote" onclick="openPromo('${id}')">Promote 🎓</button>
+                </div>
+
+                <div style="margin-bottom:15px;">
                     <span style="font-size:1.1rem; font-weight:600;">${data.fullName}</span><br>
                     <span style="opacity:0.6; font-size:0.8rem;">📍 ${data.hostel || 'No Addr'} | 📱 ${data.phone}</span>
                 </div>
@@ -276,13 +262,10 @@
         listDiv.innerHTML = html;
     }
 
-    // --- 3. ARCHIVE & RESET LOGIC ---
     async function handleFreshness(docRef, isFresh) {
         if (isFresh) return;
-        
         const snap = await getDoc(docRef);
         const old = snap.data();
-        
         const entry = {
             period: old.lastUpdated || new Date(),
             calls: old.calls || 0,
@@ -290,7 +273,6 @@
             status: old.status || 'unmarked',
             notes: old.notes || ""
         };
-
         await updateDoc(docRef, {
             history: arrayUnion(entry),
             calls: 0, visits: 0, status: 'unmarked', notes: "",
@@ -298,15 +280,12 @@
         });
     }
 
-    // --- 4. BUTTON ACTIONS ---
     window.modifyEffort = async (id, field, change, isFresh) => {
         const docRef = doc(db, "invitees", id);
         if(!isFresh) await handleFreshness(docRef, false);
-
         const snap = await getDoc(docRef); 
         let val = (snap.data()[field] || 0) + change;
         if(val < 0) val = 0;
-
         await updateDoc(docRef, { [field]: val, lastUpdated: serverTimestamp() });
         document.getElementById(field === 'calls' ? `c-${id}` : `v-${id}`).innerText = val;
     };
@@ -314,7 +293,6 @@
     window.setStatus = async (id, status, isFresh) => {
         const docRef = doc(db, "invitees", id);
         if(!isFresh) await handleFreshness(docRef, false);
-
         await updateDoc(docRef, { status: status, lastUpdated: serverTimestamp() });
         loadInvitees();
     };
@@ -322,10 +300,8 @@
     window.saveAbsence = async (id, isFresh) => {
         const docRef = doc(db, "invitees", id);
         if(!isFresh) await handleFreshness(docRef, false);
-        
         const reason = document.getElementById(`reason-${id}`).value;
         if(!reason) return alert("Please type a reason.");
-
         await updateDoc(docRef, { status: 'declined', notes: reason, lastUpdated: serverTimestamp() });
         loadInvitees();
     };
@@ -335,12 +311,10 @@
         document.getElementById(`reason-box-${id}`).style.display = show ? 'block' : 'none';
     };
 
-    // --- 5. PROMOTION LOGIC ---
     window.openPromo = async (id) => {
         const snap = await getDoc(doc(db, "invitees", id));
         const d = snap.data();
         const names = d.fullName.split(' ');
-        
         document.getElementById('promoId').value = id;
         document.getElementById('promoFirstname').value = names[0];
         document.getElementById('promoSurname').value = names.slice(1).join(' ');
@@ -351,11 +325,9 @@
         const id = document.getElementById('promoId').value;
         const btn = document.getElementById('promoSaveBtn');
         btn.disabled = true; btn.innerText = "Processing...";
-
         try {
             const invSnap = await getDoc(doc(db, "invitees", id));
             const invData = invSnap.data();
-
             await addDoc(collection(db, "members"), {
                 first_name: document.getElementById('promoFirstname').value,
                 last_name: document.getElementById('promoSurname').value,
@@ -373,7 +345,6 @@
                 shepherdId: invData.shepherdId,
                 timestamp: serverTimestamp()
             });
-
             await updateDoc(doc(db, "invitees", id), { status: 'graduated' });
             alert("Success! Member Promoted.");
             location.reload();
