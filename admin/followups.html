@@ -159,17 +159,23 @@
                 return;
             }
 
-            // 2. PROCESS EVENTS
+            // 2. PROCESS EVENTS (Remove Future Dates AND Dawn Prayers)
             const now = new Date();
             now.setHours(23, 59, 59, 999);
 
             GLOBAL_EVENTS = eventSnap.docs.map(d => {
                 const data = d.data();
                 const jsDate = (data.date && data.date.toDate) ? data.date.toDate() : new Date(data.date);
-                // FIX: Standardize name property
-                const eventName = data.name || data.title || "Service";
-                return { id: d.id, ...data, title: eventName, jsDate: jsDate };
-            }).filter(e => e.jsDate <= now); 
+                // Standardize title
+                const title = data.name || data.title || "Service";
+                return { id: d.id, ...data, title: title, jsDate: jsDate };
+            })
+            .filter(e => {
+                // FILTER: Exclude Future events AND "Dawn Prayers"
+                const isPast = e.jsDate <= now;
+                const isNotDawn = !e.title.toLowerCase().includes("dawn prayer");
+                return isPast && isNotDawn;
+            });
 
             GLOBAL_EVENTS.sort((a, b) => a.jsDate - b.jsDate);
 
@@ -188,12 +194,10 @@
         }
     }
 
-    // --- NEXT SUNDAY TARGETS ---
     function renderNextSundayTargets() {
         const d = new Date();
         d.setDate(d.getDate() + (7 - d.getDay()) % 7);
-        const dateStr = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
-        document.getElementById('nextSundayDate').innerText = dateStr;
+        document.getElementById('nextSundayDate').innerText = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
 
         const container = document.getElementById('targetArea');
         const targets = GLOBAL_INV.filter(i => i.status !== 'graduated');
@@ -242,7 +246,6 @@
         if (filteredEvents.length === 0) return;
 
         const latestEvent = filteredEvents[filteredEvents.length - 1];
-        // FIX: Using standardized 'title' (mapped from 'name' in init)
         document.getElementById('eventLabel').innerText = `Focus: ${latestEvent.title} • ${latestEvent.jsDate.toLocaleDateString()}`;
         
         calculateStats(filteredEvents, latestEvent);
@@ -308,7 +311,7 @@
 
         GLOBAL_INV.forEach(i => {
             if(i.status === 'graduated') return;
-            const name = i.fullName || i.name || "Unknown";
+            const name = i.fullName || "Unknown";
             const isPresent = i.status === 'honoured'; 
             const note = i.notes || "";
             if(note && !isPresent) allNotes.push({name, note, type:'Invitee'});
