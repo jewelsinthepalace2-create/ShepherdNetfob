@@ -137,70 +137,83 @@
 
     async function init() {
         try {
-            // --- CRITICAL FIX ---
-            // 1. Get Today's Date (End of day to include services happening right now)
+            // --- 1. DEFINE THE TIME WINDOW (1 Year Back) ---
             const today = new Date();
-            today.setHours(23, 59, 59, 999);
+            today.setHours(23, 59, 59, 999); // End of today
 
-            // 2. Query: Fetch only events <= Today, Sort Newest First, Limit to 52 (1 Year)
-            // This prevents "Future Events" from clogging the list.
-            const q = query(
+            const oneYearAgo = new Date();
+            oneYearAgo.setFullYear(today.getFullYear() - 1); // Exact start point
+            
+            // --- 2. FETCH EVENTS (Only past 12 months) ---
+            // We use string comparison for the query as dates are likely stored as strings "YYYY-MM-DD"
+            // or we filter client side if formats vary.
+            const eventsQ = query(
                 collection(db, "events"), 
-                where("date", "<=", today.toISOString().split('T')[0]), // Comparing string dates is safer if stored as strings
                 orderBy("date", "desc"), 
-                limit(52)
+                limit(60) // Fetch roughly a year's worth
             );
             
-            // Note: If you stored dates as Timestamps, use 'where("date", "<=", today)'
-            // If the query above returns empty, try removing the 'where' and doing client-side filtering on a larger set (see fallback below).
+            const eventSnap = await getDocs(eventsQ);
             
-            let eventSnap = await getDocs(q);
-            
-            // FALLBACK: If the specific date query fails due to format mismatch, 
-            // fetch the last 100 items and filter manually (Slower but safer).
             if (eventSnap.empty) {
-                const backupQ = query(collection(db, "events"), orderBy("date", "desc"), limit(60));
-                eventSnap = await getDocs(backupQ);
-            }
-
-            let allEvents = eventSnap.docs.map(d => {
-                const data = d.data();
-                // Normalize Date
-                const dObj = data.date && data.date.toDate ? data.date.toDate() : new Date(data.date);
-                return { id: d.id, ...data, parsedDate: dObj };
-            });
-
-            // Filter Client Side (Double Check)
-            const pastEvents = allEvents.filter(e => e.parsedDate <= today);
-
-            if (pastEvents.length === 0) {
-                document.getElementById('eventLabel').innerText = "No Past Services Found.";
+                document.getElementById('eventLabel').innerText = "No Data Available.";
                 return;
             }
 
-            // Reverse to show Oldest -> Newest on the graph
-            pastEvents.reverse();
-            
-            // The last item in the array is the MOST RECENT service
-            const latestEvent = pastEvents[pastEvents.length - 1];
-            
-            document.getElementById('eventLabel').innerText = `Focus: ${latestEvent.title || 'Service'} • ${latestEvent.parsedDate.toLocaleDateString()}`;
+            // Client-Side Filter: Keep only events between OneYearAgo and Today
+            let validEvents = eventSnap.docs
+                .map(d => ({ id: d.id, ...d.data() }))
+                .filter(e => {
+                    const eDate = e.date && e.date.toDate ? e.date.toDate() : new Date(e.date);
+                    return eDate <= today && eDate >= oneYearAgo;
+                })
+                .reverse(); // Sort Oldest -> Newest for the graph
 
-            await processAnalytics(pastEvents, latestEvent);
+            if (validEvents.length === 0) {
+                document.getElementById('eventLabel').innerText = "No events found in the last year.";
+                return;
+            }
+
+            // The last event in the list is the LATEST one
+            const latestEvent = validEvents[validEvents.length - 1];
+            
+            // Update Header
+            const dateString = latestEvent.date && latestEvent.date.toDate ? latestEvent.date.toDate() : new Date(latestEvent.date || Date.now());
+            document.getElementById('eventLabel').innerText = `Live: ${latestEvent.title} • ${dateString.toLocaleDateString()}`;
+
+            // Pass the window dates to optimize other queries
+            await processAnalytics(validEvents, latestEvent, oneYearAgo);
 
         } catch (error) {
             console.error("Init Error:", error);
-            // Index Error Hint: If console says "Index required", follow the link it provides!
             document.getElementById('registryBody').innerHTML = `<tr><td colspan="4" style="text-align:center; color:red">Error: ${error.message}</td></tr>`;
         }
     }
 
-    async function processAnalytics(events, latestEvent) {
-        const [attSnap, memSnap, invSnap] = await Promise.all([
-            getDocs(collection(db, "attendance")),
-            getDocs(collection(db, "members")),
-            getDocs(collection(db, "invitees"))
-        ]);
+    async function processAnalytics(events, latestEvent, startDate) {
+        // --- 3. OPTIMIZED FETCHING ---
+        // Instead of fetching ALL attendance, we *try* to limit it. 
+        // (Note: Firestore requires an index for complex queries. If this fails, we fall back to full fetch).
+        
+        let attSnap, memSnap, invSnap;
+
+        try {
+            // Try fetching only recent attendance (Optimization)
+            const attQ = query(collection(db, "attendance"), where("timestamp", ">=", startDate));
+            [attSnap, memSnap, invSnap] = await Promise.all([
+                getDocs(attQ),
+                getDocs(collection(db, "members")), // Members list is usually small enough to fetch all
+                getDocs(collection(db, "invitees")) // Invitees likewise
+            ]);
+        } catch(e) {
+            console.warn("Optimized query failed (missing index?), fetching all...", e);
+            // Fallback: Fetch all if specific index is missing
+            [attSnap, memSnap, invSnap] = await Promise.all([
+                getDocs(collection(db, "attendance")),
+                getDocs(collection(db, "members")),
+                getDocs(collection(db, "invitees"))
+            ]);
+        }
 
         let graphLabels = [];
         let graphExpected = [];
@@ -208,9 +221,9 @@
         let allNotes = [];
         let latestRegistry = [];
 
-        // --- 1. BUILD GRAPH DATA (1 Year Trend) ---
+        // --- 4. BUILD GROWTH TREND (Graph) ---
         events.forEach(evt => {
-            const eDate = evt.parsedDate;
+            const eDate = evt.date && evt.date.toDate ? evt.date.toDate() : new Date(evt.date);
             const dayStart = new Date(eDate); dayStart.setHours(0,0,0,0);
             const dayEnd = new Date(eDate); dayEnd.setHours(23,59,59,999);
             
@@ -219,7 +232,7 @@
             let presentCount = 0;
             let expectedCount = 0;
 
-            // Members Count
+            // Count Member Attendance for this specific past date
             attSnap.forEach(doc => {
                 const d = doc.data();
                 const t = d.timestamp ? d.timestamp.toDate() : new Date(d.date || 0);
@@ -229,19 +242,19 @@
                 }
             });
 
-            // Invitee Count
+            // Count Invitee Attendance (Using Archives)
             invSnap.forEach(doc => {
                 const inv = doc.data();
                 const lastUp = inv.lastUpdated ? inv.lastUpdated.toDate() : new Date(0);
                 
-                // Fresh on that specific day?
-                const isFreshForEvent = lastUp > dayStart && lastUp < dayEnd;
-                if(isFreshForEvent) {
+                // Check if they were active on THAT day
+                const isFresh = lastUp > dayStart && lastUp < dayEnd;
+                if(isFresh) {
                     expectedCount++;
                     if(inv.status === 'honoured') presentCount++;
                 }
                 
-                // History Check
+                // Check History (Archives)
                 if(inv.history && Array.isArray(inv.history)) {
                     inv.history.forEach(h => {
                         const hDate = h.period ? h.period.toDate() : new Date(0);
@@ -253,16 +266,21 @@
                 }
             });
 
+            // Fallback for visual nicety
             if(expectedCount === 0) expectedCount = presentCount;
+            
             graphExpected.push(expectedCount);
             graphActual.push(presentCount);
         });
 
-        // --- 2. BUILD TABLE DATA (Latest Only) ---
-        const latestDate = latestEvent.parsedDate;
+        // --- 5. BUILD LATEST REGISTRY (Table) ---
+        // Only focusing on the Latest Event for the detailed list
+        const latestDate = latestEvent.date && latestEvent.date.toDate ? latestEvent.date.toDate() : new Date(latestEvent.date || Date.now());
         const startDay = new Date(latestDate); startDay.setHours(0,0,0,0);
         const endDay = new Date(latestDate); endDay.setHours(23,59,59,999);
+        const freshWindow = new Date(latestDate); freshWindow.setDate(freshWindow.getDate() - 6);
 
+        // Map Attendance
         let attMap = {};
         attSnap.forEach(doc => {
             const d = doc.data();
@@ -273,11 +291,12 @@
             }
         });
 
-        // MEMBERS
+        // Members
         memSnap.forEach(doc => {
             const m = doc.data();
             const rec = attMap[doc.id];
             
+            // Name Fix
             let fullName = m.full_name || `${m.first_name || ''} ${m.last_name || ''}`.trim() || "Unknown Member";
             
             const isPresent = rec && rec.status && rec.status.toLowerCase().includes('present');
@@ -291,14 +310,14 @@
             });
         });
 
-        // INVITEES
+        // Invitees
         invSnap.forEach(doc => {
             const i = doc.data();
             if(i.status === 'graduated') return;
 
             const name = i.fullName || i.name || "Unknown Invitee";
             
-            // Direct Data
+            // Use current data
             const calls = i.calls || 0;
             const visits = i.visits || 0;
             const notes = i.notes || "";
@@ -317,7 +336,7 @@
     }
 
     function renderDashboard(labels, expected, actual, notes, registry) {
-        // Chart
+        // Render Chart
         const ctx = document.getElementById('trendChart');
         if(ctx) {
             const chartStatus = Chart.getChart("trendChart"); 
@@ -328,27 +347,27 @@
                 data: {
                     labels: labels,
                     datasets: [
-                        { label: 'Expected', data: expected, borderColor: '#4facfe', backgroundColor: 'rgba(79, 172, 254, 0.1)', fill: true, tension: 0.4, pointRadius: 2 },
-                        { label: 'Actual', data: actual, borderColor: '#00ff88', backgroundColor: 'rgba(0, 255, 136, 0.1)', fill: true, tension: 0.4, pointRadius: 2 }
+                        { label: 'Expected', data: expected, borderColor: '#4facfe', backgroundColor: 'rgba(79, 172, 254, 0.1)', fill: true, tension: 0.4 },
+                        { label: 'Actual', data: actual, borderColor: '#00ff88', backgroundColor: 'rgba(0, 255, 136, 0.1)', fill: true, tension: 0.4 }
                     ]
                 },
                 options: {
                     responsive: true,
-                    maintainAspectRatio: false, // Allows chart to stretch
+                    maintainAspectRatio: false,
                     plugins: { legend: { labels: { color: 'white' } } },
                     scales: { y: { grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { color: '#ccc' } }, x: { display: false } }
                 }
             });
         }
 
-        // KPIS
+        // Render KPIs
         const avgExp = Math.round(expected.reduce((a,b)=>a+b,0) / (expected.length||1));
         const avgAct = Math.round(actual.reduce((a,b)=>a+b,0) / (actual.length||1));
         document.getElementById('avgExpected').innerText = avgExp;
         document.getElementById('avgActual').innerText = avgAct;
         document.getElementById('retentionRate').innerText = avgExp > 0 ? Math.round((avgAct/avgExp)*100)+"%" : "0%";
 
-        // Notes
+        // Render Notes
         const notesDiv = document.getElementById('notesArea');
         if(notes.length > 0) {
             notesDiv.innerHTML = notes.map(n => `
@@ -361,7 +380,7 @@
             notesDiv.innerHTML = "<p style='text-align:center; opacity:0.5; font-size:0.8rem; padding:20px;'>No challenges recorded.</p>";
         }
 
-        // Table
+        // Render Table
         const regBody = document.getElementById('registryBody');
         if(registry.length === 0) {
             regBody.innerHTML = `<tr><td colspan="4" style="text-align:center;">No Data Available</td></tr>`;
